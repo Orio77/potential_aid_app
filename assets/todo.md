@@ -1,4 +1,8 @@
-# Flutter Schedule App - Main Screen Development Tasks
+# Flutter S- [x] **1.2** Set up code generation for Riverpod and Drift
+
+- Add build_runner to dev_dependencies
+- Add drift_dev to dev_dependencies for Drift code generation
+- Configure build.yaml if neededdule App - Main Screen Development Tasks
 
 ## Phase 1: Core Main Screen Implementation
 
@@ -23,38 +27,42 @@ Based on the wireframe in `main_screen.png` and the project overview, here are t
   - Define ColorScheme.fromSeed(...) for Material 3 theming
   - Set home: MainScreen() once created
 
-### 2. Data Models Implementation
+### 2. Data Models Implementation (Using Drift)
 
-- [ ] **2.1** Create `Task` model class
-  - Properties: id, name, estimatedMinutes, projectId (nullable for now)
-  - Add toJson/fromJson methods for persistence
-  - Add copyWith method for immutability
-- [ ] **2.2** Create `Block` model class (represents a time slot)
-  - Properties: id, taskId, dayLocal, startMinuteOfDay, lengthMinutes
-  - Add time calculation helper methods (start/end times)
-  - Add toJson/fromJson methods
-- [ ] **2.3** Create `DailySchedule` model class
-  - Contains a list of blocks for a specific day
-  - Add methods to add/remove blocks (keep as simple data operations)
-  - Include default scheduling constants (8:35 start, 1hr length, 5min breaks)
-  - Note: Keep reordering logic in ScheduleNotifier, not in this model
+- [x] **2.1** Create `Task` table in Drift
+  - Define table: id (primary key), name, estimatedMinutes, projectId (nullable)
+  - Create corresponding `.drift` file with proper column definitions
+  - Run code generation to create Dart classes
+- [x] **2.2** Create `Block` table in Drift (represents a time slot)
+  - Define table: id (primary key), taskId (foreign key), dayLocal, startMinuteOfDay, lengthMinutes
+  - Add proper column types and constraints
+  - Run code generation to create Dart classes
+- [x] **2.3** Create `Settings` table in Drift
+  - Define table for user preferences: defaultStartTime, defaultTaskLength, defaultBreakTime
+  - Include id field and proper column types
+  - Run code generation to create Dart classes
+- [x] **2.4** Set up Drift database class
+  - Create main database class extending \_$AppDatabase
+  - Include all tables and define database version
+  - Add time calculation helper methods as database extensions
 
 ### 3. State Management Setup
 
 - [ ] **3.1** Create `ScheduleNotifier` using Riverpod
   - Manage current selected date
-  - Manage list of blocks for the current day
+  - Manage list of blocks for the current day (using Drift queries)
   - Implement methods: addTask, removeTask, reorderTasks (with proper batching)
 - [ ] **3.2** Create `DateNotifier` for current day navigation
   - Track currently viewed date
   - Methods: nextDay, previousDay, goToDate
-- [ ] **3.3** Create `Settings` model and `SettingsNotifier`
-  - Store user preferences: defaultStartTime, defaultTaskLength, defaultBreakTime
-  - Persist settings using same data source as schedule
-- [ ] **3.4** Create persistence provider
-  - Save/load schedule data to local storage (SharedPreferences initially)
-  - Wrap JSON read/write in a `ScheduleLocalDataSource` class so it can be replaced later
-  - Auto-save when schedule changes
+- [ ] **3.3** Create `SettingsNotifier` using Drift
+  - Manage user preferences from Settings table
+  - Load/save defaultStartTime, defaultTaskLength, defaultBreakTime
+  - Automatically persist changes to database
+- [ ] **3.4** Create database provider for Drift
+  - Set up Riverpod provider for the Drift database instance
+  - Ensure single database instance across the app
+  - Handle database initialization and connection
 
 ### 4. Core Widgets Development
 
@@ -127,19 +135,20 @@ Based on the wireframe in `main_screen.png` and the project overview, here are t
   - Handle 24-hour time display
   - Calculate and display duration properly
 
-### 8. Persistence Implementation
+### 8. Persistence Implementation (Using Drift)
 
-- [ ] **8.1** Set up local data storage
-  - Use SharedPreferences for initial implementation
-  - Create service class for save/load operations
-  - Implement JSON serialization for all models
+- [ ] **8.1** Set up Drift database implementation
+  - Configure database file location and connection
+  - Implement proper database initialization
+  - Add error handling for database operations
 - [ ] **8.2** Auto-save functionality
-  - Save schedule changes automatically
-  - Debounce save operations to avoid excessive writes
-  - Implement didChangeAppLifecycleState to flush unsaved data on app pause/background
-- [ ] **8.3** Data migration preparation _(Nice to have - do only if you enjoy geekery)_
-  - Structure save format to allow future feature additions
-  - Version your data format for future updates
+  - Leverage Drift's automatic persistence (no manual save needed)
+  - Add transaction support for batch operations
+  - Implement didChangeAppLifecycleState for connection management
+- [ ] **8.3** Database migrations _(Built-in with Drift)_
+  - Set up schema versioning in Drift database class
+  - Add migration strategies for future schema changes
+  - Test migration scenarios
 
 ### 9. UI Polish & User Experience
 
@@ -159,18 +168,18 @@ Based on the wireframe in `main_screen.png` and the project overview, here are t
 
 ### 10. Testing & Validation
 
-- [ ] **10.1** Write unit tests for models
-  - Test Task and Block model methods
+- [ ] **10.1** Write unit tests for Drift models and database operations
+  - Test database table operations (insert, update, delete, query)
   - Test time calculations and scheduling logic
-  - Verify JSON serialization works correctly
+  - Test database transactions and error handling
 - [ ] **10.2** Write widget tests for core components
   - Test TaskBlock widget behavior
   - Test ScheduleList drag & drop
   - Test AddTaskButton dialog flow
 - [ ] **10.3** Integration testing
-  - Test complete add task flow
-  - Test day navigation
-  - Test persistence (save/load schedule)
+  - Test complete add task flow with database persistence
+  - Test day navigation with database queries
+  - Test database operations with UI interactions
 
 ### 11. Final Integration & Bug Fixes
 
@@ -193,7 +202,14 @@ After completing all tasks, you should have:
 
 - ✅ A fully functional main screen matching the wireframe
 - ✅ Ability to add, edit, and reorder tasks for any day
-- ✅ Persistent storage that survives app restarts
+
+## Success Criteria
+
+After completing all tasks, you should have:
+
+- ✅ A fully functional main screen matching the wireframe
+- ✅ Ability to add, edit, and reorder tasks for any day
+- ✅ Robust database persistence using Drift (better than simple file storage)
 - ✅ Smooth navigation between days
 - ✅ Default scheduling that follows the specified rules (8:35 start, 1hr tasks, 5min breaks)
 - ✅ Intuitive drag & drop interface
@@ -201,10 +217,10 @@ After completing all tasks, you should have:
 
 ## Notes for Learning Flutter
 
-- Start with tasks 1-3 to understand Flutter project structure and Dart models
+- Start with tasks 1-3 to understand Flutter project structure, Drift database setup, and Dart models
 - Tasks 4-5 will teach you widget composition and layout
 - Tasks 6-7 focus on user interaction and business logic
-- Tasks 8-9 cover data persistence and UI polish
-- Tasks 10-11 introduce testing and debugging practices
+- Tasks 8-9 cover Drift database operations and UI polish
+- Tasks 10-11 introduce testing practices with database integration
 
-Each task is designed to be a complete, testable unit that builds toward the final main screen functionality.
+Each task is designed to be a complete, testable unit that builds toward the final main screen functionality using modern Flutter and Drift best practices.
