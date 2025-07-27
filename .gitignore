@@ -1,0 +1,93 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Code Generation (Riverpod & others):
+
+# Generated files
+*.g.dart
+*.freezed.dart
+*.gr.dart
+*.config.dart
+
+# Development and Testing:
+
+# Coverage reports
+coverage/
+test/coverage_helper_test.dart
+
+# Test runner files
+.test_runner.dart
+
+# IDE and Development Tools:
+
+# VS Code settings (if you want to keep them local)
+.vscode/settings.json
+.vscode/launch.json
+
+# FVM (Flutter Version Management)
+.fvm/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Platform-specific additions:
+
+# macOS
+.DS_Store
+Thumbs.db
+
+# Windows
+*.tmp
+*.temp
+ehthumbs.db
+
+# Database and Local Storage:
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Local storage
+/data/
+/storage/
