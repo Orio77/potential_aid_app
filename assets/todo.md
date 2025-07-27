@@ -6,19 +6,19 @@ Based on the wireframe in `main_screen.png` and the project overview, here are t
 
 ### 1. Project Setup & Dependencies
 
-- [ ] **1.1** Verify all dependencies are properly configured in `pubspec.yaml`
+- [x] **1.1** Verify all dependencies are properly configured in `pubspec.yaml`
   - Ensure riverpod, time_machine, fl_chart, riverpod_generator are added
   - Add any missing UI dependencies (e.g., intl for date formatting)
-- [ ] **1.2** Set up code generation for Riverpod
+- [x] **1.2** Set up code generation for Riverpod
   - Add build_runner to dev_dependencies
   - Configure build.yaml if needed
-- [ ] **1.3** Create basic folder structure in `lib/`
+- [x] **1.3** Create basic folder structure in `lib/`
   - `lib/models/` - for data models
   - `lib/providers/` - for Riverpod providers
   - `lib/screens/` - for screen widgets
   - `lib/widgets/` - for reusable widgets
   - `lib/services/` - for persistence and business logic
-- [ ] **1.4** Create main.dart app entry point
+- [x] **1.4** Create main.dart app entry point
   - Set up MaterialApp with theme and routing
   - Define ColorScheme.fromSeed(...) for Material 3 theming
   - Set home: MainScreen() once created
