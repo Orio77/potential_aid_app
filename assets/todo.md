@@ -48,7 +48,7 @@ Based on the wireframe in `main_screen.png` and the project overview, here are t
 
 ### 3. State Management Setup
 
-- [ ] **3.1** Create `ScheduleNotifier` using Riverpod
+- [x] **3.1** Create `ScheduleNotifier` using Riverpod
   - Manage current selected date
   - Manage list of blocks for the current day (using Drift queries)
   - Implement methods: addTask, removeTask, reorderTasks (with proper batching)
