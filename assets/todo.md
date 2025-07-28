@@ -52,14 +52,14 @@ Based on the wireframe in `main_screen.png` and the project overview, here are t
   - Manage current selected date
   - Manage list of blocks for the current day (using Drift queries)
   - Implement methods: addTask, removeTask, reorderTasks (with proper batching)
-- [ ] **3.2** Create `DateNotifier` for current day navigation
+- [x] **3.2** Create `DateNotifier` for current day navigation
   - Track currently viewed date
   - Methods: nextDay, previousDay, goToDate
 - [ ] **3.3** Create `SettingsNotifier` using Drift
   - Manage user preferences from Settings table
   - Load/save defaultStartTime, defaultTaskLength, defaultBreakTime
   - Automatically persist changes to database
-- [ ] **3.4** Create database provider for Drift
+- [x] **3.4** Create database provider for Drift
   - Set up Riverpod provider for the Drift database instance
   - Ensure single database instance across the app
   - Handle database initialization and connection
