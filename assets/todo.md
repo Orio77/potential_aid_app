@@ -55,7 +55,7 @@ Based on the wireframe in `main_screen.png` and the project overview, here are t
 - [x] **3.2** Create `DateNotifier` for current day navigation
   - Track currently viewed date
   - Methods: nextDay, previousDay, goToDate
-- [ ] **3.3** Create `SettingsNotifier` using Drift
+- [x] **3.3** Create `SettingsNotifier` using Drift
   - Manage user preferences from Settings table
   - Load/save defaultStartTime, defaultTaskLength, defaultBreakTime
   - Automatically persist changes to database
