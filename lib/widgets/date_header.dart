@@ -4,6 +4,8 @@ import 'package:time_machine/time_machine.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 
 class DateHeader extends ConsumerWidget {
+  const DateHeader({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentDate = ref.watch(dateNotifierProvider);
@@ -23,29 +25,34 @@ class DateHeader extends ConsumerWidget {
       }
     }
 
-    return Container(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          IconButton(
-            onPressed: () =>
-                ref.read(dateNotifierProvider.notifier).goToPreviousDay(),
-            icon: Icon(Icons.arrow_back),
-          ),
-          GestureDetector(
-            onLongPress: pickDate,
-            child: Text(
-              '${currentDate.dayOfMonth} / ${currentDate.monthOfYear} / ${currentDate.year}',
-              style: Theme.of(context).textTheme.headlineLarge,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        IconButton(
+          onPressed: () =>
+              ref.read(dateNotifierProvider.notifier).goToPreviousDay(),
+          icon: Icon(Icons.arrow_back),
+        ),
+        GestureDetector(
+          onLongPress: pickDate,
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+              child: Text(
+                '${currentDate.dayOfMonth} / ${currentDate.monthOfYear} / ${currentDate.year}',
+                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                ),
+              ),
             ),
           ),
-          IconButton(
-            onPressed: () =>
-                ref.read(dateNotifierProvider.notifier).goToNextDay(),
-            icon: Icon(Icons.arrow_forward),
-          ),
-        ],
-      ),
+        ),
+        IconButton(
+          onPressed: () =>
+              ref.read(dateNotifierProvider.notifier).goToNextDay(),
+          icon: Icon(Icons.arrow_forward),
+        ),
+      ],
     );
   }
 }

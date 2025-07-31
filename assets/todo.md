@@ -1,8 +1,16 @@
-# Flutter S- [x] **1.2** Set up code generation for Riverpod and Drift
+# Flutter Schedule App - Main Screen Development Tasks
 
-- Add build_runner to dev_dependencies
-- Add drift_dev to dev_dependencies for Drift code generation
-- Configure build.yaml if neededdule App - Main Screen Development Tasks
+## 🚨 URGENT: Architecture Fixes Required
+
+**Current Issue**: The `task_bloc.dart` widget violates Flutter best practices by calling async operations in the build method and directly accessing the database. This will cause runtime errors and poor performance.
+
+**Priority Actions (Complete BEFORE continuing with other features):**
+
+1. **Fix TaskBloc widget async issue** → Section 4.5.4
+2. **Create BlockWithTask data model** → Section 4.5.1
+3. **Enhance database with joined queries** → Section 4.5.2
+4. **Refactor ScheduleNotifier for reactive streams** → Section 4.5.3
+5. **Update parent widgets for new data flow** → Section 4.5.5
 
 ## Phase 1: Core Main Screen Implementation
 
@@ -41,17 +49,21 @@ Based on the wireframe in `main_screen.png` and the project overview, here are t
   - Define table for user preferences: defaultStartTime, defaultTaskLength, defaultBreakTime
   - Include id field and proper column types
   - Run code generation to create Dart classes
-- [x] **2.4** Set up Drift database class
+- [x] **2.4** Set up Drift database class _(NEEDS EXTENSION)_
   - Create main database class extending \_$AppDatabase
   - Include all tables and define database version
   - Add time calculation helper methods as database extensions
+  - **ENHANCEMENT NEEDED**: Add joined query methods for blocks with tasks
+  - **ENHANCEMENT NEEDED**: Add task name validation and formatting utilities
 
 ### 3. State Management Setup
 
-- [x] **3.1** Create `ScheduleNotifier` using Riverpod
+- [x] **3.1** Create `ScheduleNotifier` using Riverpod _(NEEDS ENHANCEMENT)_
   - Manage current selected date
   - Manage list of blocks for the current day (using Drift queries)
   - Implement methods: addTask, removeTask, reorderTasks (with proper batching)
+  - **ENHANCEMENT NEEDED**: Add task name caching and combined data models
+  - **ENHANCEMENT NEEDED**: Implement proper reactive streams with joined data
 - [x] **3.2** Create `DateNotifier` for current day navigation
   - Track currently viewed date
   - Methods: nextDay, previousDay, goToDate
@@ -66,37 +78,39 @@ Based on the wireframe in `main_screen.png` and the project overview, here are t
 
 ### 4. Core Widgets Development
 
-- [ ] **4.1** Create `DateHeader` widget
-  - Display current date in "DD - MM - YYYY" format
-  - Make it tappable to open date picker (as shown in wireframe)
-  - Include visual indication it's clickable
-  - onTap → showDatePicker and call DateNotifier.goToDate()
-- [ ] **4.2** Create `TaskBlock` widget
+- [x] **4.1** Create `DateHeader` widget
+  - Display current date in "DD / MM / YYYY" format
+  - Make it pressable to open date picker (as shown in wireframe)
+  - Include visual indication it's pressable
+  - onPressed → showDatePicker and call DateNotifier.goToDate()
+- [x] **4.2** Create `TaskBlock` widget _(NEEDS REFACTORING)_
   - Display wavy icon/visualization on the left
   - Show time range "YY:YY - XX:XX" format
   - Display duration "X min"
   - Make it draggable for reordering
   - Add tap handler for editing
-- [ ] **4.3** Create `ScheduleList` widget
+  - **CRITICAL FIX NEEDED**: Remove async operations from build method
+  - **CRITICAL FIX NEEDED**: Remove direct database access from widget
+- [x] **4.3** Create `ScheduleList` widget
   - Container for multiple TaskBlock widgets
   - Start with simple ReorderableListView for reordering (easy approach)
   - Handle empty state when no tasks scheduled
   - Add spacing between blocks (representing break time)
   - Optional: Add fancier drag-over gaps once comfortable with basics
-- [ ] **4.4** Create `AddTaskButton` widget
+- [x] **4.4** Create `AddTaskButton` widget
   - Floating "+" button at bottom center
   - Open dialog/sheet to add new task
 
 ### 5. Main Screen Assembly
 
-- [ ] **5.1** Create `MainScreen` widget structure
+- [x] **5.1** Create `MainScreen` widget structure
   - Combine DateHeader, ScheduleList, and AddTaskButton
   - Add navigation arrows (left/right) for day navigation
   - Implement responsive layout
-- [ ] **5.2** Connect widgets to state providers
+- [x] **5.2** Connect widgets to state providers
   - Use Riverpod to connect UI to state management
   - Implement proper loading and error states
-- [ ] **5.3** Add navigation between days
+- [x] **5.3** Add navigation between days
   - Left arrow: go to previous day
   - Right arrow: go to next day
   - Update schedule list when date changes
@@ -108,15 +122,37 @@ Based on the wireframe in `main_screen.png` and the project overview, here are t
   - Time picker for start time (default: next available slot)
   - Duration picker (default: 60 minutes)
   - Save button that adds task to schedule
+  - **ADD**: Input validation with proper error messages
+  - **ADD**: Task name formatting and sanitization
 - [ ] **6.2** Implement task editing
   - Tap on TaskBlock opens edit dialog
   - Allow changing name, time, and duration
   - Include delete option
+  - **ADD**: Validation for task name changes
+  - **ADD**: Conflict detection for time changes
 - [ ] **6.3** Implement drag & drop reordering
   - Allow dragging TaskBlocks to reorder using ReorderableListView
   - Wrap recalculation in setState/provider batch update and debounce it
   - Automatically recalculate start times based on new position
   - Maintain break time between tasks
+
+### 6.5. Task Name Management Best Practices
+
+- [ ] **6.5.1** Create task name validation service
+  - Implement length limits (1-100 characters)
+  - Add character sanitization (remove invalid chars)
+  - Handle empty/whitespace-only names
+  - Add profanity/content filtering if needed
+- [ ] **6.5.2** Create task name formatting utilities
+  - Auto-capitalize first letter option
+  - Truncation with ellipsis for display
+  - Remove extra whitespace and normalize
+  - Handle special characters consistently
+- [ ] **6.5.3** Add task name error handling
+  - Graceful fallback for invalid names
+  - User-friendly error messages
+  - Recovery suggestions (e.g., "Try a shorter name")
+  - Logging for debugging name-related issues
 
 ### 7. Time Management Logic
 
@@ -172,14 +208,38 @@ Based on the wireframe in `main_screen.png` and the project overview, here are t
   - Test database table operations (insert, update, delete, query)
   - Test time calculations and scheduling logic
   - Test database transactions and error handling
+  - **ADD**: Test joined queries for BlockWithTask
+  - **ADD**: Test task name validation and formatting
 - [ ] **10.2** Write widget tests for core components
   - Test TaskBlock widget behavior
   - Test ScheduleList drag & drop
   - Test AddTaskButton dialog flow
+  - **ADD**: Test widget separation of concerns (no async in build)
+  - **ADD**: Test error states and loading indicators
 - [ ] **10.3** Integration testing
   - Test complete add task flow with database persistence
   - Test day navigation with database queries
   - Test database operations with UI interactions
+  - **ADD**: Test reactive data flow from database to UI
+  - **ADD**: Test task name edge cases and validation
+
+### 10.5. Architecture & Best Practices Testing
+
+- [ ] **10.5.1** Test data layer separation
+  - Unit tests for database extensions and joined queries
+  - Test BlockWithTask model formatting methods
+  - Test task name validation utilities
+  - Mock database for isolated testing
+- [ ] **10.5.2** Test provider layer logic
+  - Test ScheduleNotifier reactive behavior
+  - Test proper error propagation
+  - Test state management with mock data
+  - Test transaction handling and rollbacks
+- [ ] **10.5.3** Test presentation layer purity
+  - Verify widgets have no business logic
+  - Test widget rebuilds with different data
+  - Test loading and error state rendering
+  - Ensure no direct database access in widgets
 
 ### 11. Final Integration & Bug Fixes
 
@@ -214,6 +274,11 @@ After completing all tasks, you should have:
 - ✅ Default scheduling that follows the specified rules (8:35 start, 1hr tasks, 5min breaks)
 - ✅ Intuitive drag & drop interface
 - ✅ Proper time formatting and conflict prevention
+- ✅ **Clean architecture with proper separation of concerns**
+- ✅ **Reactive data flow using Drift streams and Riverpod**
+- ✅ **No async operations in widget build methods**
+- ✅ **Proper task name validation and formatting**
+- ✅ **Error handling and loading states throughout**
 
 ## Notes for Learning Flutter
 
