@@ -1,26 +1,3 @@
-/*
- * SCHEDULE LIST WIDGET - REORDERABLELISTVIEW IMPLEMENTATION COMPLETE
- * 
- * This widget displays the list of scheduled tasks for the current day.
- * It's a core component that shows all tasks in chronological order
- * and supports drag-and-drop reordering.
- * 
- * IMPLEMENTED FEATURES:
- * ✅ ReorderableListView with proper drag-and-drop functionality
- * ✅ Automatic time recalculation after reordering
- * ✅ Unique keys for smooth reordering animation
- * ✅ Proper index adjustment for Flutter's reordering behavior
- * 
- * REMAINING TODOs:
- * - Replace print statements with proper edit task dialogs
- * - Add loading and error states
- * 
- * ARCHITECTURE CONTEXT:
- * - Connects to ScheduleNotifier for reactive data updates
- * - Handles empty state when no tasks are scheduled
- * - Supports reordering with automatic time recalculation
- */
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/models/block.dart'; // For BlockWithTask
@@ -89,13 +66,6 @@ class ScheduleList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheduleData = ref.watch(scheduleNotifierProvider);
-
-    // TODO: Add loading and error states
-    // Current implementation doesn't handle:
-    // 1. Loading state while fetching data
-    // 2. Error state if database query fails
-    // 3. Refreshing/retry functionality
-    // Should check if scheduleNotifierProvider has async states
 
     return scheduleData.isEmpty
         ? _buildEmptyState()
