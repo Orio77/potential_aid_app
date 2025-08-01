@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:potential_aid_app/services/database.dart';
 
 class Project extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -9,7 +10,7 @@ class Project extends Table {
 }
 
 class ProjectWithStats {
-  final Project project;
+  final ProjectData project;
   final int taskCount;
   final double completionPercentage;
   final int daysUntilDeadline;

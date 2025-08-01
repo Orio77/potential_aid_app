@@ -11,40 +11,56 @@
  */
 
 import 'package:drift/drift.dart';
+import 'package:potential_aid_app/models/project.dart';
+import 'package:potential_aid_app/services/database.dart';
 
 class Task extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text()();
   IntColumn get estimatedMinutes => integer()();
-
-  // TODO: Task 2.2 - Update Task model relationships
-  // STEPS:
-  // 1. Ensure projectId properly references Project table (add foreign key constraint)
-  // 2. Add helper methods to get project information for tasks
-  // 3. Update existing task creation to handle optional project assignment
-
-  IntColumn get projectId => integer().nullable()();
-  // TODO: Add foreign key constraint when Project table is implemented:
-  // IntColumn get projectId => integer().nullable().references(Project, #id)();
+  IntColumn get projectId => integer()
+      .references(Project, #id, onDelete: KeyAction.cascade)
+      .nullable()();
+  BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get completedAt => dateTime().nullable()();
 }
 
-// TODO: Task 2.3 - Create combined data models
-// STEPS:
-// 1. Create TaskWithProject class for displaying tasks with project context
-// 2. Add helper methods for task-project relationships
-// 3. Create data classes for UI consumption
+class TaskWithStats {
+  final TaskData task;
+  final int totalMinutesCompleted;
+  final double completionPercentage;
+  final int blocksCount;
+  final int completedBlocksCount;
 
-// Example implementation (uncomment after Project model is ready):
-// class TaskWithProject {
-//   final TaskData task;
-//   final ProjectData? project;
-//   
-//   TaskWithProject({
-//     required this.task,
-//     this.project,
-//   });
-//   
-//   String get displayName => task.name;
-//   String get projectName => project?.name ?? 'No Project';
-//   bool get hasProject => project != null;
-// }
+  TaskWithStats({
+    required this.task,
+    required this.totalMinutesCompleted,
+    required this.completionPercentage,
+    required this.blocksCount,
+    required this.completedBlocksCount,
+  });
+
+  bool get isOverEstimate => totalMinutesCompleted > task.estimatedMinutes;
+  bool get hasTimeProgress => totalMinutesCompleted > 0;
+  bool get isCompleteByTime => completionPercentage >= 100.0;
+  bool get isCompleteByFlag => task.isCompleted;
+  bool get isActuallyComplete => isCompleteByFlag || isCompleteByTime;
+
+  String get statusDescription {
+    if (isCompleteByFlag) return 'Completed';
+    if (isCompleteByTime) return 'Time Complete';
+    if (hasTimeProgress) return '${completionPercentage.round()}% done';
+    return 'Not started';
+  }
+}
+
+class TaskWithProject {
+  final TaskData task;
+  final ProjectData? project;
+
+  TaskWithProject({required this.task, this.project});
+
+  String get displayName => task.name;
+  String get projectName => project?.name ?? 'No Project';
+  bool get hasProject => project != null;
+}
