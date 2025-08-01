@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/services/database.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
@@ -76,7 +77,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
 
   Future<void> _saveCurrentSettings() async {
     final settings = SettingsCompanion.insert(
-      id: 1,
+      id: Value(1),
       defaultStartTime: state.defaultStartTime,
       defaultTaskLength: state.defaultTaskLength,
       defaultBreakTime: state.defaultBreakTime,

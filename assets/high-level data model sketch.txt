@@ -19,3 +19,9 @@ Block  // “1‑hour slot”—may hold ≥1 Task
   ├─ start_minute_of_day   // e.g. 8 × 60 + 35 = 515
   ├─ length_minutes        // default 60
   └─ position_in_block     // 0 or 1 when you have 2 tasks in same block
+
+TaskCompletion
+  ├─ id (PK)
+  ├─ block_id (FK→Block)
+  ├─ minutes_completed
+  └─ completed_at (DATETIME)

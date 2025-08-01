@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/models/block.dart';
+import 'package:potential_aid_app/providers/completion_notifier.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/services/database.dart';
@@ -69,9 +70,13 @@ class ScheduleNotifier extends StateNotifier<List<BlockWithTask>> {
   }
 
   Future<void> removeTask(int blockId) async {
+    // Delete the block (cascade will automatically delete task completions)
     await (_database.delete(
       _database.block,
     )..where((block) => block.id.equals(blockId))).go();
+
+    // Invalidate the completion provider for this block
+    _ref.invalidate(blockCompletionProvider(blockId));
 
     await _loadScheduleForCurrentDate();
   }
@@ -124,6 +129,22 @@ class ScheduleNotifier extends StateNotifier<List<BlockWithTask>> {
     });
 
     await _loadScheduleForCurrentDate();
+  }
+
+  Future<void> addTaskCompletion(int blockId, int minutesCompleted) async {
+    final currentDate = _ref.read(dateNotifierProvider);
+    final dateTime = currentDate.atMidnight().toDateTimeLocal();
+
+    final completion = TaskCompletionCompanion.insert(
+      blockId: blockId,
+      minutesCompleted: minutesCompleted,
+      completedAt: dateTime,
+    );
+
+    await _database.into(_database.taskCompletion).insert(completion);
+
+    // Invalidate the completion provider for this specific block to refresh the UI
+    _ref.invalidate(blockCompletionProvider(blockId));
   }
 
   /// Add example tasks for testing the UI (WILL BE REMOVED)

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:potential_aid_app/models/block.dart'; // For BlockWithTask
+import 'package:potential_aid_app/models/block.dart';
+import 'package:potential_aid_app/providers/database_provider.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
+import 'package:potential_aid_app/services/database_completion.dart';
 import 'package:potential_aid_app/widgets/delete_task_dialog.dart';
 import 'package:potential_aid_app/widgets/task_block.dart';
 
@@ -30,10 +32,30 @@ class ScheduleList extends ConsumerWidget {
         final block = blocks[index];
         return _buildTaskPlaceholder(context, block, index);
       },
-      onReorder: (int oldIndex, int newIndex) {
-        ref
-            .read(scheduleNotifierProvider.notifier)
-            .reorderTasks(oldIndex, newIndex);
+      onReorder: (int oldIndex, int newIndex) async {
+        // Check if the task being moved is completed
+        final blockToMove = blocks[oldIndex];
+
+        try {
+          // Get the completion percentage directly from the database
+          final database = ref.read(databaseProvider);
+          final completionPercentage = await database
+              .getBlockCompletionPercentage(blockToMove.block.id);
+
+          final isCompleted = completionPercentage > 0;
+
+          if (!isCompleted) {
+            // Only allow reordering for incomplete tasks
+            ref
+                .read(scheduleNotifierProvider.notifier)
+                .reorderTasks(oldIndex, newIndex);
+          }
+        } catch (error) {
+          // On error, allow reordering (assume incomplete)
+          ref
+              .read(scheduleNotifierProvider.notifier)
+              .reorderTasks(oldIndex, newIndex);
+        }
       },
     );
   }
