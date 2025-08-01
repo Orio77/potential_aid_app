@@ -28,7 +28,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -39,6 +39,10 @@ class AppDatabase extends _$AppDatabase {
       if (from < 3) {
         // Add the task_completion table in version 2
         await m.createTable(taskCompletion);
+      }
+      if (from < 4) {
+        // Add the project table in version 4
+        await m.createTable(project);
       }
     },
   );
@@ -82,11 +86,11 @@ class AppDatabase extends _$AppDatabase {
   // 4. Add CRUD methods: insertProject, updateProject, deleteProject
   // 5. Add method to get tasks with project info for schedule screen
 
-  // Example implementation (uncomment and complete after Project model is ready):
-  // Future<List<ProjectData>> getAllProjects() async {
-  //   return await select(project).get();
-  // }
+  Future<List<ProjectData>> getAllProjects() async {
+    return await select(project).get();
+  }
 
+  // Example implementation (uncomment and complete after Project model is ready):
   // Future<List<ProjectWithStats>> getProjectsWithStats() async {
   //   // Join projects with task counts and completion statistics
   //   // This will be used by the ProjectsScreen to show project cards

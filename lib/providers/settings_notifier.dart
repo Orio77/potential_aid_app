@@ -77,12 +77,13 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
 
   Future<void> _saveCurrentSettings() async {
     final settings = SettingsCompanion.insert(
-      id: Value(1),
+      id: const Value(1),
       defaultStartTime: state.defaultStartTime,
       defaultTaskLength: state.defaultTaskLength,
       defaultBreakTime: state.defaultBreakTime,
     );
 
+    // Use insertOnConflictUpdate with proper conflict resolution
     await _database.into(_database.settings).insertOnConflictUpdate(settings);
   }
 }

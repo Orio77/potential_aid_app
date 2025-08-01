@@ -13,9 +13,9 @@
  */
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:drift/drift.dart';
-import 'package:potential_aid_app/services/database.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
+import 'package:potential_aid_app/services/database.dart';
+import 'package:time_machine/time_machine.dart';
 
 // TODO: Task 3.1 - Create ProjectsNotifier using Riverpod
 // STEPS:
@@ -27,38 +27,52 @@ import 'package:potential_aid_app/providers/database_provider.dart';
 // 6. Use Drift streams for reactive updates
 // 7. Create Riverpod provider for the notifier
 
-// Example structure (uncomment and complete after Project model is ready):
-// class ProjectsNotifier extends StateNotifier<List<ProjectWithStats>> {
-//   final AppDatabase _database;
-//   final Ref _ref;
-//
-//   ProjectsNotifier(this._database, this._ref) : super([]) {
-//     _loadProjects();
-//   }
-//
-//   Future<void> _loadProjects() async {
-//     // Load projects with statistics from database
-//     final projects = await _database.getProjectsWithStats();
-//     state = projects;
-//   }
-//
-//   Future<void> addProject(String name, DateTime deadline) async {
-//     // Validate inputs
-//     // Insert project to database
-//     // Refresh state
-//   }
-//
+class ProjectsNotifier extends StateNotifier<List<ProjectData>> {
+  final AppDatabase _database;
+
+  ProjectsNotifier(this._database) : super([]) {
+    _loadProjects();
+  }
+
+  Future<void> _loadProjects() async {
+    final projects = await _database.getAllProjects();
+    state = projects;
+  }
+
+  Future<void> addProject(
+    String name,
+    DateTime startDate,
+    DateTime deadline,
+  ) async {
+    final now = Instant.now().inUtc().toDateTimeUtc();
+    final projectModel = ProjectCompanion.insert(
+      name: name,
+      startDate: startDate,
+      deadline: deadline,
+      createdAt: now,
+    );
+
+    await _database.into(_database.project).insert(projectModel);
+    // Refresh the state after adding
+    await _loadProjects();
+  }
+
+  Future<int> deleteProject(int projectId) async {
+    final result = await (_database.delete(
+      _database.project,
+    )..where((project) => project.id.equals(projectId))).go();
+
+    // Refresh the state after deleting
+    await _loadProjects();
+    return result;
+  }
+}
+
 //   Future<void> editProject(int id, String name, DateTime deadline) async {
 //     // Update project in database
 //     // Refresh state
 //   }
 //
-//   Future<void> deleteProject(int id) async {
-//     // Handle tasks that belong to this project
-//     // Delete project from database
-//     // Refresh state
-//   }
-// }
 
 // TODO: Task 3.2 - Update existing notifiers to support projects
 // STEPS:
@@ -73,10 +87,11 @@ import 'package:potential_aid_app/providers/database_provider.dart';
 // 2. Create provider for project statistics (task count, completion %)
 // 3. Create provider for project deadline warnings
 
-// final projectsNotifierProvider = StateNotifierProvider<ProjectsNotifier, List<ProjectWithStats>>((ref) {
-//   final database = ref.watch(databaseProvider);
-//   return ProjectsNotifier(database, ref);
-// });
+final projectsNotifierProvider =
+    StateNotifierProvider<ProjectsNotifier, List<ProjectData>>((ref) {
+      final database = ref.watch(databaseProvider);
+      return ProjectsNotifier(database);
+    });
 
 // final projectTasksProvider = FutureProvider.family<List<TaskData>, int>((ref, projectId) async {
 //   final database = ref.watch(databaseProvider);
