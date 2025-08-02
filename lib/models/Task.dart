@@ -11,21 +11,22 @@
  */
 
 import 'package:drift/drift.dart';
+import 'project.dart';
 
 class Task extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text()();
   IntColumn get estimatedMinutes => integer()();
 
-  // TODO: Task 2.2 - Update Task model relationships
-  // STEPS:
-  // 1. Ensure projectId properly references Project table (add foreign key constraint)
-  // 2. Add helper methods to get project information for tasks
-  // 3. Update existing task creation to handle optional project assignment
+  /// Indicates whether the task has been completed.
+  BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
 
-  IntColumn get projectId => integer().nullable()();
-  // TODO: Add foreign key constraint when Project table is implemented:
-  // IntColumn get projectId => integer().nullable().references(Project, #id)();
+  /// Timestamp for when the task was completed. Null if not completed yet.
+  DateTimeColumn get completedAt => dateTime().nullable()();
+
+  /// Optional reference to the project this task belongs to.
+  IntColumn get projectId =>
+      integer().nullable().references(Project, #id, onDelete: KeyAction.setNull)();
 }
 
 // TODO: Task 2.3 - Create combined data models
@@ -35,16 +36,27 @@ class Task extends Table {
 // 3. Create data classes for UI consumption
 
 // Example implementation (uncomment after Project model is ready):
-// class TaskWithProject {
-//   final TaskData task;
-//   final ProjectData? project;
-//   
-//   TaskWithProject({
-//     required this.task,
-//     this.project,
-//   });
-//   
-//   String get displayName => task.name;
-//   String get projectName => project?.name ?? 'No Project';
-//   bool get hasProject => project != null;
-// }
+class TaskWithProject {
+  final TaskData task;
+  final ProjectData? project;
+
+  TaskWithProject({
+    required this.task,
+    this.project,
+  });
+
+  /// Convenience display name for the task.
+  String get displayName => task.name;
+
+  /// Returns the associated project name or a fallback when none exists.
+  String get projectName => project?.name ?? 'No Project';
+
+  /// Whether this task is part of a project.
+  bool get hasProject => project != null;
+
+  /// Whether the task has been completed.
+  bool get isCompleted => task.isCompleted;
+
+  /// Task completion timestamp if available.
+  DateTime? get completedAt => task.completedAt;
+}

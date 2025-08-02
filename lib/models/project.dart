@@ -11,12 +11,14 @@ class Project extends Table {
 class ProjectWithStats {
   final Project project;
   final int taskCount;
+  final int completedTaskCount;
   final double completionPercentage;
   final int daysUntilDeadline;
 
   ProjectWithStats({
     required this.project,
     required this.taskCount,
+    required this.completedTaskCount,
     required this.completionPercentage,
     required this.daysUntilDeadline,
   });
