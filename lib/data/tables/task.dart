@@ -8,6 +8,9 @@ class Task extends Table {
   IntColumn get projectId => integer()
       .references(Project, #id, onDelete: KeyAction.cascade)
       .nullable()();
+  TextColumn get unit => text().nullable()();
+  IntColumn get startPoint => integer().nullable()();
+  IntColumn get endGoal => integer().nullable()();
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
   DateTimeColumn get completedAt => dateTime().nullable()();
 }
