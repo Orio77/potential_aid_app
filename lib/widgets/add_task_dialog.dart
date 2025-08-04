@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/providers/settings_notifier.dart';
+import 'package:potential_aid_app/widgets/duration_picker_dialog.dart';
 
 class AddTaskDialog extends ConsumerStatefulWidget {
   const AddTaskDialog({super.key});
@@ -182,7 +183,7 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
     final int? picked = await showDialog(
       context: context,
       builder: (context) =>
-          _DurationPickerDialog(initialDuration: _durationMinutes),
+          DurationPickerDialog(initialDuration: _durationMinutes),
     );
 
     if (picked != null) {
@@ -190,71 +191,6 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
         _durationMinutes = picked;
       });
     }
-  }
-}
-
-class _DurationPickerDialog extends StatefulWidget {
-  final int initialDuration;
-
-  const _DurationPickerDialog({required this.initialDuration});
-
-  @override
-  State<_DurationPickerDialog> createState() => _DurationPickerDialogState();
-}
-
-class _DurationPickerDialogState extends State<_DurationPickerDialog> {
-  late int _duration;
-
-  @override
-  void initState() {
-    super.initState();
-    _duration = widget.initialDuration;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Select Duration'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('$_duration minutes'),
-          Slider(
-            value: _duration.toDouble(),
-            min: 1,
-            max: 480,
-            onChanged: (value) {
-              setState(() {
-                _duration = value.round();
-              });
-            },
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              TextButton(
-                onPressed: () => setState(() => _duration = 30),
-                child: const Text('30m'),
-              ),
-              TextButton(
-                onPressed: () => setState(() => _duration = 60),
-                child: const Text('1h'),
-              ),
-            ],
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.of(context).pop(_duration),
-          child: const Text('OK'),
-        ),
-      ],
-    );
   }
 }
 
