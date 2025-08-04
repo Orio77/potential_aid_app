@@ -16,6 +16,7 @@ class AddTaskDialog extends ConsumerStatefulWidget {
 class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
   final _formKey = GlobalKey<FormState>();
   final _taskNameController = TextEditingController();
+  final _focusNode = FocusNode();
   late TimeOfDay _startTime;
   int _durationMinutes = 60;
   bool _isLoading = false;
@@ -30,6 +31,10 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
     _durationMinutes = settings.defaultTaskLength;
 
     _startTime = _calculateNextAvailableTime();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+    });
   }
 
   @override
@@ -127,6 +132,7 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
             children: [
               TextFormField(
                 controller: _taskNameController,
+                focusNode: _focusNode,
                 decoration: const InputDecoration(
                   labelText: 'Task name',
                   border: OutlineInputBorder(),
