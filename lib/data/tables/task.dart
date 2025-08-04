@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
-import 'package:potential_aid_app/models/project.dart';
-import 'package:potential_aid_app/services/database.dart';
+import 'package:potential_aid_app/data/tables/project.dart';
+import 'package:potential_aid_app/data/database.dart';
 
 class Task extends Table {
   IntColumn get id => integer().autoIncrement()();

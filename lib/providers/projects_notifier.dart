@@ -14,7 +14,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
-import 'package:potential_aid_app/services/database.dart';
+import 'package:potential_aid_app/data/database.dart';
 import 'package:time_machine/time_machine.dart';
 
 // TODO: Task 3.1 - Create ProjectsNotifier using Riverpod

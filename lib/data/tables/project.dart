@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:potential_aid_app/services/database.dart';
+import 'package:potential_aid_app/data/database.dart';
 
 class Project extends Table {
   IntColumn get id => integer().autoIncrement()();

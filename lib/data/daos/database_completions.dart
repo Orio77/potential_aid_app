@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:potential_aid_app/services/database.dart';
+import 'package:potential_aid_app/data/database.dart';
 
 extension AppDatabaseCompletion on AppDatabase {
   Future<double> getBlockCompletionPercentage(int blockId) async {

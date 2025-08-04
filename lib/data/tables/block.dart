@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:potential_aid_app/services/database.dart';
+import 'package:potential_aid_app/data/database.dart';
 import 'task.dart';
 
 class Block extends Table {

@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:potential_aid_app/services/database.dart';
+import 'package:potential_aid_app/data/database.dart';
 import 'package:time_machine/time_machine.dart';
 
 extension AppDatabaseProjects on AppDatabase {

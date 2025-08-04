@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:potential_aid_app/services/database.dart';
+import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
 
 class AppSettings {

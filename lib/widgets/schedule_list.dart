@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:potential_aid_app/models/block.dart';
+import 'package:potential_aid_app/data/tables/block.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
-import 'package:potential_aid_app/services/database_completion.dart';
+import 'package:potential_aid_app/data/daos/database_completions.dart';
 import 'package:potential_aid_app/widgets/delete_task_dialog.dart';
 import 'package:potential_aid_app/widgets/edit_task_dialog.dart';
 import 'package:potential_aid_app/widgets/task_block.dart';

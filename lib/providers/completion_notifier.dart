@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
-import 'package:potential_aid_app/services/database_completion.dart';
+import 'package:potential_aid_app/data/daos/database_completions.dart';
 
 // Provider that gets completion percentage for a specific block
 final blockCompletionProvider = FutureProvider.family<double, int>((

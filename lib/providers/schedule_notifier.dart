@@ -1,10 +1,10 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:potential_aid_app/models/block.dart';
+import 'package:potential_aid_app/data/tables/block.dart';
 import 'package:potential_aid_app/providers/completion_notifier.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
-import 'package:potential_aid_app/services/database.dart';
+import 'package:potential_aid_app/data/database.dart';
 
 class ScheduleNotifier extends StateNotifier<List<BlockWithTask>> {
   final AppDatabase _database;

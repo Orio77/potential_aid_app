@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:potential_aid_app/models/block.dart';
+import 'package:potential_aid_app/data/tables/block.dart';
 import 'package:potential_aid_app/providers/completion_notifier.dart';
 import 'package:potential_aid_app/widgets/complete_task_dialog.dart';
 

@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:potential_aid_app/models/block.dart';
+import 'package:potential_aid_app/data/tables/block.dart';
 
 @TableIndex(name: 'idx_task_completion_block_id', columns: {#blockId})
 @TableIndex(name: 'idx_task_completion_completed_at', columns: {#completedAt})
