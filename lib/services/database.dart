@@ -70,11 +70,7 @@ class AppDatabase extends _$AppDatabase {
       final blockData = row.readTable(block);
       final taskData = row.readTable(task);
 
-      return BlockWithTask(
-        block: blockData,
-        taskName: taskData.name,
-        taskEstimatedMinutes: taskData.estimatedMinutes,
-      );
+      return BlockWithTask(block: blockData, taskName: taskData.name);
     }).toList();
   }
 

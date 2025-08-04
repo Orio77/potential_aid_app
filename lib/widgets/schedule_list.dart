@@ -5,6 +5,7 @@ import 'package:potential_aid_app/providers/database_provider.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/services/database_completion.dart';
 import 'package:potential_aid_app/widgets/delete_task_dialog.dart';
+import 'package:potential_aid_app/widgets/edit_task_dialog.dart';
 import 'package:potential_aid_app/widgets/task_block.dart';
 
 class ScheduleList extends ConsumerWidget {
@@ -70,10 +71,16 @@ class ScheduleList extends ConsumerWidget {
       key: ValueKey(block.block.id), // Unique key for ReorderableListView
       block: block,
       onTap: () {
-        // TODO: Replace with: showEditTaskDialog(context, block)
-        print(
-          'Tapped task: ${block.block.id}',
-        ); // Access block data through block.block
+        showDialog(
+          context: context,
+          builder: (BuildContext dialogContext) {
+            return EditTaskDialog(
+              blockId: block.block.id,
+              taskId: block.block.taskId,
+              initialTaskName: block.taskName,
+            );
+          },
+        );
       },
       onLongPress: () {
         showDialog(

@@ -4,14 +4,23 @@ import 'package:potential_aid_app/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/providers/settings_notifier.dart';
 import 'package:potential_aid_app/widgets/duration_picker_dialog.dart';
 
-class AddTaskDialog extends ConsumerStatefulWidget {
-  const AddTaskDialog({super.key});
+class EditTaskDialog extends ConsumerStatefulWidget {
+  final int blockId;
+  final int taskId;
+  final String? initialTaskName;
+
+  const EditTaskDialog({
+    super.key,
+    required this.blockId,
+    required this.taskId,
+    this.initialTaskName,
+  });
 
   @override
-  ConsumerState<AddTaskDialog> createState() => _AddTaskDialogState();
+  ConsumerState<EditTaskDialog> createState() => _EditTaskDialogState();
 }
 
-class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
+class _EditTaskDialogState extends ConsumerState<EditTaskDialog> {
   final _formKey = GlobalKey<FormState>();
   final _taskNameController = TextEditingController();
   late TimeOfDay _startTime;
@@ -25,6 +34,10 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
 
     final settings = ref.read(settingsNotifierProvider);
     _durationMinutes = settings.defaultTaskLength;
+
+    if (widget.initialTaskName != null) {
+      _taskNameController.text = widget.initialTaskName!;
+    }
 
     _startTime = _calculateNextAvailableTime();
   }
@@ -67,7 +80,7 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
     return null;
   }
 
-  Future<void> _saveTask() async {
+  Future<void> _editTask(int blockId, int taskId) async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -81,12 +94,12 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
       final taskName = _taskNameController.text.trim();
       final startMinutes = _timeOfDayToMinutes(_startTime);
 
-      int taskId = await ref
-          .read(scheduleNotifierProvider.notifier)
-          .addTask(taskName);
       await ref
           .read(scheduleNotifierProvider.notifier)
-          .addBlock(startMinutes, _durationMinutes, taskId);
+          .editTask(taskId, taskName);
+      await ref
+          .read(scheduleNotifierProvider.notifier)
+          .editBlock(blockId, startMinutes, _durationMinutes);
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -156,7 +169,9 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
           child: const Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: _isLoading ? null : _saveTask,
+          onPressed: _isLoading
+              ? null
+              : (() => _editTask(widget.blockId, widget.taskId)),
           child: _isLoading
               ? const SizedBox(
                   width: 16,
@@ -197,9 +212,18 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
   }
 }
 
-Future<void> showAddTaskDialog(BuildContext context) async {
+Future<void> showEditTaskDialog(
+  BuildContext context, {
+  required int blockId,
+  required int taskId,
+  String? initialTaskName,
+}) async {
   await showDialog(
     context: context,
-    builder: (context) => const AddTaskDialog(),
+    builder: (context) => EditTaskDialog(
+      blockId: blockId,
+      taskId: taskId,
+      initialTaskName: initialTaskName,
+    ),
   );
 }

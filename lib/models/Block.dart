@@ -13,13 +13,8 @@ class Block extends Table {
 class BlockWithTask {
   final BlockData block;
   final String taskName;
-  final int taskEstimatedMinutes;
 
-  BlockWithTask({
-    required this.block,
-    required this.taskName,
-    required this.taskEstimatedMinutes,
-  });
+  BlockWithTask({required this.block, required this.taskName});
 
   String get displayName => taskName.isEmpty ? "Unnamed task" : taskName;
 

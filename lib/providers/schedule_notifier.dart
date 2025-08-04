@@ -39,25 +39,55 @@ class ScheduleNotifier extends StateNotifier<List<BlockWithTask>> {
     return blocksWithTasks;
   }
 
-  // TODO Implement
-  Future<void> editTask() async {}
-
-  Future<void> addTask(
-    String taskName,
-    int startMinute,
-    int lengthMinutes,
+  Future<void> editBlock(
+    int blockId,
+    int? startMinute,
+    int? lengthMinutes,
   ) async {
-    final task = TaskCompanion.insert(
-      name: taskName,
-      estimatedMinutes: lengthMinutes,
+    BlockData block = await (_database.select(
+      _database.block,
+    )..where((block) => block.id.equals(blockId))).getSingle();
+
+    final newStartMinute = (startMinute == null || startMinute <= 0)
+        ? block.startMinuteOfDay
+        : startMinute;
+    final newLengthMinutes = (lengthMinutes == null || lengthMinutes <= 0)
+        ? block.lengthMinutes
+        : block.lengthMinutes;
+
+    await (_database.update(
+      _database.block,
+    )..where((block) => block.id.equals(blockId))).write(
+      BlockCompanion(
+        startMinuteOfDay: Value(newStartMinute),
+        lengthMinutes: Value(newLengthMinutes),
+      ),
     );
 
-    final taskId = await _database.into(_database.task).insert(task);
+    await _loadScheduleForCurrentDate();
+  }
 
+  Future<void> editTask(int taskId, String? taskName) async {
+    TaskData task = await (_database.select(
+      _database.task,
+    )..where((task) => task.id.equals(taskId))).getSingle();
+
+    final newTaskName = (taskName == null || taskName.trim().isEmpty)
+        ? task.name
+        : taskName;
+
+    await (_database.update(_database.task)
+          ..where((task) => task.id.equals(taskId)))
+        .write(TaskCompanion(name: Value(newTaskName)));
+
+    await _loadScheduleForCurrentDate();
+  }
+
+  Future<void> addBlock(int startMinute, int lengthMinutes, int taskId) async {
     final currentDate = _ref.read(dateNotifierProvider);
     final dateTime = currentDate.atMidnight().toDateTimeLocal();
 
-    final block = BlockCompanion.insert(
+    BlockCompanion block = BlockCompanion.insert(
       taskId: taskId,
       dayLocal: dateTime,
       startMinuteOfDay: startMinute,
@@ -65,8 +95,17 @@ class ScheduleNotifier extends StateNotifier<List<BlockWithTask>> {
     );
 
     await _database.into(_database.block).insert(block);
+    await _loadScheduleForCurrentDate();
+  }
+
+  Future<int> addTask(String taskName) async {
+    final task = TaskCompanion.insert(name: taskName);
+
+    int taskId = await _database.into(_database.task).insert(task);
 
     await _loadScheduleForCurrentDate();
+
+    return taskId;
   }
 
   Future<void> removeTask(int blockId) async {
@@ -170,10 +209,7 @@ class ScheduleNotifier extends StateNotifier<List<BlockWithTask>> {
     await _database.transaction(() async {
       for (final (taskName, startMinute, lengthMinutes) in exampleTasks) {
         // Create task
-        final task = TaskCompanion.insert(
-          name: taskName,
-          estimatedMinutes: lengthMinutes,
-        );
+        final task = TaskCompanion.insert(name: taskName);
         final taskId = await _database.into(_database.task).insert(task);
 
         // Create block
