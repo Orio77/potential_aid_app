@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/providers/settings_notifier.dart';
+import 'package:potential_aid_app/providers/task_search_notifier.dart';
 import 'package:potential_aid_app/widgets/duration_picker_dialog.dart';
 
 class AddTaskDialog extends ConsumerStatefulWidget {
@@ -18,6 +20,7 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
   int _durationMinutes = 60;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _showSuggestions = false;
 
   @override
   void initState() {
@@ -67,6 +70,13 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
     return null;
   }
 
+  void _selectTask(TaskData task) {
+    _taskNameController.text = task.name;
+    setState(() {
+      _showSuggestions = false;
+    });
+  }
+
   Future<void> _saveTask() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -104,6 +114,8 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final searchResults = ref.watch(taskSearchProvider);
+
     return AlertDialog(
       title: const Center(child: Text('Add New Task')),
       content: SizedBox(
@@ -121,7 +133,60 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
                 ),
                 validator: _validateTaskName,
                 enabled: !_isLoading,
+                onChanged: (value) {
+                  ref.read(taskSearchProvider.notifier).search(value);
+                  setState(() {
+                    _showSuggestions =
+                        value.isNotEmpty && searchResults.isNotEmpty;
+                  });
+                },
+                onTap: () {
+                  if (_taskNameController.text.isNotEmpty &&
+                      searchResults.isNotEmpty) {
+                    setState(() {
+                      _showSuggestions = true;
+                    });
+                  }
+                },
               ),
+
+              if (_showSuggestions && searchResults.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 150),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(4),
+                    color: Colors.white,
+                  ),
+                  child: ListView.separated(
+                    itemBuilder: (context, index) {
+                      final task = searchResults[index];
+                      return ListTile(
+                        dense: true,
+                        title: Text(
+                          task.name,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                        leading: const Icon(
+                          Icons.task_alt,
+                          size: 16,
+                          color: Colors.blue,
+                        ),
+                        trailing: const Icon(
+                          Icons.arrow_forward_ios,
+                          size: 12,
+                          color: Colors.grey,
+                        ),
+                        onTap: () => _selectTask(task),
+                      );
+                    },
+                    separatorBuilder: (context, index) =>
+                        const Divider(height: 1),
+                    itemCount: searchResults.length,
+                  ),
+                ),
+              ],
 
               const SizedBox(height: 16),
 

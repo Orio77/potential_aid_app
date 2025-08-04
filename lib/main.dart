@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/screens/main_screen.dart';
+import 'package:potential_aid_app/screens/projects_screen.dart';
 import 'package:time_machine/time_machine.dart';
 
 void main() async {
@@ -20,7 +21,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-
+      routes: {'/projects': (context) => const ProjectsScreen()},
       home: const MainScreen(),
     );
   }

@@ -1,8 +1,11 @@
 import 'package:drift/drift.dart';
 
-// One row table
+/// A table that can hold exactly one row (id must be 1).
 class Settings extends Table {
-  IntColumn get id => integer().withDefault(const Constant(1)).unique()();
+  /// The lone primary-key row, fixed to the value 1.
+  IntColumn get id =>
+      integer().customConstraint('NOT NULL DEFAULT 1 CHECK (id = 1)')();
+
   IntColumn get defaultStartTime => integer()();
   IntColumn get defaultTaskLength => integer()();
   IntColumn get defaultBreakTime => integer()();

@@ -4,7 +4,7 @@ import 'package:potential_aid_app/data/database.dart';
 
 class Task extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get name => text()();
+  TextColumn get name => text().unique()();
   IntColumn get projectId => integer()
       .references(Project, #id, onDelete: KeyAction.cascade)
       .nullable()();

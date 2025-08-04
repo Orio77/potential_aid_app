@@ -99,9 +99,8 @@ class ScheduleNotifier extends StateNotifier<List<BlockWithTask>> {
   }
 
   Future<int> addTask(String taskName) async {
-    final task = TaskCompanion.insert(name: taskName);
-
-    int taskId = await _database.into(_database.task).insert(task);
+    // Use the database helper method to get or create the task
+    int taskId = await _database.getOrCreateTask(taskName);
 
     await _loadScheduleForCurrentDate();
 

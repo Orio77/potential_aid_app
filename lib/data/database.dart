@@ -14,7 +14,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -22,18 +22,17 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
     },
     onUpgrade: (Migrator m, int from, int to) async {
-      if (from < 3) {
-        // Add the task_completion table in version 2
-        await m.createTable(taskCompletion);
-      }
-      if (from < 4) {
-        // Add the project table in version 4
-        await m.createTable(project);
-      }
-      if (from < 5) {
-        // Remove estimated_minutes column from task table in version 5
+      // Since we're okay with losing test data, just recreate everything
+      if (from < 11) {
+        // Drop all tables and recreate them with the current schema
+        await m.deleteTable('task_completion');
+        await m.deleteTable('block');
         await m.deleteTable('task');
-        await m.createTable(task);
+        await m.deleteTable('project');
+        await m.deleteTable('settings');
+
+        // Recreate all tables with current schema
+        await m.createAll();
       }
     },
     beforeOpen: (details) async {
@@ -76,5 +75,26 @@ class AppDatabase extends _$AppDatabase {
 
   Future<List<ProjectData>> getAllProjects() async {
     return await select(project).get();
+  }
+
+  Future<List<TaskData>> getAllTasks() async {
+    return await (select(task)).get();
+  }
+
+  Future<int> getOrCreateTask(String taskName) async {
+    // First, try to find an existing task with the same name
+    final existingTaskQuery = select(task)
+      ..where((t) => t.name.equals(taskName));
+
+    final existingTasks = await existingTaskQuery.get();
+
+    if (existingTasks.isNotEmpty) {
+      // Task already exists, return its ID
+      return existingTasks.first.id;
+    }
+
+    // Task doesn't exist, create a new one
+    final newTask = TaskCompanion.insert(name: taskName);
+    return await into(task).insert(newTask);
   }
 }
