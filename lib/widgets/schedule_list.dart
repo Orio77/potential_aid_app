@@ -36,17 +36,21 @@ class ScheduleList extends ConsumerWidget {
       },
       onReorder: (int oldIndex, int newIndex) async {
         // Check if the task being moved is completed
-        final blockToMove = blocks[oldIndex];
+        final first = blocks[oldIndex];
+        final second = blocks[newIndex];
 
         try {
           // Get the completion percentage directly from the database
           final database = ref.read(databaseProvider);
-          final completionPercentage = await database
-              .getBlockCompletionPercentage(blockToMove.block.id);
+          final firstCompletionPercentage = await database
+              .getBlockCompletionPercentage(first.block.id);
+          final secondCompletionPercentage = await database
+              .getBlockCompletionPercentage(second.block.id);
 
-          final isCompleted = completionPercentage > 0;
+          final anyCompleted =
+              firstCompletionPercentage > 0 || secondCompletionPercentage > 0;
 
-          if (!isCompleted) {
+          if (!anyCompleted) {
             // Only allow reordering for incomplete tasks
             ref
                 .read(scheduleNotifierProvider.notifier)
