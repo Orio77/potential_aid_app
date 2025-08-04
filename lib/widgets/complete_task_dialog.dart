@@ -23,6 +23,12 @@ class _CompleteTaskDialogState extends ConsumerState<CompleteTaskDialog> {
   late int minutesCompleted;
 
   @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Center(
@@ -37,6 +43,7 @@ class _CompleteTaskDialogState extends ConsumerState<CompleteTaskDialog> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              SizedBox(width: 60),
               ConstrainedBox(
                 constraints: BoxConstraints.tightFor(
                   width: _fieldWidth(widget.blockLength),
@@ -58,6 +65,15 @@ class _CompleteTaskDialogState extends ConsumerState<CompleteTaskDialog> {
               ),
               const SizedBox(width: 12),
               Text(' / ${widget.blockLength}'),
+              TextButton(
+                onPressed: () {
+                  minutesCompleted = widget.blockLength;
+                  setState(() {
+                    _controller.text = minutesCompleted.toString();
+                  });
+                },
+                child: Text('>>'),
+              ),
             ],
           ),
         ],
