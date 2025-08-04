@@ -118,7 +118,7 @@ class _EditTaskDialogState extends ConsumerState<EditTaskDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Center(child: Text('Add New Task')),
+      title: const Center(child: Text('Edit Task')),
       content: SizedBox(
         width: double.maxFinite,
         child: Form(
