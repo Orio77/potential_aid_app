@@ -14,7 +14,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -30,6 +30,20 @@ class AppDatabase extends _$AppDatabase {
         // Add the project table in version 4
         await m.createTable(project);
       }
+      if (from < 5) {
+        // Remove estimated_minutes column from task table in version 5
+        await m.deleteTable('task');
+        await m.createTable(task);
+      }
+    },
+    beforeOpen: (details) async {
+      // For development: uncomment these lines to reset database on every restart
+      // final db = details.database;
+      // await db.execute('DROP TABLE IF EXISTS task');
+      // await db.execute('DROP TABLE IF EXISTS task_completion');
+      // await db.execute('DROP TABLE IF EXISTS block');
+      // await db.execute('DROP TABLE IF EXISTS project');
+      // await db.execute('DROP TABLE IF EXISTS settings');
     },
   );
 

@@ -41,7 +41,7 @@ class TaskBlock extends ConsumerWidget {
     ThemeData theme,
     double completionPercentage,
   ) {
-    final isCompleted = completionPercentage > 0;
+    final isCompleted = completionPercentage > 0.0;
 
     return Opacity(
       opacity: isCompleted ? 0.6 : 1.0,
@@ -98,15 +98,15 @@ class TaskBlock extends ConsumerWidget {
   }
 
   Widget _buildTaskName(ThemeData theme, double completionPercentage) {
-    final isFullyCompleted = completionPercentage >= 100.0;
+    final isCompleted = completionPercentage > 0.0;
 
     return Text(
       block.taskName,
       style: theme.textTheme.titleMedium?.copyWith(
         fontWeight: FontWeight.w600,
-        decoration: isFullyCompleted ? TextDecoration.lineThrough : null,
+        decoration: isCompleted ? TextDecoration.lineThrough : null,
         decorationColor: theme.colorScheme.onSurfaceVariant,
-        color: isFullyCompleted
+        color: isCompleted
             ? theme.colorScheme.onSurfaceVariant
             : theme.textTheme.titleMedium?.color,
       ),
@@ -160,10 +160,10 @@ class TaskBlock extends ConsumerWidget {
   }
 
   Widget _buildActionButton(BuildContext context, double completionPercentage) {
-    final isFullyCompleted = completionPercentage >= 100.0;
+    final isCompleted = completionPercentage > 0.0;
 
     return IconButton(
-      onPressed: isFullyCompleted
+      onPressed: isCompleted
           ? null
           : () {
               showDialog(
@@ -177,8 +177,8 @@ class TaskBlock extends ConsumerWidget {
               );
             },
       icon: Icon(
-        isFullyCompleted ? Icons.check_circle : Icons.task_alt,
-        color: isFullyCompleted
+        isCompleted ? Icons.check_circle : Icons.task_alt,
+        color: isCompleted
             ? Colors.grey
             : Theme.of(context).colorScheme.onSurface,
       ),

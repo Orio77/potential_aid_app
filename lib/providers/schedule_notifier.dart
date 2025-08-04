@@ -53,7 +53,7 @@ class ScheduleNotifier extends StateNotifier<List<BlockWithTask>> {
         : startMinute;
     final newLengthMinutes = (lengthMinutes == null || lengthMinutes <= 0)
         ? block.lengthMinutes
-        : block.lengthMinutes;
+        : lengthMinutes;
 
     await (_database.update(
       _database.block,

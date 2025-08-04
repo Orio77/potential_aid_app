@@ -78,6 +78,8 @@ class ScheduleList extends ConsumerWidget {
               blockId: block.block.id,
               taskId: block.block.taskId,
               initialTaskName: block.taskName,
+              initialStartTime: block.block.startMinuteOfDay,
+              initialDuration: block.block.lengthMinutes,
             );
           },
         );

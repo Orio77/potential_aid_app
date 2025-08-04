@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
-import 'package:potential_aid_app/providers/settings_notifier.dart';
 import 'package:potential_aid_app/widgets/duration_picker_dialog.dart';
 
 class EditTaskDialog extends ConsumerStatefulWidget {
   final int blockId;
   final int taskId;
-  final String? initialTaskName;
+  final String initialTaskName;
+  final int initialStartTime;
+  final int initialDuration;
 
   const EditTaskDialog({
     super.key,
     required this.blockId,
     required this.taskId,
-    this.initialTaskName,
+    required this.initialTaskName,
+    required this.initialStartTime,
+    required this.initialDuration,
   });
 
   @override
@@ -23,23 +26,17 @@ class EditTaskDialog extends ConsumerStatefulWidget {
 class _EditTaskDialogState extends ConsumerState<EditTaskDialog> {
   final _formKey = GlobalKey<FormState>();
   final _taskNameController = TextEditingController();
+  late int _duration;
   late TimeOfDay _startTime;
-  int _durationMinutes = 60;
   bool _isLoading = false;
   String? _errorMessage;
 
   @override
   void initState() {
+    _duration = widget.initialDuration;
+    _startTime = _minutesToTimeOfDay(widget.initialStartTime);
+    _taskNameController.text = widget.initialTaskName;
     super.initState();
-
-    final settings = ref.read(settingsNotifierProvider);
-    _durationMinutes = settings.defaultTaskLength;
-
-    if (widget.initialTaskName != null) {
-      _taskNameController.text = widget.initialTaskName!;
-    }
-
-    _startTime = _calculateNextAvailableTime();
   }
 
   @override
@@ -48,36 +45,20 @@ class _EditTaskDialogState extends ConsumerState<EditTaskDialog> {
     super.dispose();
   }
 
-  TimeOfDay _calculateNextAvailableTime() {
-    final settings = ref.read(settingsNotifierProvider);
-    final schedule = ref.read(scheduleNotifierProvider);
-
-    if (schedule.isEmpty) {
-      final defaultMinutes = settings.defaultStartTime;
-      return TimeOfDay(hour: defaultMinutes ~/ 60, minute: defaultMinutes % 60);
-    }
-
-    final lastBlock = schedule.last;
-    final lastEndMinutes =
-        lastBlock.block.startMinuteOfDay + lastBlock.block.lengthMinutes;
-    final nextStartMinutes = lastEndMinutes + settings.defaultBreakTime;
-
-    return TimeOfDay(
-      hour: nextStartMinutes ~/ 60,
-      minute: nextStartMinutes % 60,
-    );
-  }
-
-  int _timeOfDayToMinutes(TimeOfDay time) {
-    return time.hour * 60 + time.minute;
-  }
-
   String? _validateTaskName(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Task name cannot be empty';
     }
 
     return null;
+  }
+
+  TimeOfDay _minutesToTimeOfDay(int minutes) {
+    return TimeOfDay(hour: minutes ~/ 60, minute: minutes % 60);
+  }
+
+  int _timeOfDayToMinutes(TimeOfDay time) {
+    return time.hour * 60 + time.minute;
   }
 
   Future<void> _editTask(int blockId, int taskId) async {
@@ -92,14 +73,13 @@ class _EditTaskDialogState extends ConsumerState<EditTaskDialog> {
 
     try {
       final taskName = _taskNameController.text.trim();
-      final startMinutes = _timeOfDayToMinutes(_startTime);
 
       await ref
           .read(scheduleNotifierProvider.notifier)
           .editTask(taskId, taskName);
       await ref
           .read(scheduleNotifierProvider.notifier)
-          .editBlock(blockId, startMinutes, _durationMinutes);
+          .editBlock(blockId, _timeOfDayToMinutes(_startTime), _duration);
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -148,7 +128,7 @@ class _EditTaskDialogState extends ConsumerState<EditTaskDialog> {
               ListTile(
                 leading: const Icon(Icons.timer),
                 title: const Text('Duration'),
-                subtitle: Text('$_durationMinutes minutes'),
+                subtitle: Text('$_duration minutes'),
                 onTap: _isLoading ? null : _pickDuration,
               ),
 
@@ -200,13 +180,12 @@ class _EditTaskDialogState extends ConsumerState<EditTaskDialog> {
   Future<void> _pickDuration() async {
     final int? picked = await showDialog(
       context: context,
-      builder: (context) =>
-          DurationPickerDialog(initialDuration: _durationMinutes),
+      builder: (context) => DurationPickerDialog(initialDuration: _duration),
     );
 
     if (picked != null) {
       setState(() {
-        _durationMinutes = picked;
+        _duration = picked;
       });
     }
   }
@@ -216,7 +195,9 @@ Future<void> showEditTaskDialog(
   BuildContext context, {
   required int blockId,
   required int taskId,
-  String? initialTaskName,
+  required String initialTaskName,
+  required int initialStartTime,
+  required int initialDuration,
 }) async {
   await showDialog(
     context: context,
@@ -224,6 +205,8 @@ Future<void> showEditTaskDialog(
       blockId: blockId,
       taskId: taskId,
       initialTaskName: initialTaskName,
+      initialStartTime: initialStartTime,
+      initialDuration: initialDuration,
     ),
   );
 }
