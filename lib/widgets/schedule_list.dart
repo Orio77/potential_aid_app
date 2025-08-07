@@ -71,31 +71,42 @@ class ScheduleList extends ConsumerWidget {
     BlockWithTask block,
     int index,
   ) {
-    return TaskBlock(
-      key: ValueKey(block.block.id), // Unique key for ReorderableListView
-      block: block,
-      onTap: () {
-        showDialog(
-          context: context,
-          builder: (BuildContext dialogContext) {
-            return EditTaskDialog(
-              blockId: block.block.id,
-              taskId: block.block.taskId,
-              initialTaskName: block.taskName,
-              initialStartTime: block.block.startMinuteOfDay,
-              initialDuration: block.block.lengthMinutes,
-            );
-          },
-        );
+    return Dismissible(
+      key: ValueKey(block.block.id),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsetsDirectional.symmetric(horizontal: 20),
+        color: Colors.red,
+        child: const Icon(Icons.delete, color: Colors.white, size: 24),
+      ),
+      confirmDismiss: (direction) async {
+        return await showDialog<bool>(
+              context: context,
+              builder: (BuildContext dialogContext) {
+                return DeleteTaskDialog(blockId: block.block.id);
+              },
+            ) ??
+            false;
       },
-      onLongPress: () {
-        showDialog(
-          context: context,
-          builder: (BuildContext dialogContext) {
-            return DeleteTaskDialog(blockId: block.block.id);
-          },
-        );
-      },
+      child: TaskBlock(
+        key: ValueKey(block.block.id), // Unique key for ReorderableListView
+        block: block,
+        onTap: () {
+          showDialog(
+            context: context,
+            builder: (BuildContext dialogContext) {
+              return EditTaskDialog(
+                blockId: block.block.id,
+                taskId: block.block.taskId,
+                initialTaskName: block.taskName,
+                initialStartTime: block.block.startMinuteOfDay,
+                initialDuration: block.block.lengthMinutes,
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
