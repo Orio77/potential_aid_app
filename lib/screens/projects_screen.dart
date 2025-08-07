@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:potential_aid_app/widgets/projects/add_project_dialog.dart';
+import 'package:potential_aid_app/widgets/projects/project_list.dart';
 
 class ProjectsScreen extends ConsumerWidget {
   const ProjectsScreen({super.key});
@@ -16,7 +18,13 @@ class ProjectsScreen extends ConsumerWidget {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
 
-      body: const Center(child: Text('Projects Will Be Here Soon!')),
+      body: Column(children: [Expanded(child: ProjectList())]),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showAddProjectDialog(context);
+        },
+        child: const Icon(Icons.add),
+      ),
     );
   }
 }
