@@ -7,6 +7,6 @@ class TaskCompletion extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get blockId =>
       integer().references(Block, #id, onDelete: KeyAction.cascade)();
-  IntColumn get minutesCompleted => integer()();
+  IntColumn get count => integer()();
   DateTimeColumn get completedAt => dateTime()();
 }

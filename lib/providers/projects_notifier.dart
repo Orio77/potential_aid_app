@@ -17,10 +17,22 @@ class ProjectsNotifier extends StateNotifier<List<ProjectData>> {
 
   Future<int> addProject(
     String name,
-    DateTime deadline,
     DateTime startDate,
+    DateTime deadline,
+    int? startPoint,
+    int? current,
+    int? goal,
+    String? unit,
   ) async {
-    final projectId = await _database.addProject(name, deadline, startDate);
+    final projectId = await _database.addProject(
+      name,
+      startDate,
+      deadline,
+      startPoint,
+      current,
+      goal,
+      unit,
+    );
 
     await _loadProjects();
 

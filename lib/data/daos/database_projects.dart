@@ -1,19 +1,24 @@
 import 'package:drift/drift.dart';
 import 'package:potential_aid_app/data/database.dart';
-import 'package:time_machine/time_machine.dart';
 
 extension AppDatabaseProjects on AppDatabase {
   Future<int> addProject(
     String name,
-    DateTime deadline,
     DateTime startDate,
+    DateTime deadline,
+    int? startPoint,
+    int? current,
+    int? goal,
+    String? unit,
   ) async {
-    final now = Instant.now().inUtc().toDateTimeUtc();
     final projectComp = ProjectCompanion(
       name: Value(name),
-      deadline: Value(deadline),
       startDate: Value(startDate),
-      createdAt: Value(now),
+      startPoint: Value(startPoint ?? 0),
+      deadline: Value(deadline),
+      current: Value(current ?? 0),
+      goal: Value(goal ?? 1),
+      unit: Value(unit ?? ""),
     );
 
     return await into(project).insert(projectComp);

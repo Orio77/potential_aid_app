@@ -93,7 +93,15 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
 
       await ref
           .read(projectsNotifierProvider.notifier)
-          .addProject(projectName, DateTime.now(), DateTime.now());
+          .addProject(
+            projectName,
+            DateTime.now(),
+            DateTime.now(),
+            0,
+            0,
+            0,
+            "unit",
+          );
 
       if (mounted) {
         Navigator.of(context).pop();

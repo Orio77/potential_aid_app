@@ -19,7 +19,7 @@ extension AppDatabaseCompletion on AppDatabase {
       return 0.0;
     }
 
-    return (completion.minutesCompleted / blockData.lengthMinutes * 100);
+    return (completion.count / blockData.lengthMinutes * 100);
   }
 
   Future<TaskCompletionData?> getCompletionForBlock(int blockId) async {

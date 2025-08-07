@@ -175,7 +175,7 @@ class ScheduleNotifier extends StateNotifier<List<BlockWithTask>> {
 
     final completion = TaskCompletionCompanion.insert(
       blockId: blockId,
-      minutesCompleted: minutesCompleted,
+      count: minutesCompleted,
       completedAt: dateTime,
     );
 

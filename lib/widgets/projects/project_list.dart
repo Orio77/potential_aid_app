@@ -24,7 +24,7 @@ class ProjectList extends ConsumerWidget {
       ),
       itemCount: projects.length,
       itemBuilder: (context, index) {
-        return ProjectCard(name: projects[index].name);
+        return ProjectCard(project: projects[index]);
       },
     );
   }

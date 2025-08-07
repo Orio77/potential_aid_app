@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:potential_aid_app/data/tables/project.dart';
-import 'package:potential_aid_app/data/database.dart';
 
+@TableIndex(name: 'idx_task_project_id', columns: {#projectId})
 class Task extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text().unique()();
@@ -9,47 +9,10 @@ class Task extends Table {
       .references(Project, #id, onDelete: KeyAction.cascade)
       .nullable()();
   TextColumn get unit => text().nullable()();
-  IntColumn get startPoint => integer().nullable()();
+  IntColumn get startPoint =>
+      integer().nullable().withDefault(const Constant(0))();
+  IntColumn get current => integer().withDefault(const Constant(0))();
   IntColumn get endGoal => integer().nullable()();
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
   DateTimeColumn get completedAt => dateTime().nullable()();
-}
-
-class TaskWithStats {
-  final TaskData task;
-  final int totalMinutesCompleted;
-  final double completionPercentage;
-  final int blocksCount;
-  final int completedBlocksCount;
-
-  TaskWithStats({
-    required this.task,
-    required this.totalMinutesCompleted,
-    required this.completionPercentage,
-    required this.blocksCount,
-    required this.completedBlocksCount,
-  });
-
-  bool get hasTimeProgress => totalMinutesCompleted > 0;
-  bool get isCompleteByTime => completionPercentage >= 100.0;
-  bool get isCompleteByFlag => task.isCompleted;
-  bool get isActuallyComplete => isCompleteByFlag || isCompleteByTime;
-
-  String get statusDescription {
-    if (isCompleteByFlag) return 'Completed';
-    if (isCompleteByTime) return 'Time Complete';
-    if (hasTimeProgress) return '${completionPercentage.round()}% done';
-    return 'Not started';
-  }
-}
-
-class TaskWithProject {
-  final TaskData task;
-  final ProjectData? project;
-
-  TaskWithProject({required this.task, this.project});
-
-  String get displayName => task.name;
-  String get projectName => project?.name ?? 'No Project';
-  bool get hasProject => project != null;
 }

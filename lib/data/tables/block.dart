@@ -2,9 +2,12 @@ import 'package:drift/drift.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'task.dart';
 
+@TableIndex(name: 'idx_block_task_id', columns: {#taskId})
+@TableIndex(name: 'idx_block_day_local', columns: {#dayLocal})
 class Block extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get taskId => integer().references(Task, #id)();
+  IntColumn get taskId =>
+      integer().references(Task, #id, onDelete: KeyAction.cascade)();
   DateTimeColumn get dayLocal => dateTime()();
   IntColumn get startMinuteOfDay => integer()();
   IntColumn get lengthMinutes => integer()();
