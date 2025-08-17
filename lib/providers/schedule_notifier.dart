@@ -264,7 +264,118 @@ class ScheduleNotifier extends StateNotifier<List<BlockWithTask>> {
 
     await _loadScheduleForCurrentDate();
   }
+
+  // TODO: ADD BLOCK MANAGEMENT METHODS FOR ADD BLOCK DIALOG
+  // The following methods need to be implemented to support the Add Block Dialog
+  // functionality where users can create blocks with multiple tasks.
+
+  // TODO: Implement addBlockWithMultipleTasks method
+  // This method should:
+  // - Accept startMinutes, totalDurationMinutes, List<TaskData> tasks, and date
+  // - Calculate time per task (equal distribution or custom allocation)
+  // - Create block entries for each task with position_in_block (0, 1, 2, etc.)
+  // - Validate no overlapping blocks exist using _validateBlockTimeSlot
+  // - Save all block entries in a database transaction
+  // - Refresh schedule data by calling _loadScheduleForCurrentDate()
+  // - Return List<int> of created block IDs
+  // Example signature:
+  // Future<List<int>> addBlockWithMultipleTasks(
+  //   int startMinutes,
+  //   int totalDurationMinutes, 
+  //   List<TaskData> tasks,
+  //   DateTime date,
+  // ) async { ... }
+
+  // TODO: Implement _validateBlockTimeSlot method (private helper)
+  // This method should:
+  // - Accept startMinutes, durationMinutes, and date parameters
+  // - Check existing blocks for the given date for time conflicts
+  // - Calculate if the proposed time slot overlaps with existing blocks
+  // - Return BlockValidationResult indicating if slot is available
+  // - Include details about any conflicting blocks for user feedback
+  // Example signature:
+  // Future<BlockValidationResult> _validateBlockTimeSlot(
+  //   int startMinutes,
+  //   int durationMinutes,
+  //   DateTime date,
+  // ) async { ... }
+
+  // TODO: Implement updateBlockTaskOrder method
+  // This method should:
+  // - Accept blockId and reorderedTasks parameters
+  // - Update position_in_block values for tasks within the same block
+  // - Maintain the same time slots but change task execution order
+  // - Use database transaction to ensure consistency
+  // - Refresh schedule data after updates
+  // Example signature:
+  // Future<bool> updateBlockTaskOrder(
+  //   int blockId,
+  //   List<TaskData> reorderedTasks,
+  // ) async { ... }
+
+  // TODO: Implement removeTaskFromBlock method
+  // This method should:
+  // - Accept blockId and taskToRemove parameters
+  // - Remove the specific block entry for the given task
+  // - Reorder remaining tasks (update position_in_block values)
+  // - Optionally redistribute time among remaining tasks
+  // - Refresh schedule data after removal
+  // - Handle case where removing last task deletes entire block
+  // Example signature:
+  // Future<bool> removeTaskFromBlock(
+  //   int blockId,
+  //   TaskData taskToRemove,
+  // ) async { ... }
+
+  // TODO: Implement _calculateTimeDistribution method (private helper)
+  // This method should:
+  // - Accept totalMinutes and tasks parameters
+  // - Support equal time distribution (totalMinutes / tasks.length)
+  // - Support custom time allocation via optional parameter
+  // - Handle rounding for uneven time splits
+  // - Ensure total allocated time doesn't exceed available time
+  // - Return Map<TaskData, int> showing minutes per task
+  // Example signature:
+  // Map<TaskData, int> _calculateTimeDistribution(
+  //   int totalMinutes,
+  //   List<TaskData> tasks,
+  //   Map<TaskData, int>? customDurations,
+  // ) { ... }
 }
+
+// TODO: Create BlockValidationResult class
+// This class should be added to support time slot validation for the Add Block Dialog.
+// It should contain:
+// - bool isValid: indicates if the proposed time slot is available
+// - List<BlockWithTask> conflicts: any existing blocks that would conflict
+// - String? errorMessage: human-readable description of conflicts
+// 
+// class BlockValidationResult {
+//   final bool isValid;
+//   final List<BlockWithTask> conflicts;
+//   final String? errorMessage;
+//   
+//   BlockValidationResult({
+//     required this.isValid,
+//     this.conflicts = const [],
+//     this.errorMessage,
+//   });
+//   
+//   factory BlockValidationResult.valid() {
+//     return BlockValidationResult(isValid: true);
+//   }
+//   
+//   factory BlockValidationResult.invalid(
+//     String message, 
+//     List<BlockWithTask> conflicts,
+//   ) {
+//     return BlockValidationResult(
+//       isValid: false,
+//       errorMessage: message,
+//       conflicts: conflicts,
+//     );
+//   }
+// }
 
 final scheduleNotifierProvider =
     StateNotifierProvider<ScheduleNotifier, List<BlockWithTask>>((ref) {
