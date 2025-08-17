@@ -4,17 +4,33 @@ import 'package:potential_aid_app/providers/database_provider.dart';
 
 class TaskSearchNotifier extends StateNotifier<List<TaskData>> {
   TaskSearchNotifier(this._database) : super([]);
-  static const int maxResults = 3;
 
   final AppDatabase _database;
 
-  Future<void> search(String query) async {
-    List<TaskData> tasks = await _database.getAllTasks();
+  Future<void> search(
+    String query, [
+    List<bool Function(TaskData)>? predicates,
+    bool andMode = true,
+    int limit = 20,
+  ]) async {
+    final q = query.trim();
+    if (q.isEmpty) {
+      state = [];
+      return;
+    }
 
-    var filtered = tasks
-        .where((task) => task.name.contains(query))
-        .take(maxResults)
-        .toList();
+    final base = await _database.taskDao.searchTasks(query: q, limit: limit);
+
+    if (predicates == null || predicates.isEmpty) {
+      state = base;
+      return;
+    }
+
+    final filtered = base.where((task) {
+      return andMode
+          ? predicates.every((p) => p(task))
+          : predicates.any((p) => p(task));
+    }).toList();
 
     state = filtered;
   }

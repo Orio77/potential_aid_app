@@ -1,6 +1,8 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:potential_aid_app/data/daos/project_dao.dart';
+import 'package:potential_aid_app/data/daos/task_dao.dart';
 import 'package:potential_aid_app/data/tables/block.dart';
 import 'package:potential_aid_app/data/tables/project.dart';
 import 'package:potential_aid_app/data/tables/settings.dart';
@@ -9,7 +11,10 @@ import 'package:potential_aid_app/data/tables/task_completion.dart';
 
 part 'database.g.dart';
 
-@DriftDatabase(tables: [Task, TaskCompletion, Block, Project, Settings])
+@DriftDatabase(
+  tables: [Task, TaskCompletion, Block, Project, Settings],
+  daos: [TaskDao, ProjectDao],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 

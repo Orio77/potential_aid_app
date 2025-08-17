@@ -264,6 +264,10 @@ class ScheduleNotifier extends StateNotifier<List<BlockWithTask>> {
 
     await _loadScheduleForCurrentDate();
   }
+
+  Future<ProjectData?> getProjectData(String name) async {
+    return await _database.projectDao.getByName(name);
+  }
 }
 
 final scheduleNotifierProvider =
