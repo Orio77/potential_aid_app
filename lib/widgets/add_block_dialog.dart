@@ -5,7 +5,7 @@ import 'package:potential_aid_app/providers/project_search_notifier.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/providers/settings_notifier.dart';
 import 'package:potential_aid_app/widgets/duration_picker_dialog.dart';
-import 'package:potential_aid_app/widgets/task_list.dart';
+import 'package:potential_aid_app/widgets/schedule/block_task_list.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
 
 class AddBlockDialog extends ConsumerStatefulWidget {
@@ -110,7 +110,7 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
 
               const SizedBox(height: 16),
 
-              SizedBox(height: 200, child: TaskList(project: selectedProject)),
+              Expanded(child: BlockTaskList(project: selectedProject)),
 
               ListTile(
                 leading: const Icon(Icons.access_time),
