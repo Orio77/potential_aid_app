@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
-import 'package:potential_aid_app/providers/schedule_notifier.dart';
-import 'package:potential_aid_app/providers/settings_notifier.dart';
+import 'package:potential_aid_app/providers/date_notifier.dart';
+import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/task_search_notifier.dart';
-import 'package:potential_aid_app/widgets/duration_picker_dialog.dart';
+import 'package:potential_aid_app/widgets/goal_progress_input.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
+import 'package:time_machine/time_machine.dart';
 
 class AddTaskDialog extends ConsumerStatefulWidget {
-  const AddTaskDialog({super.key});
+  final int projectId;
+
+  const AddTaskDialog({super.key, required this.projectId});
 
   @override
   ConsumerState<AddTaskDialog> createState() => _AddTaskDialogState();
@@ -17,20 +20,19 @@ class AddTaskDialog extends ConsumerStatefulWidget {
 class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
   final _formKey = GlobalKey<FormState>();
   final _taskNameController = TextEditingController();
+  final _currentController = TextEditingController();
+  final _endGoalController = TextEditingController();
+  final _unitController = TextEditingController();
   final _focusNode = FocusNode();
-  late TimeOfDay _startTime;
-  int _durationMinutes = 60;
+  late DateTime _deadline;
+  late DateTime _currentDate;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-
-    final settings = ref.read(settingsNotifierProvider);
-    _durationMinutes = settings.defaultTaskLength;
-
-    _startTime = _calculateNextAvailableTime();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
@@ -38,80 +40,29 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (!_isInitialized) {
+      _initializeValues();
+      _isInitialized = true;
+    }
+  }
+
+  void _initializeValues() {
+    _currentDate = ref.watch(dateNotifierProvider).toDateTimeUnspecified();
+    _deadline = _currentDate.add(Duration(days: 7));
+  }
+
+  @override
   void dispose() {
     _taskNameController.dispose();
+    _currentController.dispose();
+    _endGoalController.dispose();
+    _unitController.dispose();
+    _focusNode.dispose();
+
     super.dispose();
-  }
-
-  TimeOfDay _calculateNextAvailableTime() {
-    final settings = ref.read(settingsNotifierProvider);
-    final schedule = ref.read(scheduleNotifierProvider);
-
-    if (schedule.isEmpty) {
-      final defaultMinutes = settings.defaultStartTime;
-      return TimeOfDay(hour: defaultMinutes ~/ 60, minute: defaultMinutes % 60);
-    }
-
-    final lastBlock = schedule.last;
-    final lastEndMinutes =
-        lastBlock.block.startMinuteOfDay + lastBlock.block.lengthMinutes;
-    final nextStartMinutes = lastEndMinutes + settings.defaultBreakTime;
-
-    return TimeOfDay(
-      hour: nextStartMinutes ~/ 60,
-      minute: nextStartMinutes % 60,
-    );
-  }
-
-  int _timeOfDayToMinutes(TimeOfDay time) {
-    return time.hour * 60 + time.minute;
-  }
-
-  String? _validateTaskName(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Task name cannot be empty';
-    }
-
-    return null;
-  }
-
-  void _selectTask(TaskData task) {
-    _taskNameController.text = task.name;
-  }
-
-  Future<void> _saveTask() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final taskName = _taskNameController.text.trim();
-      final startMinutes = _timeOfDayToMinutes(_startTime);
-
-      int taskId = await ref
-          .read(scheduleNotifierProvider.notifier)
-          .addTask(taskName);
-      await ref
-          .read(scheduleNotifierProvider.notifier)
-          .addBlock(startMinutes, _durationMinutes, taskId);
-
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to save task: ${e.toString()}';
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
   }
 
   @override
@@ -145,18 +96,21 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
 
               const SizedBox(height: 16),
 
-              ListTile(
-                leading: const Icon(Icons.access_time),
-                title: const Text('Start Time'),
-                subtitle: Text(_startTime.format(context)),
-                onTap: _isLoading ? null : _pickStartTime,
+              GoalProgressInput(
+                currentController: _currentController,
+                endGoalController: _endGoalController,
+                unitController: _unitController,
               ),
 
+              const SizedBox(height: 16),
+
               ListTile(
-                leading: const Icon(Icons.timer),
-                title: const Text('Duration'),
-                subtitle: Text('$_durationMinutes minutes'),
-                onTap: _isLoading ? null : _pickDuration,
+                leading: const Icon(Icons.calendar_month, size: 30),
+                title: Text(
+                  'Deadline: ${LocalDate.dateTime(_deadline).toString('dd-MM-yyyy')}',
+                  style: TextStyle(fontSize: 20),
+                ),
+                onTap: _isLoading ? null : () => _pickDeadline(_currentDate),
               ),
 
               if (_errorMessage != null) ...[
@@ -189,37 +143,79 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
     );
   }
 
-  Future<void> _pickStartTime() async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: _startTime,
-    );
+  String? _validateTaskName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Task name cannot be empty';
+    }
 
-    if (picked != null) {
+    return null;
+  }
+
+  void _selectTask(TaskData task) {
+    _taskNameController.text = task.name;
+  }
+
+  Future<void> _saveTask() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final taskName = _taskNameController.text.trim();
+      final current = int.tryParse(_currentController.text.trim());
+      final endGoal = int.tryParse(_endGoalController.text.trim());
+      final unit = _unitController.text.trim();
+
+      await ref
+          .read(projectTasksNotifier(widget.projectId).notifier)
+          .addTask(
+            taskName,
+            widget.projectId,
+            _deadline,
+            unit,
+            0,
+            current,
+            endGoal,
+          );
+
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
       setState(() {
-        _startTime = picked;
+        _errorMessage = 'Failed to save task: ${e.toString()}';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
       });
     }
   }
 
-  Future<void> _pickDuration() async {
-    final int? picked = await showDialog(
+  Future<void> _pickDeadline(DateTime today) async {
+    final DateTime? picked = await showDatePicker(
       context: context,
-      builder: (context) =>
-          DurationPickerDialog(initialDuration: _durationMinutes),
+      initialDate: today,
+      firstDate: today,
+      lastDate: today.add(Duration(days: 365)),
     );
 
     if (picked != null) {
       setState(() {
-        _durationMinutes = picked;
+        _deadline = picked;
       });
     }
   }
 }
 
-Future<void> showAddTaskDialog(BuildContext context) async {
+Future<void> showAddTaskDialog(BuildContext context, int projectId) async {
   await showDialog(
     context: context,
-    builder: (context) => const AddTaskDialog(),
+    builder: (context) => AddTaskDialog(projectId: projectId),
   );
 }

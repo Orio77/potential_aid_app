@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:potential_aid_app/screens/project_list_screen.dart';
 import 'package:potential_aid_app/widgets/add_block_dialog.dart';
 import 'package:potential_aid_app/widgets/date_header.dart';
 import 'package:potential_aid_app/widgets/schedule_list.dart';
@@ -16,7 +17,11 @@ class MainScreen extends ConsumerWidget {
         actions: [
           IconButton(
             onPressed: () {
-              Navigator.of(context).pushNamed('/projects');
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const ProjectListScreen(),
+                ),
+              );
             },
             icon: const Icon(Icons.folder_outlined),
             tooltip: 'Projects',

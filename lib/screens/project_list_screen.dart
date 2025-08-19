@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/widgets/projects/add_project_dialog.dart';
 import 'package:potential_aid_app/widgets/projects/project_list.dart';
 
-class ProjectsScreen extends ConsumerWidget {
-  const ProjectsScreen({super.key});
+class ProjectListScreen extends ConsumerWidget {
+  const ProjectListScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

@@ -110,7 +110,7 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
 
               const SizedBox(height: 16),
 
-              TaskList(project: selectedProject),
+              SizedBox(height: 200, child: TaskList(project: selectedProject)),
 
               ListTile(
                 leading: const Icon(Icons.access_time),

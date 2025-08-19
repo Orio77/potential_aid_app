@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
+import 'package:potential_aid_app/screens/project_screen.dart';
 
 class ProjectCard extends ConsumerWidget {
   final ProjectData project;
@@ -18,17 +19,26 @@ class ProjectCard extends ConsumerWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadiusGeometry.circular(12),
       ),
-      child: Column(
-        children: [
-          Center(
-            child: Text(
-              name,
-              style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => ProjectScreen(data: project),
             ),
-          ),
-          Text('$current / $goal $unit'),
-          Text(deadline.toString()),
-        ],
+          );
+        },
+        child: Column(
+          children: [
+            Center(
+              child: Text(
+                name,
+                style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+              ),
+            ),
+            Text('$current / $goal $unit'),
+            Text(deadline.toString()),
+          ],
+        ),
       ),
     );
   }

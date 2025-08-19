@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:potential_aid_app/data/daos/database_completions.dart';
 import 'package:potential_aid_app/data/tables/block.dart';
 import 'package:potential_aid_app/providers/completion_notifier.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
@@ -98,15 +99,6 @@ class ScheduleNotifier extends StateNotifier<List<BlockWithTask>> {
     await _loadScheduleForCurrentDate();
   }
 
-  Future<int> addTask(String taskName) async {
-    // Use the database helper method to get or create the task
-    int taskId = await _database.getOrCreateTask(taskName);
-
-    await _loadScheduleForCurrentDate();
-
-    return taskId;
-  }
-
   Future<void> removeTask(int blockId) async {
     // Delete the block (cascade will automatically delete task completions)
     await (_database.delete(
@@ -128,6 +120,22 @@ class ScheduleNotifier extends StateNotifier<List<BlockWithTask>> {
         newIndex > blocks.length ||
         oldIndex < 0 ||
         newIndex < 0) {
+      return;
+    }
+
+    final first = blocks[oldIndex];
+    final second = blocks[newIndex];
+
+    // Get the completion percentage directly from the database
+    final firstCompletionPercentage = await _database
+        .getBlockCompletionPercentage(first.block.id);
+    final secondCompletionPercentage = await _database
+        .getBlockCompletionPercentage(second.block.id);
+
+    final anyCompleted =
+        firstCompletionPercentage > 0 || secondCompletionPercentage > 0;
+
+    if (anyCompleted) {
       return;
     }
 
@@ -183,86 +191,6 @@ class ScheduleNotifier extends StateNotifier<List<BlockWithTask>> {
 
     // Invalidate the completion provider for this specific block to refresh the UI
     _ref.invalidate(blockCompletionProvider(blockId));
-  }
-
-  /// Add example tasks for testing the UI (WILL BE REMOVED)
-  Future<void> addExampleTasks() async {
-    final currentDate = _ref.read(dateNotifierProvider);
-    final dateTime = currentDate.atMidnight().toDateTimeLocal();
-
-    // Check if we already have tasks for today
-    final existingBlocks = await _getBlocksWithTasks();
-    if (existingBlocks.isNotEmpty) {
-      return; // Don't add duplicates
-    }
-
-    final exampleTasks = [
-      ('Morning Review', 8 * 60 + 35, 60), // 08:35, 1 hour
-      ('Deep Work Session', 9 * 60 + 40, 90), // 09:40, 1.5 hours
-      ('Team Meeting', 11 * 60 + 15, 45), // 11:15, 45 minutes
-      ('Lunch Break', 12 * 60 + 5, 60), // 12:05, 1 hour
-      ('Project Planning', 13 * 60 + 10, 120), // 13:10, 2 hours
-      ('Code Review', 15 * 60 + 15, 30), // 15:15, 30 minutes
-    ];
-
-    await _database.transaction(() async {
-      for (final (taskName, startMinute, lengthMinutes) in exampleTasks) {
-        // Create task
-        final task = TaskCompanion.insert(name: taskName);
-        final taskId = await _database.into(_database.task).insert(task);
-
-        // Create block
-        final block = BlockCompanion.insert(
-          taskId: taskId,
-          dayLocal: dateTime,
-          startMinuteOfDay: startMinute,
-          lengthMinutes: lengthMinutes,
-        );
-        await _database.into(_database.block).insert(block);
-      }
-    });
-
-    await _loadScheduleForCurrentDate();
-  }
-
-  /// Clear all tasks for the current day (WILL BE REMOVED)
-  Future<void> clearTodaysTasks() async {
-    final currentDate = _ref.read(dateNotifierProvider);
-    final dateTime = currentDate.atMidnight().toDateTimeLocal();
-
-    // Get all blocks for today
-    final blocksToDelete = await _getBlocksWithTasks();
-
-    if (blocksToDelete.isEmpty) {
-      return; // Nothing to delete
-    }
-
-    await _database.transaction(() async {
-      // Delete all blocks for today
-      await (_database.delete(
-        _database.block,
-      )..where((block) => block.dayLocal.equals(dateTime))).go();
-
-      // Optionally delete orphaned tasks (tasks with no blocks)
-      // This keeps the database clean
-      final orphanedTasksQuery = _database.selectOnly(_database.task)
-        ..addColumns([_database.task.id])
-        ..where(
-          _database.task.id.isNotInQuery(
-            _database.selectOnly(_database.block)
-              ..addColumns([_database.block.taskId]),
-          ),
-        );
-
-      final orphanedTasks = await orphanedTasksQuery.get();
-      for (final task in orphanedTasks) {
-        await (_database.delete(
-          _database.task,
-        )..where((t) => t.id.equals(task.read(_database.task.id)!))).go();
-      }
-    });
-
-    await _loadScheduleForCurrentDate();
   }
 
   Future<ProjectData?> getProjectData(String name) async {

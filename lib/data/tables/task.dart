@@ -12,7 +12,8 @@ class Task extends Table {
   IntColumn get startPoint =>
       integer().nullable().withDefault(const Constant(0))();
   IntColumn get current => integer().withDefault(const Constant(0))();
-  IntColumn get endGoal => integer().nullable()();
+  IntColumn get endGoal => integer().withDefault(const Constant(1))();
+  DateTimeColumn get deadline => dateTime().nullable()();
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
   DateTimeColumn get completedAt => dateTime().nullable()();
 }
