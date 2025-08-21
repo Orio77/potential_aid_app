@@ -1,1 +1,1 @@
-Project screen -> add project task functionality -> select tasks for time block -> task completion functionality -> stats screen
+save block to the schedule functionality -> task completion functionality -> stats screen -> tasks division functionality

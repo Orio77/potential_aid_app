@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/tables/block.dart';
+import 'package:potential_aid_app/providers/block_with_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/completion_notifier.dart';
 import 'package:potential_aid_app/widgets/complete_task_dialog.dart';
 
 class TaskBlock extends ConsumerWidget {
-  final BlockWithTask block;
+  final int blockId;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
   const TaskBlock({
     super.key,
-    required this.block,
+    required this.blockId,
     this.onTap,
     this.onLongPress,
   });
@@ -19,20 +20,20 @@ class TaskBlock extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-
-    // Watch the completion percentage for this specific block
-    final completionAsync = ref.watch(blockCompletionProvider(block.block.id));
+    final completionAsync = ref.watch(blockCompletionProvider(blockId));
+    final AsyncValue<BlockWithTasks> blockAsync = ref.watch(
+      blockTasksNotifier(blockId),
+    );
 
     return completionAsync.when(
-      data: (completionPercentage) =>
-          _buildTaskBlock(context, theme, completionPercentage),
-      loading: () => _buildTaskBlock(
-        context,
-        theme,
-        0.0,
-      ), // Show as incomplete while loading
-      error: (error, stack) =>
-          _buildTaskBlock(context, theme, 0.0), // Show as incomplete on error
+      data: (completionPercentage) => blockAsync.when(
+        data: (block) =>
+            _buildTaskBlock(context, theme, completionPercentage, block),
+        error: (error, stack) => _buildTaskBlock(context, theme, 0.0, null),
+        loading: () => _buildTaskBlock(context, theme, 0.0, null),
+      ),
+      loading: () => _buildTaskBlock(context, theme, 0.0, null),
+      error: (error, stack) => _buildTaskBlock(context, theme, 0.0, null),
     );
   }
 
@@ -40,6 +41,7 @@ class TaskBlock extends ConsumerWidget {
     BuildContext context,
     ThemeData theme,
     double completionPercentage,
+    BlockWithTasks? block,
   ) {
     final isCompleted = completionPercentage > 0.0;
 
@@ -52,30 +54,37 @@ class TaskBlock extends ConsumerWidget {
           onLongPress: isCompleted ? null : onLongPress,
           child: Padding(
             padding: EdgeInsets.all(16),
-            child: Row(
-              children: [
-                _buildCompletionIcon(theme, completionPercentage),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildTaskName(theme, completionPercentage),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          _buildTimeInfo(theme),
-                          if (isCompleted) ...[
-                            const SizedBox(width: 8),
-                            _buildCompletionBadge(theme, completionPercentage),
+            child: IntrinsicHeight(
+              child: Row(
+                children: [
+                  _buildCompletionIcon(theme, completionPercentage),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildProjectName(theme, completionPercentage),
+                        const SizedBox(height: 4),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildTimeInfo(theme, block),
+                            _buildTaskInfo(theme, block),
+                            if (isCompleted) ...[
+                              const SizedBox(width: 8),
+                              _buildCompletionBadge(
+                                theme,
+                                completionPercentage,
+                              ),
+                            ],
                           ],
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                _buildActionButton(context, completionPercentage),
-              ],
+                  _buildActionButton(context, completionPercentage, block),
+                ],
+              ),
             ),
           ),
         ),
@@ -97,11 +106,11 @@ class TaskBlock extends ConsumerWidget {
     return Icon(Icons.waves, color: theme.colorScheme.onSurfaceVariant);
   }
 
-  Widget _buildTaskName(ThemeData theme, double completionPercentage) {
+  Widget _buildProjectName(ThemeData theme, double completionPercentage) {
     final isCompleted = completionPercentage > 0.0;
 
     return Text(
-      block.taskName,
+      'Change in task_block.dart',
       style: theme.textTheme.titleMedium?.copyWith(
         fontWeight: FontWeight.w600,
         decoration: isCompleted ? TextDecoration.lineThrough : null,
@@ -113,7 +122,16 @@ class TaskBlock extends ConsumerWidget {
     );
   }
 
-  Widget _buildTimeInfo(ThemeData theme) {
+  Widget _buildTimeInfo(ThemeData theme, BlockWithTasks? block) {
+    if (block == null) {
+      return Text(
+        'Loading...',
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      );
+    }
+
     return Row(
       children: [
         Text(
@@ -141,6 +159,54 @@ class TaskBlock extends ConsumerWidget {
     );
   }
 
+  Widget _buildTaskInfo(ThemeData theme, BlockWithTasks? block) {
+    if (block == null) {
+      return Text('block is null');
+    }
+
+    if (block.tasks == null) {
+      return Text('tasks property is null');
+    }
+
+    final tasks = block.tasks!;
+
+    print('Debug: Block ID ${block.block.id} has ${tasks.length} tasks');
+    for (int i = 0; i < tasks.length; i++) {
+      print('  Task $i: ${tasks[i].name}');
+    }
+
+    if (tasks.isEmpty) {
+      return Text(
+        'No tasks (tasks list is empty)',
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      );
+    }
+
+    // Show all tasks in a column - card will grow to fit content
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: tasks
+            .map(
+              (task) => Padding(
+                padding: const EdgeInsets.only(bottom: 2.0),
+                child: Text(
+                  task.name,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+
   Widget _buildCompletionBadge(ThemeData theme, double completionPercentage) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -159,11 +225,15 @@ class TaskBlock extends ConsumerWidget {
     );
   }
 
-  Widget _buildActionButton(BuildContext context, double completionPercentage) {
+  Widget _buildActionButton(
+    BuildContext context,
+    double completionPercentage,
+    BlockWithTasks? block,
+  ) {
     final isCompleted = completionPercentage > 0.0;
 
     return IconButton(
-      onPressed: isCompleted
+      onPressed: isCompleted || block == null
           ? null
           : () {
               showDialog(
@@ -189,10 +259,9 @@ class TaskBlock extends ConsumerWidget {
     final isCompleted = completionPercentage > 0;
 
     if (!isCompleted) {
-      return null; // Default card color
+      return null;
     }
 
-    // Return a subtle tinted background for completed tasks
     return _getCompletionColor(completionPercentage).withValues(alpha: 0.1);
   }
 

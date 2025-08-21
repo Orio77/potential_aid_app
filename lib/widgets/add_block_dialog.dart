@@ -4,6 +4,7 @@ import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/project_search_notifier.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/providers/settings_notifier.dart';
+import 'package:potential_aid_app/utils/time_utils.dart';
 import 'package:potential_aid_app/widgets/duration_picker_dialog.dart';
 import 'package:potential_aid_app/widgets/schedule/block_task_list.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
@@ -22,7 +23,8 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
   late TimeOfDay _startTime;
   int _durationMinutes = 60;
   String? _errorMessage;
-  ProjectData? selectedProject;
+  ProjectData? _selectedProject;
+  List<TaskData> _selectedTasks = [];
 
   @override
   void initState() {
@@ -30,11 +32,16 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
 
     final settings = ref.read(settingsNotifierProvider);
 
+    final defaultStartTime = settings.defaultStartTime;
     _durationMinutes = settings.defaultTaskLength;
-    _startTime = _calculateNextAvailableTime();
+    _startTime = TimeOfDay(
+      hour: defaultStartTime ~/ 60,
+      minute: defaultStartTime % 60,
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
+      _initializeStartTime();
     });
   }
 
@@ -46,7 +53,16 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
     super.dispose();
   }
 
-  TimeOfDay _calculateNextAvailableTime() {
+  Future<void> _initializeStartTime() async {
+    final calculatedTime = await _calculateNextAvailableTime();
+    if (mounted) {
+      setState(() {
+        _startTime = calculatedTime;
+      });
+    }
+  }
+
+  Future<TimeOfDay> _calculateNextAvailableTime() async {
     final settings = ref.read(settingsNotifierProvider);
     final schedule = ref.read(scheduleNotifierProvider);
 
@@ -55,9 +71,12 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
       return TimeOfDay(hour: defaultMinutes ~/ 60, minute: defaultMinutes % 60);
     }
 
-    final lastBlock = schedule.last;
+    final lastBlockId = schedule.last;
+    final lastBlock = await ref
+        .read(scheduleNotifierProvider.notifier)
+        .getBlockById(lastBlockId);
     final lastEndMinutes =
-        lastBlock.block.startMinuteOfDay + lastBlock.block.lengthMinutes;
+        lastBlock!.startMinuteOfDay + lastBlock.lengthMinutes;
     final nextStartMinutes = lastEndMinutes + settings.defaultBreakTime;
 
     return TimeOfDay(
@@ -74,7 +93,52 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
     return null;
   }
 
-  Future<void> _saveBlock() async {}
+  void _onTasksChanged(List<TaskData> tasks) {
+    setState(() {
+      _selectedTasks = tasks;
+    });
+  }
+
+  Future<void> _saveBlock() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (_selectedProject == null) {
+      setState(() {
+        _errorMessage = 'Please select a project';
+      });
+    }
+
+    setState(() {
+      _errorMessage = null;
+    });
+
+    try {
+      final blockId = await ref
+          .read(scheduleNotifierProvider.notifier)
+          .addBlock(
+            TimeUtils.datetimeToMinutes(_startTime),
+            _durationMinutes,
+            _selectedProject!.id,
+          );
+      if (_selectedTasks.isNotEmpty) {
+        await _saveBlockTasks(blockId, _selectedTasks);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Failed to save block $e';
+        });
+      }
+    }
+  }
+
+  Future<void> _saveBlockTasks(int blockId, List<TaskData> tasks) async {
+    await ref
+        .read(scheduleNotifierProvider.notifier)
+        .assignTasksToBlock(blockId, tasks.map((t) => t.id).toList());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -96,7 +160,7 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
                 getDisplayText: (block) => block.name,
                 onItemSelected: (projectData) {
                   setState(() {
-                    selectedProject = projectData;
+                    _selectedProject = projectData;
                   });
                 },
                 leadingIcon: (project) =>
@@ -110,7 +174,12 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
 
               const SizedBox(height: 16),
 
-              Expanded(child: BlockTaskList(project: selectedProject)),
+              Expanded(
+                child: BlockTaskList(
+                  project: _selectedProject,
+                  onTasksChanged: _onTasksChanged,
+                ),
+              ),
 
               ListTile(
                 leading: const Icon(Icons.access_time),
@@ -145,13 +214,14 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
           child: const Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: () async {
-            final navigator = Navigator.of(context);
-            await _saveBlock();
-            if (mounted) {
-              navigator.pop();
-            }
-          },
+          onPressed: _selectedProject == null
+              ? null
+              : () async {
+                  await _saveBlock();
+                  if (mounted && _errorMessage == null) {
+                    Navigator.of(context).pop();
+                  }
+                },
           child: const Text('Save'),
         ),
       ],

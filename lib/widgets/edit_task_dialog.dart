@@ -79,7 +79,7 @@ class _EditTaskDialogState extends ConsumerState<EditTaskDialog> {
           .editTask(taskId, taskName);
       await ref
           .read(scheduleNotifierProvider.notifier)
-          .editBlock(blockId, _timeOfDayToMinutes(_startTime), _duration);
+          .editBlock(blockId, _timeOfDayToMinutes(_startTime), _duration, null);
 
       if (mounted) {
         Navigator.of(context).pop();

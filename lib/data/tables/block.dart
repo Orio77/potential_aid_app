@@ -1,25 +1,23 @@
 import 'package:drift/drift.dart';
 import 'package:potential_aid_app/data/database.dart';
-import 'task.dart';
+import 'package:potential_aid_app/data/tables/project.dart';
 
-@TableIndex(name: 'idx_block_task_id', columns: {#taskId})
+@TableIndex(name: 'idx_block_project_id', columns: {#projectId})
 @TableIndex(name: 'idx_block_day_local', columns: {#dayLocal})
 class Block extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get taskId =>
-      integer().references(Task, #id, onDelete: KeyAction.cascade)();
+  IntColumn get projectId =>
+      integer().references(Project, #id, onDelete: KeyAction.cascade)();
   DateTimeColumn get dayLocal => dateTime()();
   IntColumn get startMinuteOfDay => integer()();
   IntColumn get lengthMinutes => integer()();
 }
 
-class BlockWithTask {
+class BlockWithTasks {
   final BlockData block;
-  final String taskName;
+  final List<TaskData>? tasks;
 
-  BlockWithTask({required this.block, required this.taskName});
-
-  String get displayName => taskName.isEmpty ? "Unnamed task" : taskName;
+  BlockWithTasks({required this.block, this.tasks});
 
   String formatTimeRange() {
     final startMinutes = block.startMinuteOfDay;

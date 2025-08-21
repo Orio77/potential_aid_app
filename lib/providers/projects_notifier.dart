@@ -38,6 +38,10 @@ class ProjectsNotifier extends StateNotifier<List<ProjectData>> {
 
     return projectId;
   }
+
+  Future<ProjectData?> getProjectData(String name) async {
+    return await _database.projectDao.getByName(name);
+  }
 }
 
 final projectsNotifierProvider =

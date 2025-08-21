@@ -57,7 +57,7 @@ class _DeleteTaskDialogState extends ConsumerState<DeleteTaskDialog> {
                 onPressed: () {
                   ref
                       .read(scheduleNotifierProvider.notifier)
-                      .removeTask(widget.blockId);
+                      .removeBlock(widget.blockId);
                   Navigator.of(context).pop();
                 },
                 child: const Text('YES'),

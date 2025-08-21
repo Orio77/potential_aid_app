@@ -7,7 +7,7 @@ import 'package:potential_aid_app/providers/database_provider.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/data/database.dart';
 
-class ScheduleNotifier extends StateNotifier<List<BlockWithTask>> {
+class ScheduleNotifier extends StateNotifier<List<int>> {
   final AppDatabase _database;
   final Ref _ref;
   late final ProviderSubscription _dateSubscription;
@@ -28,22 +28,29 @@ class ScheduleNotifier extends StateNotifier<List<BlockWithTask>> {
   Future<void> _loadScheduleForCurrentDate() async {
     final blocks = await _getBlocksWithTasks();
 
-    state = blocks;
+    state = blocks.map((b) => b.block.id).toList();
   }
 
-  Future<List<BlockWithTask>> _getBlocksWithTasks() async {
+  Future<List<BlockWithTasks>> _getBlocksWithTasks() async {
     final currentDate = _ref.read(dateNotifierProvider);
     final dateTime = currentDate.atMidnight().toDateTimeLocal();
 
-    final blocksWithTasks = await _database.getBlocksWithTasksForDate(dateTime);
+    final blocksWithTasks = await _database.blockDao.getBlocksWithTasks(
+      dateTime,
+    );
 
     return blocksWithTasks;
+  }
+
+  Future<BlockData?> getBlockById(int blockId) async {
+    return await _database.blockDao.getBlockById(blockId);
   }
 
   Future<void> editBlock(
     int blockId,
     int? startMinute,
     int? lengthMinutes,
+    int? projectId,
   ) async {
     BlockData block = await (_database.select(
       _database.block,
@@ -55,6 +62,9 @@ class ScheduleNotifier extends StateNotifier<List<BlockWithTask>> {
     final newLengthMinutes = (lengthMinutes == null || lengthMinutes <= 0)
         ? block.lengthMinutes
         : lengthMinutes;
+    final newProjectId = (projectId == null || projectId < 0)
+        ? block.projectId
+        : projectId;
 
     await (_database.update(
       _database.block,
@@ -62,10 +72,9 @@ class ScheduleNotifier extends StateNotifier<List<BlockWithTask>> {
       BlockCompanion(
         startMinuteOfDay: Value(newStartMinute),
         lengthMinutes: Value(newLengthMinutes),
+        projectId: Value(newProjectId),
       ),
     );
-
-    await _loadScheduleForCurrentDate();
   }
 
   Future<void> editTask(int taskId, String? taskName) async {
@@ -80,41 +89,41 @@ class ScheduleNotifier extends StateNotifier<List<BlockWithTask>> {
     await (_database.update(_database.task)
           ..where((task) => task.id.equals(taskId)))
         .write(TaskCompanion(name: Value(newTaskName)));
-
-    await _loadScheduleForCurrentDate();
   }
 
-  Future<void> addBlock(int startMinute, int lengthMinutes, int taskId) async {
+  Future<int> addBlock(
+    int startMinute,
+    int lengthMinutes,
+    int projectId,
+  ) async {
     final currentDate = _ref.read(dateNotifierProvider);
     final dateTime = currentDate.atMidnight().toDateTimeLocal();
 
     BlockCompanion block = BlockCompanion.insert(
-      taskId: taskId,
+      projectId: projectId,
       dayLocal: dateTime,
       startMinuteOfDay: startMinute,
       lengthMinutes: lengthMinutes,
     );
 
-    await _database.into(_database.block).insert(block);
+    final blockId = await _database.into(_database.block).insert(block);
     await _loadScheduleForCurrentDate();
+    return blockId;
   }
 
-  Future<void> removeTask(int blockId) async {
-    // Delete the block (cascade will automatically delete task completions)
+  Future<void> removeBlock(int blockId) async {
     await (_database.delete(
       _database.block,
     )..where((block) => block.id.equals(blockId))).go();
 
-    // Invalidate the completion provider for this block
     _ref.invalidate(blockCompletionProvider(blockId));
 
     await _loadScheduleForCurrentDate();
   }
 
-  Future<void> reorderTasks(int oldIndex, int newIndex) async {
+  Future<void> reorderBlocks(int oldIndex, int newIndex) async {
     final blocks = await _getBlocksWithTasks();
 
-    // Handle edge cases
     if (oldIndex == newIndex ||
         oldIndex >= blocks.length ||
         newIndex > blocks.length ||
@@ -125,8 +134,6 @@ class ScheduleNotifier extends StateNotifier<List<BlockWithTask>> {
 
     final first = blocks[oldIndex];
     final second = blocks[newIndex];
-
-    // Get the completion percentage directly from the database
     final firstCompletionPercentage = await _database
         .getBlockCompletionPercentage(first.block.id);
     final secondCompletionPercentage = await _database
@@ -135,33 +142,22 @@ class ScheduleNotifier extends StateNotifier<List<BlockWithTask>> {
     final anyCompleted =
         firstCompletionPercentage > 0 || secondCompletionPercentage > 0;
 
-    if (anyCompleted) {
+    if (anyCompleted || oldIndex == newIndex) {
       return;
     }
-
-    // Adjust newIndex for Flutter's ReorderableListView behavior
-    // When moving down, Flutter gives us newIndex as the position after insertion
     if (newIndex > oldIndex) {
       newIndex--;
     }
 
-    // If after adjustment they're the same, no reordering needed
-    if (oldIndex == newIndex) {
-      return;
-    }
-
-    // Create a copy of the blocks list and reorder it
-    final reorderedBlocks = List<BlockWithTask>.from(blocks);
+    final reorderedBlocks = List<BlockWithTasks>.from(blocks);
     final movedBlock = reorderedBlocks.removeAt(oldIndex);
     reorderedBlocks.insert(newIndex, movedBlock);
 
-    // Update the database with new start times based on the new order
     await _database.transaction(() async {
       for (int i = 0; i < reorderedBlocks.length; i++) {
         final block = reorderedBlocks[i];
         final originalBlock = blocks[i];
 
-        // Only update if the start time actually changed
         if (block.block.id != originalBlock.block.id) {
           await (_database.update(
             _database.block,
@@ -177,6 +173,10 @@ class ScheduleNotifier extends StateNotifier<List<BlockWithTask>> {
     await _loadScheduleForCurrentDate();
   }
 
+  Future<void> assignTasksToBlock(int blockId, List<int> taskIds) async {
+    await _database.blockDao.assignTasksToBlock(blockId, taskIds);
+  }
+
   Future<void> addTaskCompletion(int blockId, int minutesCompleted) async {
     final currentDate = _ref.read(dateNotifierProvider);
     final dateTime = currentDate.atMidnight().toDateTimeLocal();
@@ -189,17 +189,12 @@ class ScheduleNotifier extends StateNotifier<List<BlockWithTask>> {
 
     await _database.into(_database.taskCompletion).insert(completion);
 
-    // Invalidate the completion provider for this specific block to refresh the UI
     _ref.invalidate(blockCompletionProvider(blockId));
-  }
-
-  Future<ProjectData?> getProjectData(String name) async {
-    return await _database.projectDao.getByName(name);
   }
 }
 
 final scheduleNotifierProvider =
-    StateNotifierProvider<ScheduleNotifier, List<BlockWithTask>>((ref) {
+    StateNotifierProvider<ScheduleNotifier, List<int>>((ref) {
       final database = ref.watch(databaseProvider);
       return ScheduleNotifier(database, ref);
     });

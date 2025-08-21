@@ -8,7 +8,12 @@ enum TaskListViewState { initial, addingTasks }
 
 class BlockTaskList extends ConsumerStatefulWidget {
   final ProjectData? project;
-  const BlockTaskList({super.key, required this.project});
+  final void Function(List<TaskData>) onTasksChanged;
+  const BlockTaskList({
+    super.key,
+    required this.project,
+    required this.onTasksChanged,
+  });
 
   @override
   ConsumerState<ConsumerStatefulWidget> createState() => _TaskListState();
@@ -87,6 +92,7 @@ class _TaskListState extends ConsumerState<BlockTaskList> {
         _tasks.add(task);
         _taskNameController.clear();
       });
+      widget.onTasksChanged(_tasks);
     }
   }
 
@@ -105,6 +111,7 @@ class _TaskListState extends ConsumerState<BlockTaskList> {
     setState(() {
       _tasks.removeAt(index);
     });
+    widget.onTasksChanged(_tasks);
   }
 
   @override

@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:potential_aid_app/data/tables/block.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/widgets/delete_task_dialog.dart';
-import 'package:potential_aid_app/widgets/edit_task_dialog.dart';
 import 'package:potential_aid_app/widgets/task_block.dart';
 
 class ScheduleList extends ConsumerWidget {
@@ -23,30 +21,26 @@ class ScheduleList extends ConsumerWidget {
     );
   }
 
-  Widget _buildScheduleList(List<BlockWithTask> blocks, WidgetRef ref) {
+  Widget _buildScheduleList(List<int> blockIds, WidgetRef ref) {
     return ReorderableListView.builder(
       buildDefaultDragHandles: true,
       padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
-      itemCount: blocks.length,
+      itemCount: blockIds.length,
       itemBuilder: (context, index) {
-        final block = blocks[index];
-        return _buildTaskPlaceholder(context, block, index);
+        final blockId = blockIds[index];
+        return _buildTaskPlaceholder(context, blockId, index);
       },
       onReorder: (int oldIndex, int newIndex) async {
         ref
             .read(scheduleNotifierProvider.notifier)
-            .reorderTasks(oldIndex, newIndex);
+            .reorderBlocks(oldIndex, newIndex);
       },
     );
   }
 
-  Widget _buildTaskPlaceholder(
-    BuildContext context,
-    BlockWithTask block,
-    int index,
-  ) {
+  Widget _buildTaskPlaceholder(BuildContext context, int blockId, int index) {
     return Dismissible(
-      key: ValueKey(block.block.id),
+      key: ValueKey(blockId),
       direction: DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,
@@ -58,27 +52,27 @@ class ScheduleList extends ConsumerWidget {
         return await showDialog<bool>(
               context: context,
               builder: (BuildContext dialogContext) {
-                return DeleteTaskDialog(blockId: block.block.id);
+                return DeleteTaskDialog(blockId: blockId);
               },
             ) ??
             false;
       },
       child: TaskBlock(
-        key: ValueKey(block.block.id), // Unique key for ReorderableListView
-        block: block,
+        key: ValueKey(blockId), // Unique key for ReorderableListView
+        blockId: blockId,
         onTap: () {
-          showDialog(
-            context: context,
-            builder: (BuildContext dialogContext) {
-              return EditTaskDialog(
-                blockId: block.block.id,
-                taskId: block.block.taskId,
-                initialTaskName: block.taskName,
-                initialStartTime: block.block.startMinuteOfDay,
-                initialDuration: block.block.lengthMinutes,
-              );
-            },
-          );
+          // showDialog(
+          //   context: context,
+          //   builder: (BuildContext dialogContext) {
+          //     return EditTaskDialog(
+          //       blockId: block.block.id,
+          //       taskId: block.block.projectId,
+          //       initialTaskName: 'Change in schedule_list.dart',
+          //       initialStartTime: block.block.startMinuteOfDay,
+          //       initialDuration: block.block.lengthMinutes,
+          //     );
+          //   },
+          // );
         },
       ),
     );
