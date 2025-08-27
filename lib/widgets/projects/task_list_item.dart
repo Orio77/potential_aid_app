@@ -16,18 +16,31 @@ class TaskListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final progress = task.endGoal > 0 ? task.current / task.endGoal : 0.0;
     return Card(
-      child: Column(
-        children: [
-          Text(
-            'Title: ${task.name}',
-            style: TextStyle(fontWeight: FontWeight.w500),
-          ),
-          Text('${task.current}/${task.endGoal} ${task.unit}'),
-          Text(
-            'Deadline: ${task.deadline != null ? LocalDate.dateTime(task.deadline!).toString('dd-MM-yyyy') : 'No deadline set'}',
-          ),
-        ],
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(16),
+        onTap: onTap,
+        title: Text(
+          task.name,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            LinearProgressIndicator(value: progress),
+            const SizedBox(height: 4),
+            Text('${task.current}/${task.endGoal} ${task.unit}'),
+            Text(
+              'Deadline: ${task.deadline != null ? LocalDate.dateTime(task.deadline!).toString('dd-MM-yyyy') : 'No deadline set'}',
+            ),
+          ],
+        ),
+        trailing: IconButton(
+          icon: const Icon(Icons.check_circle_outline),
+          onPressed: onComplete,
+        ),
       ),
     );
   }

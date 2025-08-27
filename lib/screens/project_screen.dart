@@ -29,7 +29,7 @@ class ProjectScreen extends ConsumerWidget {
           Text(
             'Deadline: ${LocalDate.dateTime(data.deadline).toString('dd-MM-yyyy')}',
           ),
-          ProjectTaskList(projectId: data.id),
+          Expanded(child: ProjectTaskList(projectId: data.id)),
         ],
       ),
       floatingActionButton: ElevatedButton(

@@ -10,20 +10,24 @@ class ProjectListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Projects'),
+        title: const Text('Projects'),
+        centerTitle: true,
         leading: IconButton(
           onPressed: () => Navigator.of(context).pop(),
-          icon: Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back),
         ),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
 
-      body: Column(children: [Expanded(child: ProjectList())]),
-      floatingActionButton: FloatingActionButton(
+      body: const SafeArea(
+        child: Padding(padding: EdgeInsets.all(16), child: ProjectList()),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           showAddProjectDialog(context);
         },
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: const Text('Project'),
       ),
     );
   }

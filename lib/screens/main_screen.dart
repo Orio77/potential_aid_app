@@ -12,7 +12,14 @@ class MainScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
-        title: const Center(child: Text('Daily Schedule')),
+        title: const Padding(
+          padding: EdgeInsets.all(8),
+          child: Text(
+            'Daily Schedule',
+            style: TextStyle(fontWeight: FontWeight.w500, fontSize: 30),
+          ),
+        ),
+        centerTitle: true,
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
@@ -28,17 +35,24 @@ class MainScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          const DateHeader(),
-          Expanded(child: ScheduleList()),
-        ],
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: const [
+              DateHeader(),
+              SizedBox(height: 16),
+              Expanded(child: ScheduleList()),
+            ],
+          ),
+        ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           showAddBlockDialog(context);
         },
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: const Text('Block'),
       ),
     );
   }

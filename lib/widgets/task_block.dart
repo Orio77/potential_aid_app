@@ -53,7 +53,7 @@ class TaskBlock extends ConsumerWidget {
           onTap: isCompleted ? null : onTap,
           onLongPress: isCompleted ? null : onLongPress,
           child: Padding(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             child: IntrinsicHeight(
               child: Row(
                 children: [
@@ -63,7 +63,7 @@ class TaskBlock extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildProjectName(theme, completionPercentage),
+                        _buildProjectName(theme, completionPercentage, block),
                         const SizedBox(height: 4),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,11 +106,18 @@ class TaskBlock extends ConsumerWidget {
     return Icon(Icons.waves, color: theme.colorScheme.onSurfaceVariant);
   }
 
-  Widget _buildProjectName(ThemeData theme, double completionPercentage) {
+  Widget _buildProjectName(
+    ThemeData theme,
+    double completionPercentage,
+    BlockWithTasks? block,
+  ) {
     final isCompleted = completionPercentage > 0.0;
+    final title = block?.tasks != null && block!.tasks!.isNotEmpty
+        ? block.tasks!.first.name
+        : 'Unnamed Block';
 
     return Text(
-      'Change in task_block.dart',
+      title,
       style: theme.textTheme.titleMedium?.copyWith(
         fontWeight: FontWeight.w600,
         decoration: isCompleted ? TextDecoration.lineThrough : null,
@@ -169,11 +176,6 @@ class TaskBlock extends ConsumerWidget {
     }
 
     final tasks = block.tasks!;
-
-    print('Debug: Block ID ${block.block.id} has ${tasks.length} tasks');
-    for (int i = 0; i < tasks.length; i++) {
-      print('  Task $i: ${tasks[i].name}');
-    }
 
     if (tasks.isEmpty) {
       return Text(

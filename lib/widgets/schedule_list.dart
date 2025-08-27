@@ -7,15 +7,28 @@ import 'package:potential_aid_app/widgets/task_block.dart';
 class ScheduleList extends ConsumerWidget {
   const ScheduleList({super.key});
 
-  Widget _buildEmptyState() {
-    return const Center(
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.schedule, size: 64, color: Colors.amberAccent),
-          SizedBox(height: 16),
-          Text('No tasks scheduled for this day'),
-          Text('Tap the + button to add your first task'),
+          Icon(
+            Icons.schedule,
+            size: 64,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No tasks scheduled for this day',
+            style: Theme.of(context).textTheme.titleMedium,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Tap the + button to add your first task',
+            style: Theme.of(context).textTheme.bodyMedium,
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
@@ -24,7 +37,7 @@ class ScheduleList extends ConsumerWidget {
   Widget _buildScheduleList(List<int> blockIds, WidgetRef ref) {
     return ReorderableListView.builder(
       buildDefaultDragHandles: true,
-      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: blockIds.length,
       itemBuilder: (context, index) {
         final blockId = blockIds[index];
@@ -57,23 +70,26 @@ class ScheduleList extends ConsumerWidget {
             ) ??
             false;
       },
-      child: TaskBlock(
-        key: ValueKey(blockId), // Unique key for ReorderableListView
-        blockId: blockId,
-        onTap: () {
-          // showDialog(
-          //   context: context,
-          //   builder: (BuildContext dialogContext) {
-          //     return EditTaskDialog(
-          //       blockId: block.block.id,
-          //       taskId: block.block.projectId,
-          //       initialTaskName: 'Change in schedule_list.dart',
-          //       initialStartTime: block.block.startMinuteOfDay,
-          //       initialDuration: block.block.lengthMinutes,
-          //     );
-          //   },
-          // );
-        },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: TaskBlock(
+          key: ValueKey(blockId), // Unique key for ReorderableListView
+          blockId: blockId,
+          onTap: () {
+            // showDialog(
+            //   context: context,
+            //   builder: (BuildContext dialogContext) {
+            //     return EditTaskDialog(
+            //       blockId: block.block.id,
+            //       taskId: block.block.projectId,
+            //       initialTaskName: 'Change in schedule_list.dart',
+            //       initialStartTime: block.block.startMinuteOfDay,
+            //       initialDuration: block.block.lengthMinutes,
+            //     );
+            //   },
+            // );
+          },
+        ),
       ),
     );
   }
@@ -83,7 +99,7 @@ class ScheduleList extends ConsumerWidget {
     final scheduleData = ref.watch(scheduleNotifierProvider);
 
     return scheduleData.isEmpty
-        ? _buildEmptyState()
+        ? _buildEmptyState(context)
         : _buildScheduleList(scheduleData, ref);
   }
 }
