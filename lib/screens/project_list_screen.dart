@@ -10,7 +10,10 @@ class ProjectListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Projects'),
+        title: const Text(
+          'Projects',
+          style: TextStyle(fontWeight: FontWeight.w400, fontSize: 35),
+        ),
         centerTitle: true,
         leading: IconButton(
           onPressed: () => Navigator.of(context).pop(),

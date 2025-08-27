@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/screens/project_screen.dart';
+import 'package:potential_aid_app/utils/time_utils.dart';
 
 class ProjectCard extends ConsumerWidget {
   final ProjectData project;
@@ -36,7 +37,7 @@ class ProjectCard extends ConsumerWidget {
               ),
             ),
             Text('$current / $goal $unit'),
-            Text(deadline.toString()),
+            Text('Deadline: ${TimeUtils.formatDateTime(deadline)}'),
           ],
         ),
       ),
