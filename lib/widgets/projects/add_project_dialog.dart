@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
+import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
+import 'package:potential_aid_app/utils/time_utils.dart';
+import 'package:potential_aid_app/widgets/goal_progress_input.dart';
 
 class AddProjectDialog extends ConsumerStatefulWidget {
   const AddProjectDialog({super.key});
@@ -12,12 +15,56 @@ class AddProjectDialog extends ConsumerStatefulWidget {
 class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
   final _formKey = GlobalKey<FormState>();
   final _projectNameController = TextEditingController();
+  final _currentController = TextEditingController();
+  final _endGoalController = TextEditingController();
+  final _unitController = TextEditingController();
+  late DateTime _startDate;
+  late DateTime _deadline;
   final _focusNode = FocusNode();
   bool _isLoading = false;
   String? _errorMessage;
 
+  bool get _isFormValid {
+    return _projectNameController.text.trim().isNotEmpty &&
+        _currentController.text.trim().isNotEmpty &&
+        _endGoalController.text.trim().isNotEmpty &&
+        _unitController.text.trim().isNotEmpty &&
+        int.tryParse(_currentController.text) != null &&
+        int.tryParse(_endGoalController.text) != null;
+  }
+
+  @override
+  void initState() {
+    final date = ref.read(dateNotifierProvider);
+    _startDate = date.toDateTimeUnspecified();
+    _deadline = date.toDateTimeUnspecified().add(Duration(days: 7));
+
+    _projectNameController.addListener(_updateButtonState);
+    _currentController.addListener(_updateButtonState);
+    _endGoalController.addListener(_updateButtonState);
+    _unitController.addListener(_updateButtonState);
+
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _projectNameController.dispose();
+    _currentController.dispose();
+    _endGoalController.dispose();
+    _unitController.dispose();
+
+    _projectNameController.removeListener(_updateButtonState);
+    _currentController.removeListener(_updateButtonState);
+    _endGoalController.removeListener(_updateButtonState);
+    _unitController.removeListener(_updateButtonState);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final today = ref.read(dateNotifierProvider).toDateTimeUnspecified();
+
     return AlertDialog(
       title: const Center(child: Text('Add New Project')),
       content: SizedBox(
@@ -40,6 +87,54 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
 
               const SizedBox(height: 16),
 
+              GoalProgressInput(
+                currentController: _currentController,
+                endGoalController: _endGoalController,
+                unitController: _unitController,
+              ),
+
+              const SizedBox(height: 16),
+
+              Column(
+                spacing: 6,
+                children: [
+                  Row(
+                    spacing: 6,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () async =>
+                            _selectDate(context, today, false),
+                        label: Icon(Icons.calendar_today),
+                      ),
+                      Text(
+                        'Start Date: ${TimeUtils.formatDateTime(_startDate)}',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    spacing: 6,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () async =>
+                            _selectDate(context, today, true),
+                        label: Icon(Icons.calendar_today),
+                      ),
+                      Text(
+                        'Deadline: ${TimeUtils.formatDateTime(_deadline)}',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+
               if (_errorMessage != null) ...[
                 const SizedBox(height: 16),
                 Text(
@@ -57,7 +152,16 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
           child: const Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: _isLoading ? null : _saveProject,
+          onPressed: (_isLoading || !_isFormValid)
+              ? null
+              : () => _saveProject(
+                  _startDate,
+                  _deadline,
+                  0,
+                  int.tryParse(_currentController.text)!,
+                  int.tryParse(_endGoalController.text)!,
+                  _unitController.text,
+                ),
           child: _isLoading
               ? const SizedBox(
                   width: 16,
@@ -78,7 +182,18 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
     return null;
   }
 
-  Future<void> _saveProject() async {
+  void _updateButtonState() {
+    setState(() {});
+  }
+
+  Future<void> _saveProject(
+    DateTime startDate,
+    DateTime deadline,
+    int initial,
+    int current,
+    int goal,
+    String unit,
+  ) async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -95,12 +210,12 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
           .read(projectsNotifierProvider.notifier)
           .addProject(
             projectName,
-            DateTime.now(),
-            DateTime.now(),
-            0,
-            0,
-            0,
-            "unit",
+            startDate,
+            deadline,
+            initial,
+            current,
+            goal,
+            unit,
           );
 
       if (mounted) {
@@ -113,6 +228,25 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
     } finally {
       setState(() {
         _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _selectDate(
+    BuildContext context,
+    DateTime today,
+    bool isDeadline,
+  ) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      firstDate: today,
+      lastDate: today.add(Duration(days: 1827)),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _startDate = isDeadline ? _startDate : picked;
+        _deadline = isDeadline ? picked : _deadline;
       });
     }
   }
