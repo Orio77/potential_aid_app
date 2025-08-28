@@ -123,9 +123,6 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
     int minutes,
     DateTime completedAt,
   ) async {
-    print(
-      'BlockDao.completeBlock() called: blockId=$blockId, minutes=$minutes, completedAt=$completedAt',
-    );
     if (minutes < 0) throw ArgumentError('Count must not be negative');
 
     final completionId = await into(db.blockCompletion).insert(
@@ -135,9 +132,7 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
         completedAt: completedAt,
       ),
     );
-    print(
-      'BlockDao.completeBlock() inserted completion with ID: $completionId',
-    );
+
     return completionId;
   }
 }

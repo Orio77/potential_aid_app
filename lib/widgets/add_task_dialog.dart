@@ -92,6 +92,7 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
                   size: 12,
                   color: Colors.grey,
                 ),
+                predicates: [(task) => !task.isCompleted],
               ),
 
               const SizedBox(height: 16),

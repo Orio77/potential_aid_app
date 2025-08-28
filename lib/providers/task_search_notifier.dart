@@ -27,9 +27,21 @@ class TaskSearchNotifier extends StateNotifier<List<TaskData>> {
     }
 
     final filtered = base.where((task) {
-      return andMode
-          ? predicates.every((p) => p(task))
-          : predicates.any((p) => p(task));
+      final results = <bool>[];
+      for (int i = 0; i < predicates.length; i++) {
+        try {
+          final result = predicates[i](task);
+          results.add(result);
+        } catch (e) {
+          results.add(false);
+        }
+      }
+
+      final finalResult = andMode
+          ? results.every((r) => r)
+          : results.any((r) => r);
+
+      return finalResult;
     }).toList();
 
     state = filtered;

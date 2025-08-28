@@ -100,11 +100,7 @@ class _CompleteTaskDialogState extends ConsumerState<CompleteTaskDialog> {
         ),
         TextButton(
           onPressed: () async {
-            print(
-              'CompleteTaskDialog: Complete button pressed for blockId ${widget.blockId}',
-            );
             await _saveAllCompletions();
-            print('CompleteTaskDialog: All completions saved, closing dialog');
             Navigator.of(context).pop();
           },
           child: const Text('Complete'),
@@ -113,24 +109,7 @@ class _CompleteTaskDialogState extends ConsumerState<CompleteTaskDialog> {
     );
   }
 
-  bool _isValidInput(int input) {
-    return input > 0 && input <= widget.blockLength;
-  }
-
-  void _showErrorMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, style: TextStyle(color: Colors.black)),
-        backgroundColor: Theme.of(context).colorScheme.onError,
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
-
   Future<void> _saveAllCompletions() async {
-    print(
-      'CompleteTaskDialog._saveAllCompletions() called for blockId ${widget.blockId}',
-    );
     final List<String> errors = [];
 
     for (int i = 0; i < _taskKeys.length; i++) {

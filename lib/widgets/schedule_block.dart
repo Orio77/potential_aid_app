@@ -19,7 +19,6 @@ class ScheduleBlock extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    print('ScheduleBlock.build() called for blockId: $blockId');
     final theme = Theme.of(context);
     final completionAsync = ref.watch(blockCompletionProvider(blockId));
     final AsyncValue<BlockWithTasks> blockAsync = ref.watch(
@@ -28,9 +27,6 @@ class ScheduleBlock extends ConsumerWidget {
 
     return completionAsync.when(
       data: (completionPercentage) {
-        print(
-          'ScheduleBlock blockId $blockId: completionPercentage = $completionPercentage',
-        );
         return blockAsync.when(
           data: (block) =>
               _buildTaskBlock(context, theme, completionPercentage, block),
@@ -39,11 +35,9 @@ class ScheduleBlock extends ConsumerWidget {
         );
       },
       loading: () {
-        print('ScheduleBlock blockId $blockId: completion loading');
         return _buildTaskBlock(context, theme, 0.0, null);
       },
       error: (error, stack) {
-        print('ScheduleBlock blockId $blockId: completion error: $error');
         return _buildTaskBlock(context, theme, 0.0, null);
       },
     );
@@ -55,9 +49,6 @@ class ScheduleBlock extends ConsumerWidget {
     double completionPercentage,
     BlockWithTasks? block,
   ) {
-    print(
-      'ScheduleBlock._buildTaskBlock() blockId $blockId: completionPercentage = $completionPercentage, isCompleted = ${completionPercentage > 0.0}',
-    );
     final isCompleted = completionPercentage > 0.0;
 
     return Opacity(
@@ -248,17 +239,11 @@ class ScheduleBlock extends ConsumerWidget {
     BlockWithTasks? block,
   ) {
     final isCompleted = completionPercentage > 0.0;
-    print(
-      'ScheduleBlock._buildActionButton() blockId $blockId: completionPercentage = $completionPercentage, isCompleted = $isCompleted',
-    );
 
     return IconButton(
       onPressed: isCompleted || block == null
           ? null
           : () {
-              print(
-                'ScheduleBlock: Opening CompleteTaskDialog for blockId $blockId',
-              );
               showDialog(
                 context: context,
                 builder: (BuildContext buildContext) {

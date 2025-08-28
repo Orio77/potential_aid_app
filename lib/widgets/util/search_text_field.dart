@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 mixin SearchCapability<T> on StateNotifier<List<T>> {
-  Future<void> search(String query);
+  Future<void> search(String query, List<bool Function(T)>? predicates);
 }
 
 class SearchTextField<T, N extends StateNotifier<List<T>>>
@@ -85,6 +85,7 @@ class _SearchTextFieldState<T, N extends StateNotifier<List<T>>>
       value,
       widget.predicates,
     );
+
     widget.onChanged?.call(value);
 
     setState(() {

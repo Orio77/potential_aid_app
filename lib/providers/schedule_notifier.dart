@@ -189,25 +189,15 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
   }
 
   Future<int> addBlockCompletion(int blockId, int minutesCompleted) async {
-    print(
-      'ScheduleNotifier.addBlockCompletion() called: blockId=$blockId, minutesCompleted=$minutesCompleted',
-    );
     final currentDate = _ref.read(dateNotifierProvider);
     final dateTime = currentDate.atMidnight().toDateTimeLocal();
-    print('ScheduleNotifier.addBlockCompletion() dateTime: $dateTime');
 
     final completionId = await _database.blockDao.completeBlock(
       blockId,
       minutesCompleted,
       dateTime,
     );
-    print(
-      'ScheduleNotifier.addBlockCompletion() completion saved with ID: $completionId',
-    );
 
-    print(
-      'ScheduleNotifier.addBlockCompletion() invalidating blockCompletionProvider for blockId: $blockId',
-    );
     _ref.invalidate(blockCompletionProvider(blockId));
 
     return completionId;

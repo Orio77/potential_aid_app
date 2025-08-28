@@ -80,8 +80,6 @@ class TaskCompletionElementState extends ConsumerState<TaskCompletionElement> {
     final inputText = _completionController.text.trim();
     final completionCount = int.tryParse(inputText);
 
-    print("Task completion clicked with $completionCount count");
-
     if (completionCount == null) {
       return null;
     }
@@ -90,8 +88,6 @@ class TaskCompletionElementState extends ConsumerState<TaskCompletionElement> {
       final res = await ref
           .read(scheduleNotifierProvider.notifier)
           .addTaskCompletion(widget.task.id, completionCount);
-
-      print("Resulting completion id: $res");
 
       widget.onTaskCompletion?.call(widget.task.id, completionCount);
 

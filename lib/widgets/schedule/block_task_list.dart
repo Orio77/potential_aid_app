@@ -101,7 +101,7 @@ class _TaskListState extends ConsumerState<BlockTaskList> {
       setState(() {
         viewState = TaskListViewState.addingTasks;
         _predicates = <bool Function(TaskData)>[
-          (task) => task.projectId == widget.project?.id,
+          (task) => task.projectId == widget.project?.id && !task.isCompleted,
         ];
       });
     }
