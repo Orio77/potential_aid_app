@@ -1,12 +1,13 @@
 import 'package:drift/drift.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/data/tables/block.dart';
+import 'package:potential_aid_app/data/tables/block_completion.dart';
 import 'package:potential_aid_app/data/tables/block_task.dart';
 import 'package:potential_aid_app/data/tables/task.dart';
 
 part 'block_dao.g.dart';
 
-@DriftAccessor(tables: [Block, BlockTask, Task])
+@DriftAccessor(tables: [Block, BlockTask, Task, BlockCompletion])
 class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
   BlockDao(super.attachedDatabase);
 
@@ -115,5 +116,28 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
     }
 
     return BlockWithTasks(block: blockData, tasks: tasks);
+  }
+
+  Future<int> completeBlock(
+    int blockId,
+    int minutes,
+    DateTime completedAt,
+  ) async {
+    print(
+      'BlockDao.completeBlock() called: blockId=$blockId, minutes=$minutes, completedAt=$completedAt',
+    );
+    if (minutes < 0) throw ArgumentError('Count must not be negative');
+
+    final completionId = await into(db.blockCompletion).insert(
+      BlockCompletionCompanion.insert(
+        blockId: blockId,
+        count: minutes,
+        completedAt: completedAt,
+      ),
+    );
+    print(
+      'BlockDao.completeBlock() inserted completion with ID: $completionId',
+    );
+    return completionId;
   }
 }

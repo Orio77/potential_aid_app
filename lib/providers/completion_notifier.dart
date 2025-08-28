@@ -7,8 +7,13 @@ final blockCompletionProvider = FutureProvider.family<double, int>((
   ref,
   blockId,
 ) async {
+  print('blockCompletionProvider called for blockId: $blockId');
   final database = ref.read(databaseProvider);
-  return await database.getBlockCompletionPercentage(blockId);
+  final percentage = await database.getBlockCompletionPercentage(blockId);
+  print(
+    'blockCompletionProvider blockId $blockId: returning percentage = $percentage',
+  );
+  return percentage;
 });
 
 // Provider that watches for completion changes across all blocks

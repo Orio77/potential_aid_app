@@ -1,0 +1,157 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:potential_aid_app/data/database.dart';
+import 'package:potential_aid_app/providers/block_with_tasks_notifier.dart';
+import 'package:potential_aid_app/widgets/block_completion_element.dart';
+import 'package:potential_aid_app/widgets/task_completion_element.dart';
+
+class CompleteTaskDialog extends ConsumerStatefulWidget {
+  final int blockId;
+  final int blockLength;
+
+  const CompleteTaskDialog({
+    super.key,
+    required this.blockId,
+    required this.blockLength,
+  });
+
+  @override
+  ConsumerState<ConsumerStatefulWidget> createState() =>
+      _CompleteTaskDialogState();
+}
+
+class _CompleteTaskDialogState extends ConsumerState<CompleteTaskDialog> {
+  final List<GlobalKey<TaskCompletionElementState>> _taskKeys = [];
+  final GlobalKey<BlockCompletionElementState> _blockKey =
+      GlobalKey<BlockCompletionElementState>();
+  late List<TaskData> tasks;
+  late int minutesCompleted;
+
+  @override
+  Widget build(BuildContext context) {
+    final blockWithTasksAsync = ref.watch(blockTasksNotifier(widget.blockId));
+    final screenWidth = MediaQuery.of(context).size.width;
+    final dialogWidth = (screenWidth * 0.85).clamp(280.0, 400.0);
+
+    return AlertDialog(
+      title: const Center(
+        child: Text('Complete This Block', textAlign: TextAlign.center),
+      ),
+      content: SizedBox(
+        width: dialogWidth,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const SizedBox(height: 12),
+            blockWithTasksAsync.when(
+              data: (blockWithTasks) {
+                if (blockWithTasks.tasks == null ||
+                    blockWithTasks.tasks!.isEmpty) {
+                  return const Text('No tasks found for this block');
+                }
+
+                _taskKeys.clear();
+                for (int i = 0; i < blockWithTasks.tasks!.length; i++) {
+                  _taskKeys.add(GlobalKey<TaskCompletionElementState>());
+                }
+
+                return ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.4,
+                  ),
+                  child: Column(
+                    children: [
+                      BlockCompletionElement(
+                        key: _blockKey,
+                        block: blockWithTasks.block,
+                        onBlockCompletion: (blockId, minutesCompleted) {},
+                      ),
+                      ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: blockWithTasks.tasks!.length,
+                        itemBuilder: (context, index) {
+                          final task = blockWithTasks.tasks![index];
+                          return TaskCompletionElement(
+                            key: _taskKeys[index],
+                            task: task,
+                            onTaskCompletion: (taskId, completionCount) {},
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+              error: (error, stack) => Text('Error: $error'),
+              loading: () => const CircularProgressIndicator(),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+      actionsPadding: const EdgeInsets.only(bottom: 20, right: 12, left: 12),
+      actionsAlignment: MainAxisAlignment.center,
+      actionsOverflowAlignment: OverflowBarAlignment.center,
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () async {
+            print(
+              'CompleteTaskDialog: Complete button pressed for blockId ${widget.blockId}',
+            );
+            await _saveAllCompletions();
+            print('CompleteTaskDialog: All completions saved, closing dialog');
+            Navigator.of(context).pop();
+          },
+          child: const Text('Complete'),
+        ),
+      ],
+    );
+  }
+
+  bool _isValidInput(int input) {
+    return input > 0 && input <= widget.blockLength;
+  }
+
+  void _showErrorMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: TextStyle(color: Colors.black)),
+        backgroundColor: Theme.of(context).colorScheme.onError,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  Future<void> _saveAllCompletions() async {
+    print(
+      'CompleteTaskDialog._saveAllCompletions() called for blockId ${widget.blockId}',
+    );
+    final List<String> errors = [];
+
+    for (int i = 0; i < _taskKeys.length; i++) {
+      final key = _taskKeys[i];
+      if (key.currentState != null) {
+        try {
+          final state = key.currentState as TaskCompletionElementState;
+          await state.saveCompletion();
+        } catch (e) {
+          errors.add('Task ${i + 1}: $e');
+        }
+      }
+    }
+
+    if (_blockKey.currentState != null) {
+      try {
+        final state = _blockKey.currentState as BlockCompletionElementState;
+        await state.saveCompletion();
+      } catch (e) {
+        errors.add("Block: $e");
+      }
+    }
+  }
+}

@@ -177,19 +177,40 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
     await _database.blockDao.assignTasksToBlock(blockId, taskIds);
   }
 
-  Future<void> addTaskCompletion(int blockId, int minutesCompleted) async {
+  Future<int> addTaskCompletion(int taskId, int completedCount) async {
     final currentDate = _ref.read(dateNotifierProvider);
     final dateTime = currentDate.atMidnight().toDateTimeLocal();
 
-    final completion = TaskCompletionCompanion.insert(
-      blockId: blockId,
-      count: minutesCompleted,
-      completedAt: dateTime,
+    return await _database.taskDao.completeTask(
+      taskId,
+      completedCount,
+      dateTime,
+    );
+  }
+
+  Future<int> addBlockCompletion(int blockId, int minutesCompleted) async {
+    print(
+      'ScheduleNotifier.addBlockCompletion() called: blockId=$blockId, minutesCompleted=$minutesCompleted',
+    );
+    final currentDate = _ref.read(dateNotifierProvider);
+    final dateTime = currentDate.atMidnight().toDateTimeLocal();
+    print('ScheduleNotifier.addBlockCompletion() dateTime: $dateTime');
+
+    final completionId = await _database.blockDao.completeBlock(
+      blockId,
+      minutesCompleted,
+      dateTime,
+    );
+    print(
+      'ScheduleNotifier.addBlockCompletion() completion saved with ID: $completionId',
     );
 
-    await _database.into(_database.taskCompletion).insert(completion);
-
+    print(
+      'ScheduleNotifier.addBlockCompletion() invalidating blockCompletionProvider for blockId: $blockId',
+    );
     _ref.invalidate(blockCompletionProvider(blockId));
+
+    return completionId;
   }
 }
 

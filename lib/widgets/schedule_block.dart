@@ -3,14 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/tables/block.dart';
 import 'package:potential_aid_app/providers/block_with_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/completion_notifier.dart';
-import 'package:potential_aid_app/widgets/complete_task_dialog.dart';
+import 'package:potential_aid_app/widgets/complete_block_dialog.dart';
 
-class TaskBlock extends ConsumerWidget {
+class ScheduleBlock extends ConsumerWidget {
   final int blockId;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
-  const TaskBlock({
+  const ScheduleBlock({
     super.key,
     required this.blockId,
     this.onTap,
@@ -19,6 +19,7 @@ class TaskBlock extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    print('ScheduleBlock.build() called for blockId: $blockId');
     final theme = Theme.of(context);
     final completionAsync = ref.watch(blockCompletionProvider(blockId));
     final AsyncValue<BlockWithTasks> blockAsync = ref.watch(
@@ -26,14 +27,25 @@ class TaskBlock extends ConsumerWidget {
     );
 
     return completionAsync.when(
-      data: (completionPercentage) => blockAsync.when(
-        data: (block) =>
-            _buildTaskBlock(context, theme, completionPercentage, block),
-        error: (error, stack) => _buildTaskBlock(context, theme, 0.0, null),
-        loading: () => _buildTaskBlock(context, theme, 0.0, null),
-      ),
-      loading: () => _buildTaskBlock(context, theme, 0.0, null),
-      error: (error, stack) => _buildTaskBlock(context, theme, 0.0, null),
+      data: (completionPercentage) {
+        print(
+          'ScheduleBlock blockId $blockId: completionPercentage = $completionPercentage',
+        );
+        return blockAsync.when(
+          data: (block) =>
+              _buildTaskBlock(context, theme, completionPercentage, block),
+          error: (error, stack) => _buildTaskBlock(context, theme, 0.0, null),
+          loading: () => _buildTaskBlock(context, theme, 0.0, null),
+        );
+      },
+      loading: () {
+        print('ScheduleBlock blockId $blockId: completion loading');
+        return _buildTaskBlock(context, theme, 0.0, null);
+      },
+      error: (error, stack) {
+        print('ScheduleBlock blockId $blockId: completion error: $error');
+        return _buildTaskBlock(context, theme, 0.0, null);
+      },
     );
   }
 
@@ -43,6 +55,9 @@ class TaskBlock extends ConsumerWidget {
     double completionPercentage,
     BlockWithTasks? block,
   ) {
+    print(
+      'ScheduleBlock._buildTaskBlock() blockId $blockId: completionPercentage = $completionPercentage, isCompleted = ${completionPercentage > 0.0}',
+    );
     final isCompleted = completionPercentage > 0.0;
 
     return Opacity(
@@ -233,11 +248,17 @@ class TaskBlock extends ConsumerWidget {
     BlockWithTasks? block,
   ) {
     final isCompleted = completionPercentage > 0.0;
+    print(
+      'ScheduleBlock._buildActionButton() blockId $blockId: completionPercentage = $completionPercentage, isCompleted = $isCompleted',
+    );
 
     return IconButton(
       onPressed: isCompleted || block == null
           ? null
           : () {
+              print(
+                'ScheduleBlock: Opening CompleteTaskDialog for blockId $blockId',
+              );
               showDialog(
                 context: context,
                 builder: (BuildContext buildContext) {

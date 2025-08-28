@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/widgets/delete_task_dialog.dart';
-import 'package:potential_aid_app/widgets/task_block.dart';
+import 'package:potential_aid_app/widgets/schedule_block.dart';
 
 class ScheduleList extends ConsumerWidget {
   const ScheduleList({super.key});
@@ -41,7 +41,7 @@ class ScheduleList extends ConsumerWidget {
       itemCount: blockIds.length,
       itemBuilder: (context, index) {
         final blockId = blockIds[index];
-        return _buildTaskPlaceholder(context, blockId, index);
+        return _buildBlockPlaceholder(context, blockId, index);
       },
       onReorder: (int oldIndex, int newIndex) async {
         ref
@@ -51,7 +51,7 @@ class ScheduleList extends ConsumerWidget {
     );
   }
 
-  Widget _buildTaskPlaceholder(BuildContext context, int blockId, int index) {
+  Widget _buildBlockPlaceholder(BuildContext context, int blockId, int index) {
     return Dismissible(
       key: ValueKey(blockId),
       direction: DismissDirection.endToStart,
@@ -72,7 +72,7 @@ class ScheduleList extends ConsumerWidget {
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
-        child: TaskBlock(
+        child: ScheduleBlock(
           key: ValueKey(blockId), // Unique key for ReorderableListView
           blockId: blockId,
           onTap: () {

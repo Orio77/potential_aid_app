@@ -9,19 +9,28 @@ import 'package:potential_aid_app/data/tables/block_task.dart';
 import 'package:potential_aid_app/data/tables/project.dart';
 import 'package:potential_aid_app/data/tables/settings.dart';
 import 'package:potential_aid_app/data/tables/task.dart';
+import 'package:potential_aid_app/data/tables/block_completion.dart';
 import 'package:potential_aid_app/data/tables/task_completion.dart';
 
 part 'database.g.dart';
 
 @DriftDatabase(
-  tables: [Task, TaskCompletion, Block, BlockTask, Project, Settings],
+  tables: [
+    Task,
+    TaskCompletion,
+    BlockCompletion,
+    Block,
+    BlockTask,
+    Project,
+    Settings,
+  ],
   daos: [TaskDao, BlockDao, ProjectDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -30,9 +39,10 @@ class AppDatabase extends _$AppDatabase {
     },
     onUpgrade: (Migrator m, int from, int to) async {
       // Since we're okay with losing test data, just recreate everything
-      if (from < 14) {
+      if (from < 15) {
         // Drop all tables and recreate them with the current schema
         await m.deleteTable('task_completion');
+        await m.deleteTable('block_completion');
         await m.deleteTable('block_task');
         await m.deleteTable('block');
         await m.deleteTable('task');
