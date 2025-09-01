@@ -40,7 +40,9 @@ class _TaskListState extends ConsumerState<BlockAddTaskList> {
         _tasks.clear();
         _taskNameController.clear();
       });
-      widget.onTasksChanged(_tasks);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        widget.onTasksChanged(_tasks);
+      });
       _updatePredicates();
     }
   }
