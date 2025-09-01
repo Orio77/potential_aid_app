@@ -10,16 +10,16 @@ import 'package:potential_aid_app/widgets/duration_picker_dialog.dart';
 import 'package:potential_aid_app/widgets/schedule/block_add_task_list.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
 
-class EditTaskDialog extends ConsumerStatefulWidget {
+class EditBlockDialog extends ConsumerStatefulWidget {
   final int blockId;
 
-  const EditTaskDialog({super.key, required this.blockId});
+  const EditBlockDialog({super.key, required this.blockId});
 
   @override
-  ConsumerState<EditTaskDialog> createState() => _EditTaskDialogState();
+  ConsumerState<EditBlockDialog> createState() => _EditTaskDialogState();
 }
 
-class _EditTaskDialogState extends ConsumerState<EditTaskDialog> {
+class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _projectNameController;
   bool _isLoading = false;
@@ -84,7 +84,7 @@ class _EditTaskDialogState extends ConsumerState<EditTaskDialog> {
     return time.hour * 60 + time.minute;
   }
 
-  Future<void> _editBlock(int blockId) async {
+  Future<void> _saveEditBlock(int blockId) async {
     if (!_formKey.currentState!.validate() ||
         _startTime == null ||
         _duration == null) {
@@ -224,7 +224,7 @@ class _EditTaskDialogState extends ConsumerState<EditTaskDialog> {
           child: const Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: _isLoading ? null : (() => _editBlock(widget.blockId)),
+          onPressed: _isLoading ? null : (() => _saveEditBlock(widget.blockId)),
           child: _isLoading
               ? const SizedBox(
                   width: 16,
@@ -264,12 +264,12 @@ class _EditTaskDialogState extends ConsumerState<EditTaskDialog> {
   }
 }
 
-Future<void> showEditTaskDialog(
+Future<void> showEditBlockDialog(
   BuildContext context, {
   required int blockId,
 }) async {
   await showDialog(
     context: context,
-    builder: (context) => EditTaskDialog(blockId: blockId),
+    builder: (context) => EditBlockDialog(blockId: blockId),
   );
 }

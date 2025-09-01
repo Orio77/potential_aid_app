@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/widgets/delete_task_dialog.dart';
-import 'package:potential_aid_app/widgets/edit_task_dialog.dart';
+import 'package:potential_aid_app/widgets/edit_block_dialog.dart';
 import 'package:potential_aid_app/widgets/schedule_block.dart';
 
 class ScheduleList extends ConsumerWidget {
@@ -77,7 +77,7 @@ class ScheduleList extends ConsumerWidget {
           key: ValueKey(blockId),
           blockId: blockId,
           onTap: () {
-            showEditTaskDialog(context, blockId: blockId);
+            showEditBlockDialog(context, blockId: blockId);
           },
         ),
       ),

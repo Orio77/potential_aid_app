@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/data/tables/block.dart';
 import 'package:potential_aid_app/providers/block_with_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/completion_notifier.dart';
+import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/utils/completion_utils.dart';
 import 'package:potential_aid_app/widgets/complete_block_dialog.dart';
 import 'package:potential_aid_app/widgets/schedule/blocks_task_list.dart';
@@ -26,22 +28,30 @@ class ScheduleBlock extends ConsumerWidget {
     final AsyncValue<BlockWithTasks> blockAsync = ref.watch(
       blockTasksNotifier(blockId),
     );
+    final projectAsync = ref.watch(projectByBlockProvider(blockId));
 
     return completionAsync.when(
       data: (completionPercentage) {
         return blockAsync.when(
-          data: (block) =>
-              _buildTaskBlock(context, theme, completionPercentage, block),
-          error: (error, stack) => _buildTaskBlock(context, theme, 0.0, null),
-          loading: () => _buildTaskBlock(context, theme, 0.0, null),
+          data: (block) {
+            return projectAsync.when(
+              data: (project) => _buildTaskBlock(
+                context,
+                theme,
+                completionPercentage,
+                block,
+                project!,
+              ),
+              error: (error, stack) => _buildErrorState(context, theme),
+              loading: () => _buildLoadingState(context, theme),
+            );
+          },
+          error: (error, stack) => _buildErrorState(context, theme),
+          loading: () => _buildLoadingState(context, theme),
         );
       },
-      loading: () {
-        return _buildTaskBlock(context, theme, 0.0, null);
-      },
-      error: (error, stack) {
-        return _buildTaskBlock(context, theme, 0.0, null);
-      },
+      loading: () => _buildLoadingState(context, theme),
+      error: (error, stack) => _buildErrorState(context, theme),
     );
   }
 
@@ -50,6 +60,7 @@ class ScheduleBlock extends ConsumerWidget {
     ThemeData theme,
     double completionPercentage,
     BlockWithTasks? block,
+    ProjectData project,
   ) {
     final isCompleted = completionPercentage > 0.0;
 
@@ -71,7 +82,7 @@ class ScheduleBlock extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildProjectName(theme, completionPercentage, block),
+                        _buildProjectName(theme, completionPercentage, project),
                         const SizedBox(height: 4),
                         _buildTimeInfo(theme, block),
 
@@ -114,12 +125,10 @@ class ScheduleBlock extends ConsumerWidget {
   Widget _buildProjectName(
     ThemeData theme,
     double completionPercentage,
-    BlockWithTasks? block,
+    ProjectData project,
   ) {
     final isCompleted = completionPercentage > 0.0;
-    final title = block?.tasks != null && block!.tasks!.isNotEmpty
-        ? block.tasks!.first.name
-        : 'Unnamed Block';
+    final title = project.name;
 
     return Text(
       title,
@@ -232,5 +241,44 @@ class ScheduleBlock extends ConsumerWidget {
     return CompletionUtils.getCompletionColor(
       completionPercentage,
     ).withValues(alpha: 0.1);
+  }
+
+  Widget _buildLoadingState(BuildContext context, ThemeData theme) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: 12),
+            Text('Loading...', style: theme.textTheme.bodyMedium),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, ThemeData theme) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline, color: theme.colorScheme.error, size: 24),
+            const SizedBox(width: 12),
+            Text(
+              'Error loading block',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

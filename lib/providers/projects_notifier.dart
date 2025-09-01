@@ -57,3 +57,11 @@ final projectProvider = FutureProvider.family<ProjectData?, int>((
   final database = ref.watch(databaseProvider);
   return await database.projectDao.getById(projectId);
 });
+
+final projectByBlockProvider = FutureProvider.family<ProjectData?, int>((
+  ref,
+  blockId,
+) async {
+  final database = ref.watch(databaseProvider);
+  return await database.projectDao.getByBlockId(blockId);
+});
