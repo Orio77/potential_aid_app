@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/widgets/delete_task_dialog.dart';
+import 'package:potential_aid_app/widgets/edit_task_dialog.dart';
 import 'package:potential_aid_app/widgets/schedule_block.dart';
 
 class ScheduleList extends ConsumerWidget {
@@ -73,21 +74,10 @@ class ScheduleList extends ConsumerWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: ScheduleBlock(
-          key: ValueKey(blockId), // Unique key for ReorderableListView
+          key: ValueKey(blockId),
           blockId: blockId,
           onTap: () {
-            // showDialog(
-            //   context: context,
-            //   builder: (BuildContext dialogContext) {
-            //     return EditTaskDialog(
-            //       blockId: block.block.id,
-            //       taskId: block.block.projectId,
-            //       initialTaskName: 'Change in schedule_list.dart',
-            //       initialStartTime: block.block.startMinuteOfDay,
-            //       initialDuration: block.block.lengthMinutes,
-            //     );
-            //   },
-            // );
+            showEditTaskDialog(context, blockId: blockId);
           },
         ),
       ),

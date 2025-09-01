@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/tables/block.dart';
 import 'package:potential_aid_app/providers/block_with_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/completion_notifier.dart';
+import 'package:potential_aid_app/utils/completion_utils.dart';
 import 'package:potential_aid_app/widgets/complete_block_dialog.dart';
+import 'package:potential_aid_app/widgets/schedule/blocks_task_list.dart';
 
 class ScheduleBlock extends ConsumerWidget {
   final int blockId;
@@ -71,23 +73,20 @@ class ScheduleBlock extends ConsumerWidget {
                       children: [
                         _buildProjectName(theme, completionPercentage, block),
                         const SizedBox(height: 4),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildTimeInfo(theme, block),
-                            _buildTaskInfo(theme, block),
-                            if (isCompleted) ...[
-                              const SizedBox(width: 8),
-                              _buildCompletionBadge(
-                                theme,
-                                completionPercentage,
-                              ),
-                            ],
-                          ],
-                        ),
+                        _buildTimeInfo(theme, block),
+
+                        if (block != null &&
+                            block.tasks != null &&
+                            block.tasks!.isNotEmpty) ...[
+                          const SizedBox(height: 20),
+                        ],
+
+                        BlocksTaskList(block: block),
+                        if (isCompleted) ...[const SizedBox(width: 8)],
                       ],
                     ),
                   ),
+                  _buildCompletionBadge(theme, completionPercentage),
                   _buildActionButton(context, completionPercentage, block),
                 ],
               ),
@@ -104,7 +103,7 @@ class ScheduleBlock extends ConsumerWidget {
     if (isCompleted) {
       return Icon(
         Icons.check_circle,
-        color: _getCompletionColor(completionPercentage),
+        color: CompletionUtils.getCompletionColor(completionPercentage),
         size: 24,
       );
     }
@@ -126,6 +125,7 @@ class ScheduleBlock extends ConsumerWidget {
       title,
       style: theme.textTheme.titleMedium?.copyWith(
         fontWeight: FontWeight.w600,
+        fontSize: 20,
         decoration: isCompleted ? TextDecoration.lineThrough : null,
         decorationColor: theme.colorScheme.onSurfaceVariant,
         color: isCompleted
@@ -151,6 +151,7 @@ class ScheduleBlock extends ConsumerWidget {
           block.formatTimeRange(),
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
+            fontSize: 12,
           ),
         ),
         const SizedBox(width: 8),
@@ -165,6 +166,7 @@ class ScheduleBlock extends ConsumerWidget {
             style: theme.textTheme.labelSmall?.copyWith(
               color: theme.colorScheme.onPrimaryContainer,
               fontWeight: FontWeight.w500,
+              fontSize: 12,
             ),
           ),
         ),
@@ -172,54 +174,11 @@ class ScheduleBlock extends ConsumerWidget {
     );
   }
 
-  Widget _buildTaskInfo(ThemeData theme, BlockWithTasks? block) {
-    if (block == null) {
-      return Text('block is null');
-    }
-
-    if (block.tasks == null) {
-      return Text('tasks property is null');
-    }
-
-    final tasks = block.tasks!;
-
-    if (tasks.isEmpty) {
-      return Text(
-        'No tasks (tasks list is empty)',
-        style: theme.textTheme.bodyMedium?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-      );
-    }
-
-    // Show all tasks in a column - card will grow to fit content
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: tasks
-            .map(
-              (task) => Padding(
-                padding: const EdgeInsets.only(bottom: 2.0),
-                child: Text(
-                  task.name,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            )
-            .toList(),
-      ),
-    );
-  }
-
   Widget _buildCompletionBadge(ThemeData theme, double completionPercentage) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: _getCompletionColor(completionPercentage),
+        color: CompletionUtils.getCompletionColor(completionPercentage),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
@@ -270,22 +229,8 @@ class ScheduleBlock extends ConsumerWidget {
       return null;
     }
 
-    return _getCompletionColor(completionPercentage).withValues(alpha: 0.1);
-  }
-
-  Color _getCompletionColor(double completionPercentage) {
-    if (completionPercentage == 0) {
-      return Colors.grey;
-    } else if (completionPercentage < 25) {
-      return Colors.red;
-    } else if (completionPercentage < 50) {
-      return Colors.orange;
-    } else if (completionPercentage < 75) {
-      return Colors.amber;
-    } else if (completionPercentage < 100) {
-      return Colors.lightGreen;
-    } else {
-      return Colors.green;
-    }
+    return CompletionUtils.getCompletionColor(
+      completionPercentage,
+    ).withValues(alpha: 0.1);
   }
 }

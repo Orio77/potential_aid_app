@@ -1,11 +1,12 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/daos/database_completions.dart';
+import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/data/tables/block.dart';
+import 'package:potential_aid_app/providers/block_with_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/completion_notifier.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
-import 'package:potential_aid_app/data/database.dart';
 
 class ScheduleNotifier extends StateNotifier<List<int>> {
   final AppDatabase _database;
@@ -51,10 +52,15 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
     int? startMinute,
     int? lengthMinutes,
     int? projectId,
+    List<int>? taskIds,
   ) async {
     BlockData block = await (_database.select(
       _database.block,
     )..where((block) => block.id.equals(blockId))).getSingle();
+    List<BlockTaskData> initialTasks = await (_database.select(
+      _database.blockTask,
+    )..where((b) => b.blockId.equals(blockId))).get();
+    List<int> initialTaskIds = initialTasks.map((bt) => bt.taskId).toList();
 
     final newStartMinute = (startMinute == null || startMinute <= 0)
         ? block.startMinuteOfDay
@@ -65,16 +71,41 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
     final newProjectId = (projectId == null || projectId < 0)
         ? block.projectId
         : projectId;
+    final newTaskIds = taskIds ?? initialTaskIds;
 
-    await (_database.update(
-      _database.block,
-    )..where((block) => block.id.equals(blockId))).write(
-      BlockCompanion(
-        startMinuteOfDay: Value(newStartMinute),
-        lengthMinutes: Value(newLengthMinutes),
-        projectId: Value(newProjectId),
-      ),
-    );
+    await _database.transaction(() async {
+      await (_database.update(
+        _database.block,
+      )..where((block) => block.id.equals(blockId))).write(
+        BlockCompanion(
+          startMinuteOfDay: Value(newStartMinute),
+          lengthMinutes: Value(newLengthMinutes),
+          projectId: Value(newProjectId),
+        ),
+      );
+
+      await (_database.delete(
+        _database.blockTask,
+      )..where((bt) => bt.blockId.equals(blockId))).go();
+
+      if (newTaskIds.isNotEmpty) {
+        final blockTaskEntries = newTaskIds
+            .map(
+              (taskId) => BlockTaskCompanion(
+                blockId: Value(blockId),
+                taskId: Value(taskId),
+              ),
+            )
+            .toList();
+
+        await _database.batch((batch) {
+          batch.insertAll(_database.blockTask, blockTaskEntries);
+        });
+      }
+    });
+
+    _ref.invalidate(blockTasksNotifier(blockId));
+    await _loadScheduleForCurrentDate();
   }
 
   Future<void> editTask(int taskId, String? taskName) async {

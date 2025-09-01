@@ -14,6 +14,12 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
     return await query.getSingleOrNull();
   }
 
+  Future<ProjectData?> getById(int projectId) async {
+    final query = select(project)..where((p) => p.id.equals(projectId));
+
+    return await query.getSingleOrNull();
+  }
+
   Future<List<ProjectData>> searchProjects({
     required String query,
     int? limit,

@@ -6,7 +6,7 @@ import 'package:potential_aid_app/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/providers/settings_notifier.dart';
 import 'package:potential_aid_app/utils/time_utils.dart';
 import 'package:potential_aid_app/widgets/duration_picker_dialog.dart';
-import 'package:potential_aid_app/widgets/schedule/block_task_list.dart';
+import 'package:potential_aid_app/widgets/schedule/block_add_task_list.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
 
 class AddBlockDialog extends ConsumerStatefulWidget {
@@ -146,6 +146,9 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
       title: const Center(child: Text('Add New Block')),
       content: SizedBox(
         width: double.maxFinite,
+        height:
+            MediaQuery.of(context).size.height *
+            0.7, // Use 70% of screen height
         child: Form(
           key: _formKey,
           child: Column(
@@ -175,11 +178,13 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
               const SizedBox(height: 16),
 
               Expanded(
-                child: BlockTaskList(
+                child: BlockAddTaskList(
                   project: _selectedProject,
                   onTasksChanged: _onTasksChanged,
                 ),
               ),
+
+              const SizedBox(height: 16),
 
               ListTile(
                 leading: const Icon(Icons.access_time),

@@ -49,3 +49,11 @@ final projectsNotifierProvider =
       final database = ref.watch(databaseProvider);
       return ProjectsNotifier(database);
     });
+
+final projectProvider = FutureProvider.family<ProjectData?, int>((
+  ref,
+  projectId,
+) async {
+  final database = ref.watch(databaseProvider);
+  return await database.projectDao.getById(projectId);
+});
