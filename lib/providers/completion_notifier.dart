@@ -2,18 +2,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
 import 'package:potential_aid_app/data/daos/database_completions.dart';
 
-// Provider that gets completion percentage for a specific block
-final blockCompletionProvider = FutureProvider.family<double, int>((
+final blockCompletionProvider = FutureProvider.family<double?, int>((
   ref,
   blockId,
 ) async {
+  print('blockCompletionProvider: called for blockId $blockId');
   final database = ref.read(databaseProvider);
-  final percentage = await database.getBlockCompletionPercentage(blockId);
-  return percentage;
+  print('blockCompletionProvider: database obtained');
+
+  try {
+    final percentage = await database.getBlockCompletionPercentage(blockId);
+    print('blockCompletionProvider: percentage = $percentage');
+    return percentage;
+  } catch (e, stackTrace) {
+    print('blockCompletionProvider: ERROR - $e');
+    print('blockCompletionProvider: STACK TRACE - $stackTrace');
+    rethrow;
+  }
 });
 
-// Provider that watches for completion changes across all blocks
-// This will be used to invalidate specific block completion providers when completion changes
 final completionChangeNotifierProvider =
     StateNotifierProvider<CompletionChangeNotifier, int>((ref) {
       return CompletionChangeNotifier();
@@ -22,8 +29,7 @@ final completionChangeNotifierProvider =
 class CompletionChangeNotifier extends StateNotifier<int> {
   CompletionChangeNotifier() : super(0);
 
-  // Call this whenever completion data changes
   void notifyCompletionChanged() {
-    state = state + 1; // Increment to trigger listeners
+    state = state + 1;
   }
 }

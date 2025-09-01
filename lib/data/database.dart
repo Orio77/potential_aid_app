@@ -30,7 +30,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -39,7 +39,7 @@ class AppDatabase extends _$AppDatabase {
     },
     onUpgrade: (Migrator m, int from, int to) async {
       // Since we're okay with losing test data, just recreate everything
-      if (from < 15) {
+      if (from < 16) {
         // Drop all tables and recreate them with the current schema
         await m.deleteTable('task_completion');
         await m.deleteTable('block_completion');
@@ -54,13 +54,7 @@ class AppDatabase extends _$AppDatabase {
       }
     },
     beforeOpen: (details) async {
-      // For development: uncomment these lines to reset database on every restart
-      // final db = details.database;
-      // await db.execute('DROP TABLE IF EXISTS task');
-      // await db.execute('DROP TABLE IF EXISTS task_completion');
-      // await db.execute('DROP TABLE IF EXISTS block');
-      // await db.execute('DROP TABLE IF EXISTS project');
-      // await db.execute('DROP TABLE IF EXISTS settings');
+      // Database will be reset via migration when schema version changes
     },
   );
 

@@ -170,6 +170,11 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
     final secondCompletionPercentage = await _database
         .getBlockCompletionPercentage(second.block.id);
 
+    if (firstCompletionPercentage == null ||
+        secondCompletionPercentage == null) {
+      return;
+    }
+
     final anyCompleted =
         firstCompletionPercentage > 0 || secondCompletionPercentage > 0;
 
