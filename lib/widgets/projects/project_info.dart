@@ -18,6 +18,9 @@ class ProjectInfo extends ConsumerWidget {
       children: [
         Text('$current / $goal $unit'),
         Text('Deadline: ${TimeUtils.formatDateTime(deadline)}'),
+        Text("Time spent total: 23h"), // TODO
+        Text("Avg: 2 $unit / day"), // TODO
+        Text("% of life devoted: 2.34%"), // TODO
       ],
     );
   }
