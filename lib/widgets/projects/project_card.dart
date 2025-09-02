@@ -1,20 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
+import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/screens/project_screen.dart';
 import 'package:potential_aid_app/widgets/projects/project_info.dart';
 import 'package:potential_aid_app/widgets/projects/project_title.dart';
 
 class ProjectCard extends ConsumerWidget {
-  final ProjectData project;
-  const ProjectCard({super.key, required this.project});
+  final int projectId;
+  const ProjectCard({super.key, required this.projectId});
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget _buildProjectCard(BuildContext context, ProjectData project) {
     return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadiusGeometry.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: () {
           Navigator.of(context).push(
@@ -28,6 +26,32 @@ class ProjectCard extends ConsumerWidget {
             ProjectTitle(title: project.name),
             ProjectInfo(project: project),
           ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final projectData = ref.watch(projectProvider(projectId));
+
+    return projectData.when(
+      data: (data) {
+        if (data == null) {
+          return const SizedBox.shrink();
+        }
+        return _buildProjectCard(context, data);
+      },
+      error: (error, stackTrace) => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text('Error loading project: $error'),
+        ),
+      ),
+      loading: () => const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Center(child: CircularProgressIndicator()),
         ),
       ),
     );

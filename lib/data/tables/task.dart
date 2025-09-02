@@ -5,9 +5,8 @@ import 'package:potential_aid_app/data/tables/project.dart';
 class Task extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text().unique()();
-  IntColumn get projectId => integer()
-      .references(Project, #id, onDelete: KeyAction.cascade)
-      .nullable()();
+  IntColumn get projectId =>
+      integer().references(Project, #id, onDelete: KeyAction.cascade)();
   TextColumn get unit => text().nullable()();
   IntColumn get startPoint =>
       integer().nullable().withDefault(const Constant(0))();

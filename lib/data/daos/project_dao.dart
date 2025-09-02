@@ -51,4 +51,20 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
 
     return selectQuery.get();
   }
+
+  Future<int> addProjectCompletion(int projectId, int completionCount) async {
+    final projectData = await (select(
+      project,
+    )..where((p) => p.id.equals(projectId))).getSingle();
+
+    final projectCompanion = ProjectCompanion(
+      current: Value(projectData.current + completionCount),
+    );
+
+    final res = await (update(
+      project,
+    )..where((p) => p.id.equals(projectId))).write(projectCompanion);
+
+    return res;
+  }
 }

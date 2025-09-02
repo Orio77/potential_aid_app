@@ -7,6 +7,7 @@ import 'package:potential_aid_app/providers/block_with_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/completion_notifier.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
+import 'package:potential_aid_app/providers/projects_notifier.dart';
 
 class ScheduleNotifier extends StateNotifier<List<int>> {
   final AppDatabase _database;
@@ -237,6 +238,17 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
     _ref.invalidate(blockCompletionProvider(blockId));
 
     return completionId;
+  }
+
+  Future<int> addProjectCompletion(int projectId, int completionCount) async {
+    final res = await _database.projectDao.addProjectCompletion(
+      projectId,
+      completionCount,
+    );
+
+    _ref.invalidate(projectProvider(projectId));
+
+    return res;
   }
 }
 

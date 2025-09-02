@@ -5,11 +5,11 @@ import 'package:potential_aid_app/data/daos/block_dao.dart';
 import 'package:potential_aid_app/data/daos/project_dao.dart';
 import 'package:potential_aid_app/data/daos/task_dao.dart';
 import 'package:potential_aid_app/data/tables/block.dart';
+import 'package:potential_aid_app/data/tables/block_completion.dart';
 import 'package:potential_aid_app/data/tables/block_task.dart';
 import 'package:potential_aid_app/data/tables/project.dart';
 import 'package:potential_aid_app/data/tables/settings.dart';
 import 'package:potential_aid_app/data/tables/task.dart';
-import 'package:potential_aid_app/data/tables/block_completion.dart';
 import 'package:potential_aid_app/data/tables/task_completion.dart';
 
 part 'database.g.dart';
@@ -91,22 +91,5 @@ class AppDatabase extends _$AppDatabase {
 
   Future<List<TaskData>> getAllTasks() async {
     return await (select(task)).get();
-  }
-
-  Future<int> getOrCreateTask(String taskName) async {
-    // First, try to find an existing task with the same name
-    final existingTaskQuery = select(task)
-      ..where((t) => t.name.equals(taskName));
-
-    final existingTasks = await existingTaskQuery.get();
-
-    if (existingTasks.isNotEmpty) {
-      // Task already exists, return its ID
-      return existingTasks.first.id;
-    }
-
-    // Task doesn't exist, create a new one
-    final newTask = TaskCompanion.insert(name: taskName);
-    return await into(task).insert(newTask);
   }
 }

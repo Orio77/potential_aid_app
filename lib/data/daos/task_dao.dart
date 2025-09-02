@@ -37,7 +37,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
   ]) async {
     final taskData = TaskCompanion.insert(
       name: name,
-      projectId: Value(projectId),
+      projectId: projectId,
       deadline: Value(deadline),
       unit: Value(unit ?? ''),
       startPoint: Value(startPoint ?? 0),

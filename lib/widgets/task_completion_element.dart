@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
+import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
 
 class TaskCompletionElement extends ConsumerStatefulWidget {
@@ -90,6 +91,17 @@ class TaskCompletionElementState extends ConsumerState<TaskCompletionElement> {
           .addTaskCompletion(widget.task.id, completionCount);
 
       widget.onTaskCompletion?.call(widget.task.id, completionCount);
+
+      final projectDataAsync = await ref.read(
+        projectProvider(widget.task.projectId).future,
+      );
+
+      if (projectDataAsync != null &&
+          widget.task.unit == projectDataAsync.unit) {
+        await ref
+            .read(scheduleNotifierProvider.notifier)
+            .addProjectCompletion(widget.task.projectId, completionCount);
+      }
 
       return res;
     } catch (e) {
