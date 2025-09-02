@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/utils/time_utils.dart';
+import 'package:potential_aid_app/widgets/heatmap_widget.dart';
 
 class ProjectInfo extends ConsumerWidget {
   final ProjectData project;
@@ -15,9 +16,19 @@ class ProjectInfo extends ConsumerWidget {
     final deadline = project.deadline;
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text('$current / $goal $unit'),
         Text('Deadline: ${TimeUtils.formatDateTime(deadline)}'),
+        const SizedBox(height: 16),
+        const SizedBox(height: 8),
+        CompactHeatmapWidget(
+          projectId: project.id,
+          months: 1,
+          cellSize: 22.0,
+          orientation: HeatmapOrientation.vertical,
+        ),
       ],
     );
   }
