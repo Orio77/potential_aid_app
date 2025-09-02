@@ -31,6 +31,13 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
     super.initState();
 
     final settings = ref.read(settingsNotifierProvider);
+    _projectNameController.addListener(() {
+      if (_projectNameController.text.isEmpty) {
+        setState(() {
+          _selectedProject = null;
+        });
+      }
+    });
 
     final defaultStartTime = settings.defaultStartTime;
     _durationMinutes = settings.defaultTaskLength;
@@ -146,9 +153,6 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
       title: const Center(child: Text('Add New Block')),
       content: SizedBox(
         width: double.maxFinite,
-        height:
-            MediaQuery.of(context).size.height *
-            0.7, // Use 70% of screen height
         child: Form(
           key: _formKey,
           child: Column(
@@ -177,12 +181,14 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
 
               const SizedBox(height: 16),
 
-              Expanded(
-                child: BlockAddTaskList(
-                  project: _selectedProject,
-                  onTasksChanged: _onTasksChanged,
+              if (_selectedProject != null) ...[
+                Expanded(
+                  child: BlockAddTaskList(
+                    project: _selectedProject,
+                    onTasksChanged: _onTasksChanged,
+                  ),
                 ),
-              ),
+              ],
 
               const SizedBox(height: 16),
 

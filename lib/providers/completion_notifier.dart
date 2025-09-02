@@ -6,17 +6,12 @@ final blockCompletionProvider = FutureProvider.family<double?, int>((
   ref,
   blockId,
 ) async {
-  print('blockCompletionProvider: called for blockId $blockId');
   final database = ref.read(databaseProvider);
-  print('blockCompletionProvider: database obtained');
 
   try {
     final percentage = await database.getBlockCompletionPercentage(blockId);
-    print('blockCompletionProvider: percentage = $percentage');
     return percentage;
-  } catch (e, stackTrace) {
-    print('blockCompletionProvider: ERROR - $e');
-    print('blockCompletionProvider: STACK TRACE - $stackTrace');
+  } catch (e) {
     rethrow;
   }
 });

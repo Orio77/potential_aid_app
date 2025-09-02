@@ -70,7 +70,7 @@ class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
 
   String? _validateProjectName(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Task name cannot be empty';
+      return 'Project name cannot be empty';
     }
 
     return null;
@@ -147,7 +147,7 @@ class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
     }
 
     return AlertDialog(
-      title: const Center(child: Text('Edit Task')),
+      title: const Center(child: Text('Edit Block')),
       content: SizedBox(
         width: double.maxFinite,
         child: Form(
@@ -178,18 +178,20 @@ class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
 
               const SizedBox(height: 16),
 
-              Expanded(
-                child: BlockAddTaskList(
-                  key: ValueKey(_selectedProject?.id),
-                  project: _selectedProject,
-                  initialTasks: _selectedTasks,
-                  onTasksChanged: (tasks) {
-                    setState(() {
-                      _selectedTasks = tasks;
-                    });
-                  },
+              if (_selectedProject != null) ...[
+                Expanded(
+                  child: BlockAddTaskList(
+                    key: ValueKey(_selectedProject?.id),
+                    project: _selectedProject,
+                    initialTasks: _selectedTasks,
+                    onTasksChanged: (tasks) {
+                      setState(() {
+                        _selectedTasks = tasks;
+                      });
+                    },
+                  ),
                 ),
-              ),
+              ],
 
               const SizedBox(height: 16),
 

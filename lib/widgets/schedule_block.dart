@@ -7,6 +7,7 @@ import 'package:potential_aid_app/providers/completion_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/utils/completion_utils.dart';
 import 'package:potential_aid_app/widgets/complete_block_dialog.dart';
+import 'package:potential_aid_app/widgets/edit_block_dialog.dart';
 import 'package:potential_aid_app/widgets/schedule/blocks_task_list.dart';
 
 class ScheduleBlock extends ConsumerWidget {
@@ -23,7 +24,6 @@ class ScheduleBlock extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    print('ScheduleBlock: build called for blockId $blockId');
     final theme = Theme.of(context);
     final completionAsync = ref.watch(blockCompletionProvider(blockId));
     final AsyncValue<BlockWithTasks> blockAsync = ref.watch(
@@ -33,12 +33,8 @@ class ScheduleBlock extends ConsumerWidget {
 
     return blockAsync.when(
       data: (block) {
-        print('ScheduleBlock: blockAsync data received');
         return completionAsync.when(
           data: (completionPercentage) {
-            print(
-              'ScheduleBlock: completionAsync data received: $completionPercentage',
-            );
             return projectAsync.when(
               data: (project) => _buildTaskBlock(
                 context,
@@ -48,31 +44,25 @@ class ScheduleBlock extends ConsumerWidget {
                 project!,
               ),
               error: (error, stack) {
-                print('ScheduleBlock: projectAsync error: $error');
                 return _buildTaskBlock(context, theme, null, null, null);
               },
               loading: () {
-                print('ScheduleBlock: projectAsync loading');
                 return _buildLoadingState(context, theme);
               },
             );
           },
           error: (error, stack) {
-            print('ScheduleBlock: completionAsync error: $error');
             return _buildErrorState(context, theme);
           },
           loading: () {
-            print('ScheduleBlock: completionAsync loading');
             return _buildLoadingState(context, theme);
           },
         );
       },
       loading: () {
-        print('ScheduleBlock: blockAsync loading');
         return _buildLoadingState(context, theme);
       },
       error: (error, stack) {
-        print('ScheduleBlock: blockAsync error: $error');
         return _buildErrorState(context, theme);
       },
     );
@@ -85,18 +75,16 @@ class ScheduleBlock extends ConsumerWidget {
     BlockWithTasks? blockWithTasks,
     ProjectData? project,
   ) {
-    print(
-      'ScheduleBlock: _buildTaskBlock called with completion: $completionPercentage',
-    );
     final isCompleted = completionPercentage != null;
-    print('ScheduleBlock: isCompleted: $isCompleted');
 
     return Opacity(
       opacity: isCompleted ? 0.6 : 1.0,
       child: Card(
         color: _getCardColor(theme, completionPercentage),
         child: InkWell(
-          onTap: isCompleted ? null : () => print("notcompleted"),
+          onTap: isCompleted
+              ? null
+              : () => showEditBlockDialog(context, blockId: blockId),
           onLongPress: isCompleted ? null : onLongPress,
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -139,9 +127,6 @@ class ScheduleBlock extends ConsumerWidget {
   }
 
   Widget _buildCompletionIcon(ThemeData theme, double? completionPercentage) {
-    print(
-      'ScheduleBlock: _buildCompletionIcon called with completion: $completionPercentage',
-    );
     final isCompleted = completionPercentage != null;
 
     if (isCompleted) {
@@ -160,9 +145,6 @@ class ScheduleBlock extends ConsumerWidget {
     double? completionPercentage,
     ProjectData? project,
   ) {
-    print(
-      'ScheduleBlock: _buildProjectName called with project: ${project?.name}',
-    );
     if (project == null) {
       return SizedBox.shrink();
     }
@@ -184,9 +166,6 @@ class ScheduleBlock extends ConsumerWidget {
   }
 
   Widget _buildTimeInfo(ThemeData theme, BlockWithTasks? block) {
-    print(
-      'ScheduleBlock: _buildTimeInfo called with block: ${block?.block.id}',
-    );
     if (block == null) {
       return Text(
         'Loading...',
@@ -226,9 +205,6 @@ class ScheduleBlock extends ConsumerWidget {
   }
 
   Widget _buildCompletionBadge(ThemeData theme, double? completionPercentage) {
-    print(
-      'ScheduleBlock: _buildCompletionBadge called with completion: $completionPercentage',
-    );
     return completionPercentage == null
         ? SizedBox.shrink()
         : Container(
@@ -253,18 +229,12 @@ class ScheduleBlock extends ConsumerWidget {
     double? completionPercentage,
     BlockWithTasks? blockWithTasks,
   ) {
-    print(
-      'ScheduleBlock: _buildActionButton called with completion: $completionPercentage',
-    );
     final isCompleted = completionPercentage != null;
 
     return IconButton(
       onPressed: isCompleted || blockWithTasks == null
           ? null
           : () {
-              print(
-                'ScheduleBlock: Action button pressed for block ${blockWithTasks.block.id}',
-              );
               showDialog(
                 context: context,
                 builder: (BuildContext buildContext) {
@@ -285,9 +255,6 @@ class ScheduleBlock extends ConsumerWidget {
   }
 
   Color? _getCardColor(ThemeData theme, double? completionPercentage) {
-    print(
-      'ScheduleBlock: _getCardColor called with completion: $completionPercentage',
-    );
     final isCompleted = completionPercentage != null;
 
     if (!isCompleted) {
@@ -300,7 +267,6 @@ class ScheduleBlock extends ConsumerWidget {
   }
 
   Widget _buildLoadingState(BuildContext context, ThemeData theme) {
-    print('ScheduleBlock: _buildLoadingState called');
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -320,7 +286,6 @@ class ScheduleBlock extends ConsumerWidget {
   }
 
   Widget _buildErrorState(BuildContext context, ThemeData theme) {
-    print('ScheduleBlock: _buildErrorState called');
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
