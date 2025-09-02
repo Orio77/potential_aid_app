@@ -4,6 +4,7 @@ import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/widgets/add_task_dialog.dart';
 import 'package:potential_aid_app/widgets/projects/project_info.dart';
 import 'package:potential_aid_app/widgets/projects/project_task_list.dart';
+import 'package:potential_aid_app/widgets/projects/project_title.dart';
 
 class ProjectScreen extends ConsumerWidget {
   final ProjectData data;
@@ -14,7 +15,7 @@ class ProjectScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("${data.name} Project"),
+        title: ProjectTitle(title: data.name),
         centerTitle: true,
         leading: IconButton(
           onPressed: () => Navigator.of(context).pop(),

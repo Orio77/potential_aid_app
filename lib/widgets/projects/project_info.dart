@@ -9,7 +9,6 @@ class ProjectInfo extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final title = project.name;
     final current = project.current;
     final goal = project.goal;
     final unit = project.unit;
@@ -17,12 +16,6 @@ class ProjectInfo extends ConsumerWidget {
 
     return Column(
       children: [
-        Center(
-          child: Text(
-            title,
-            style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
-          ),
-        ),
         Text('$current / $goal $unit'),
         Text('Deadline: ${TimeUtils.formatDateTime(deadline)}'),
       ],
