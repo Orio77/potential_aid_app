@@ -135,4 +135,30 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
 
     return completionId;
   }
+
+  Future<Map<BlockData, BlockCompletionData>> getBlockCompletionsForDate(
+    DateTime date,
+  ) async {
+    final startOfDay = DateTime(date.year, date.month, date.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+    final blocksWithCompletions = <BlockData, BlockCompletionData>{};
+
+    final query =
+        select(blockCompletion).join([
+          innerJoin(block, block.id.equalsExp(blockCompletion.blockId)),
+        ])..where(
+          blockCompletion.completedAt.isBiggerOrEqualValue(startOfDay) &
+              blockCompletion.completedAt.isSmallerThanValue(endOfDay),
+        );
+
+    final rows = await query.get();
+
+    for (final row in rows) {
+      final blockData = row.readTable(block);
+      final completionData = row.readTable(blockCompletion);
+      blocksWithCompletions[blockData] = completionData;
+    }
+
+    return blocksWithCompletions;
+  }
 }

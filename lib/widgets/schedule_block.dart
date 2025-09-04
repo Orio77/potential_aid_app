@@ -25,7 +25,9 @@ class ScheduleBlock extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final completionAsync = ref.watch(blockCompletionProvider(blockId));
+    final completionAsync = ref.watch(
+      blockCompletionPercentageProvider(blockId),
+    );
     final AsyncValue<BlockWithTasks> blockAsync = ref.watch(
       blockTasksNotifier(blockId),
     );

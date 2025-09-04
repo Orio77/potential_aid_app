@@ -1,10 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:potential_aid_app/providers/database_provider.dart';
 import 'package:potential_aid_app/data/daos/database_completions.dart';
+import 'package:potential_aid_app/data/database.dart';
+import 'package:potential_aid_app/providers/database_provider.dart';
 
-final blockCompletionProvider = FutureProvider.family<double?, int>((
+final blockCompletionPercentageProvider = FutureProvider.family<double?, int>((
   ref,
-  blockId,
+  int blockId,
 ) async {
   final database = ref.read(databaseProvider);
 
@@ -16,9 +17,14 @@ final blockCompletionProvider = FutureProvider.family<double?, int>((
   }
 });
 
-final completionChangeNotifierProvider =
-    StateNotifierProvider<CompletionChangeNotifier, int>((ref) {
-      return CompletionChangeNotifier();
+final scheduleDayCompletionPercentagesProvider =
+    FutureProvider.family<Map<BlockData, BlockCompletionData>, DateTime>((
+      ref,
+      DateTime date,
+    ) async {
+      final database = ref.read(databaseProvider);
+
+      return await database.blockDao.getBlockCompletionsForDate(date);
     });
 
 class CompletionChangeNotifier extends StateNotifier<int> {
@@ -28,3 +34,8 @@ class CompletionChangeNotifier extends StateNotifier<int> {
     state = state + 1;
   }
 }
+
+final completionChangeNotifierProvider =
+    StateNotifierProvider<CompletionChangeNotifier, int>((ref) {
+      return CompletionChangeNotifier();
+    });

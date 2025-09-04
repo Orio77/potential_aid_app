@@ -148,7 +148,7 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
       _database.block,
     )..where((block) => block.id.equals(blockId))).go();
 
-    _ref.invalidate(blockCompletionProvider(blockId));
+    _ref.invalidate(blockCompletionPercentageProvider(blockId));
 
     await _loadScheduleForCurrentDate();
   }
@@ -235,7 +235,7 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
       dateTime,
     );
 
-    _ref.invalidate(blockCompletionProvider(blockId));
+    _ref.invalidate(blockCompletionPercentageProvider(blockId));
 
     return completionId;
   }
