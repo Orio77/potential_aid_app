@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:potential_aid_app/widgets/stats/stat_list.dart';
 
 // TODO
 class StatsScreen extends ConsumerWidget {
@@ -13,6 +14,7 @@ class StatsScreen extends ConsumerWidget {
         centerTitle: true,
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
+      body: StatList(),
     );
   }
 }

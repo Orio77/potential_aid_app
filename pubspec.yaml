@@ -36,7 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   riverpod: ^2.6.1
   time_machine: ^0.9.17
-  fl_chart: ^1.0.0
+  fl_chart: ^0.68.0
   intl: ^0.20.2
   mocktail: ^1.0.4
   flutter_riverpod: ^2.6.1

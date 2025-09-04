@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 
 class CompletionUtils {
-  // Smooth color interpolation for progress bars
   static Color getCompletionColor(double completionPercentage) {
-    // Clamp the percentage between 0 and 100
     final clamped = completionPercentage.clamp(0.0, 100.0);
 
     if (clamped == 0) return Colors.grey.shade300;
     if (clamped == 100) return Colors.green.shade600;
 
-    // Define color stops with smooth transitions
     final colorStops = [
       _ColorStop(0, Colors.red.shade400),
       _ColorStop(25, Colors.orange.shade400),
@@ -21,7 +18,6 @@ class CompletionUtils {
     return _interpolateColor(clamped, colorStops);
   }
 
-  // Alternative with Material 3 color scheme
   static Color getCompletionColorM3(
     double completionPercentage,
     ColorScheme colorScheme,
@@ -41,7 +37,6 @@ class CompletionUtils {
     return _interpolateColor(clamped, colorStops);
   }
 
-  // Get completion text with better descriptions
   static String getCompletionText(double completionPercentage) {
     final clamped = completionPercentage.clamp(0.0, 100.0);
 
@@ -55,7 +50,6 @@ class CompletionUtils {
     return 'Almost complete';
   }
 
-  // Helper method for smooth color interpolation
   static Color _interpolateColor(
     double percentage,
     List<_ColorStop> colorStops,
