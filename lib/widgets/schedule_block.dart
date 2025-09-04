@@ -4,11 +4,13 @@ import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/data/tables/block.dart';
 import 'package:potential_aid_app/providers/block_with_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/completion_notifier.dart';
+import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/utils/completion_utils.dart';
 import 'package:potential_aid_app/widgets/complete_block_dialog.dart';
 import 'package:potential_aid_app/widgets/edit_block_dialog.dart';
 import 'package:potential_aid_app/widgets/schedule/blocks_task_list.dart';
+import 'package:time_machine/time_machine.dart';
 
 class ScheduleBlock extends ConsumerWidget {
   final int blockId;
@@ -32,6 +34,7 @@ class ScheduleBlock extends ConsumerWidget {
       blockTasksNotifier(blockId),
     );
     final projectAsync = ref.watch(projectByBlockProvider(blockId));
+    final dateTime = ref.watch(dateTimeNotifierProvider);
 
     return blockAsync.when(
       data: (block) {
@@ -44,9 +47,17 @@ class ScheduleBlock extends ConsumerWidget {
                 completionPercentage,
                 block,
                 project!,
+                dateTime,
               ),
               error: (error, stack) {
-                return _buildTaskBlock(context, theme, null, null, null);
+                return _buildTaskBlock(
+                  context,
+                  theme,
+                  null,
+                  null,
+                  null,
+                  dateTime,
+                );
               },
               loading: () {
                 return _buildLoadingState(context, theme);
@@ -76,6 +87,7 @@ class ScheduleBlock extends ConsumerWidget {
     double? completionPercentage,
     BlockWithTasks? blockWithTasks,
     ProjectData? project,
+    LocalDateTime dateTime,
   ) {
     final isCompleted = completionPercentage != null;
 
@@ -118,6 +130,7 @@ class ScheduleBlock extends ConsumerWidget {
                     context,
                     completionPercentage,
                     blockWithTasks,
+                    dateTime,
                   ),
                 ],
               ),
@@ -230,11 +243,17 @@ class ScheduleBlock extends ConsumerWidget {
     BuildContext context,
     double? completionPercentage,
     BlockWithTasks? blockWithTasks,
+    LocalDateTime dateTime,
   ) {
     final isCompleted = completionPercentage != null;
+    final isAfterBlock = blockWithTasks != null
+        ? (dateTime.hourOfDay * 60 + dateTime.minuteOfHour) >
+              (blockWithTasks.block.startMinuteOfDay +
+                  blockWithTasks.block.lengthMinutes)
+        : false;
 
     return IconButton(
-      onPressed: isCompleted || blockWithTasks == null
+      onPressed: isCompleted || blockWithTasks == null || !isAfterBlock
           ? null
           : () {
               showDialog(
@@ -248,8 +267,8 @@ class ScheduleBlock extends ConsumerWidget {
               );
             },
       icon: Icon(
-        isCompleted ? Icons.check_circle : Icons.task_alt,
-        color: isCompleted
+        (isCompleted || !isAfterBlock) ? Icons.check_circle : Icons.task_alt,
+        color: (isCompleted || !isAfterBlock)
             ? Colors.grey
             : Theme.of(context).colorScheme.onSurface,
       ),
