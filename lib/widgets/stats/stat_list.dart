@@ -1,35 +1,50 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:potential_aid_app/providers/stats_provider.dart';
 import 'package:potential_aid_app/widgets/stats/barmap.dart';
+import 'package:time_machine/time_machine.dart';
 
-class StatList extends StatelessWidget {
+class StatList extends ConsumerWidget {
   const StatList({super.key});
 
+  static const int _monthsToShow = 4;
+
   @override
-  Widget build(BuildContext context) {
-    return ListView(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final months = List.generate(
+      _monthsToShow,
+      (i) => LocalDate.today().subtractMonths(i),
+    );
+
+    return ListView.separated(
       padding: const EdgeInsets.all(16.0),
-      children: [
-        Card(
+      itemCount: months.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 16),
+      itemBuilder: (context, index) => _buildBarMapCard(ref, months[index]),
+    );
+  }
+
+  Widget _buildBarMapCard(WidgetRef ref, LocalDate monthYearDate) {
+    final completions = ref.watch(barMapStatsNotifier(monthYearDate));
+
+    return completions.when(
+      data: (data) {
+        if (data.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Card(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: SizedBox(height: 300, child: BarMap()),
+            child: SizedBox(
+              height: 300,
+              child: BarMap(monthYearDate: monthYearDate),
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: SizedBox(height: 300, child: BarMap()),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: SizedBox(height: 300, child: BarMap()),
-          ),
-        ),
-      ],
+        );
+      },
+      loading: () => const CircularProgressIndicator(),
+      error: (error, trace) => Text("Error: $error"),
     );
   }
 }

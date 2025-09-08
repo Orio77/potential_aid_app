@@ -16,9 +16,8 @@ class ProjectStats {
   });
 }
 
-// Standalone functions for use in FutureProvider
 Future<int> calculateTimeSpentTotal(AppDatabase database, int projectId) async {
-  return await getBlockCompletionSum(database, projectId);
+  return await _getBlockCompletionSum(database, projectId);
 }
 
 Future<double> calculateAverageUnitPerDay(
@@ -60,11 +59,11 @@ Future<double> calculateAverageUnitPerDay(
 }
 
 Future<double> calculateLifeDevoted(AppDatabase database, int projectId) async {
-  final res = (await getBlockCompletionSum(database, projectId, 7)) / 112;
+  final res = (await _getBlockCompletionSum(database, projectId, 7)) / 112;
   return (res * 100).round() / 100.0;
 }
 
-Future<int> getBlockCompletionSum(
+Future<int> _getBlockCompletionSum(
   AppDatabase database,
   int projectId, [
   int? lastDays,
@@ -81,7 +80,7 @@ Future<int> getBlockCompletionSum(
 
   if (lastDays != null) {
     final cutoffDate = LocalDate.today()
-        .addDays(-lastDays)
+        .subtractDays(lastDays)
         .toDateTimeUnspecified();
     query.where(
       database.blockCompletion.completedAt.isBiggerThanValue(cutoffDate),
@@ -92,39 +91,26 @@ Future<int> getBlockCompletionSum(
   return result.read(database.blockCompletion.count.sum()) ?? 0;
 }
 
-class ProjectStatsNotifier extends StateNotifier<AsyncValue<ProjectStats>> {
-  final AppDatabase _database;
-  final int projectId;
+Future<List<TaskCompletionData>> getTaskCompletions(
+  AppDatabase database,
+  LocalDate monthYearDate,
+) async {
+  final query = database.select(database.taskCompletion);
 
-  ProjectStatsNotifier(this._database, this.projectId)
-    : super(const AsyncValue.loading()) {
-    _loadStats();
-  }
+  query.where(
+    (tc) => tc.completedAt.isBetweenValues(
+      DateTime(monthYearDate.yearOfEra, monthYearDate.monthOfYear, 1),
+      DateTime(
+        monthYearDate.yearOfEra,
+        monthYearDate.monthOfYear + 1,
+        1,
+      ).subtract(Duration(days: 1)),
+    ),
+  );
 
-  void _loadStats() async {
-    try {
-      final results = await Future.wait([
-        calculateTimeSpentTotal(_database, projectId),
-        calculateAverageUnitPerDay(_database, projectId),
-        calculateLifeDevoted(_database, projectId),
-      ]);
+  query.orderBy([(tc) => OrderingTerm.asc(tc.completedAt)]);
 
-      final stats = ProjectStats(
-        timeSpentTotal: results[0] as int,
-        averageUnitPerDay: results[1] as double,
-        lifeDevoted: results[2] as double,
-      );
-
-      state = AsyncValue.data(stats);
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-    }
-  }
-
-  void refresh() {
-    state = const AsyncValue.loading();
-    _loadStats();
-  }
+  return await query.get();
 }
 
 final projectStatsNotifier = FutureProvider.family<ProjectStats, int>((
@@ -145,3 +131,13 @@ final projectStatsNotifier = FutureProvider.family<ProjectStats, int>((
     lifeDevoted: results[2] as double,
   );
 });
+
+final barMapStatsNotifier =
+    FutureProvider.family<List<TaskCompletionData>, LocalDate>((
+      ref,
+      monthYearDate,
+    ) async {
+      final database = ref.watch(databaseProvider);
+
+      return await getTaskCompletions(database, monthYearDate);
+    });
