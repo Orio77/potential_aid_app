@@ -8,6 +8,7 @@ import 'package:potential_aid_app/providers/completion_notifier.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
+import 'package:potential_aid_app/providers/stats_provider.dart';
 
 class ScheduleNotifier extends StateNotifier<List<int>> {
   final AppDatabase _database;
@@ -218,11 +219,19 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
     final currentDate = _ref.read(dateNotifierProvider);
     final dateTime = currentDate.atMidnight().toDateTimeLocal();
 
-    return await _database.taskDao.completeTask(
+    final result = await _database.taskDao.completeTask(
       taskId,
       completedCount,
       dateTime,
     );
+
+    // Get task to find its project ID and invalidate stats
+    final task = await (_database.select(
+      _database.task,
+    )..where((t) => t.id.equals(taskId))).getSingle();
+    _ref.invalidate(projectStatsNotifier(task.projectId));
+
+    return result;
   }
 
   Future<int> addBlockCompletion(int blockId, int minutesCompleted) async {
@@ -236,6 +245,12 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
     );
 
     _ref.invalidate(blockCompletionPercentageProvider(blockId));
+
+    // Get block to find its project ID and invalidate stats
+    final block = await (_database.select(
+      _database.block,
+    )..where((b) => b.id.equals(blockId))).getSingle();
+    _ref.invalidate(projectStatsNotifier(block.projectId));
 
     return completionId;
   }
