@@ -5,6 +5,7 @@ import 'package:potential_aid_app/widgets/add_task_dialog.dart';
 import 'package:potential_aid_app/widgets/projects/project_info.dart';
 import 'package:potential_aid_app/widgets/projects/project_task_list.dart';
 import 'package:potential_aid_app/widgets/projects/project_title.dart';
+import 'package:potential_aid_app/widgets/projects/related_projects_list.dart';
 import 'package:potential_aid_app/widgets/stats/heatmap.dart';
 
 class ProjectScreen extends ConsumerWidget {
@@ -23,12 +24,15 @@ class ProjectScreen extends ConsumerWidget {
           icon: Icon(Icons.arrow_back_ios),
         ),
       ),
-      body: Column(
-        children: [
-          ProjectInfo(project: data),
-          Heatmap(title: "HeatMap", projectId: data.id),
-          Expanded(child: ProjectTaskList(projectId: data.id)),
-        ],
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            ProjectInfo(project: data),
+            Heatmap(projectId: data.id),
+            RelatedProjectsList(),
+            SizedBox(height: 400, child: ProjectTaskList(projectId: data.id)),
+          ],
+        ),
       ),
       floatingActionButton: ElevatedButton(
         onPressed: () => showAddTaskDialog(context, data.id),

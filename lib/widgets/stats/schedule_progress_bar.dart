@@ -20,7 +20,7 @@ class ScheduleProgressBar extends ConsumerWidget {
     return blocksWithCompletionsAsync.when(
       data: (data) {
         return (date.isBefore(today) || date.isAtSameMomentAs(today))
-            ? _buildProgressBar(context, data)
+            ? _buildProgressBar(context, calculateCompletionPercentage(data))
             : SizedBox.shrink();
       },
       loading: () => const CircularProgressIndicator(),
@@ -28,11 +28,7 @@ class ScheduleProgressBar extends ConsumerWidget {
     );
   }
 
-  Widget _buildProgressBar(
-    BuildContext context,
-    Map<BlockData, BlockCompletionData> completions,
-  ) {
-    final completionValue = calculateCompletionPercentage(completions);
+  Widget _buildProgressBar(BuildContext context, double completionValue) {
     final color = CompletionUtils.getCompletionColor(completionValue * 100);
 
     return Padding(

@@ -80,8 +80,8 @@ class Heatmap extends ConsumerWidget {
   }
 
   Widget _buildDayTile(LocalDate? date, Map<LocalDate, int> completionMap) {
-    final activity = date != null ? (completionMap[date] ?? 0) : 0;
-    final color = _getColorForActivity(activity);
+    final completion = date != null ? (completionMap[date] ?? 0) : 0;
+    final color = _getColorForActivity(completion);
     final cellSize = 20.0;
 
     return Container(
@@ -97,7 +97,7 @@ class Heatmap extends ConsumerWidget {
       ),
       child: date != null
           ? Tooltip(
-              message: '${date.toString()}: $activity activities',
+              message: '${date.toString()}: $completion completions',
               child: Container(),
             )
           : Container(),
