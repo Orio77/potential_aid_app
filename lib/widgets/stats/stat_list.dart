@@ -19,7 +19,7 @@ class StatList extends ConsumerWidget {
     return ListView.separated(
       padding: const EdgeInsets.all(16.0),
       itemCount: months.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 16),
+      separatorBuilder: (context, index) => const SizedBox(height: 16),
       itemBuilder: (context, index) => _buildBarMapCard(ref, months[index]),
     );
   }

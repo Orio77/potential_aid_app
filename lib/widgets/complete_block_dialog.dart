@@ -100,8 +100,11 @@ class _CompleteTaskDialogState extends ConsumerState<CompleteTaskDialog> {
         ),
         TextButton(
           onPressed: () async {
+            final navigator = Navigator.of(context);
             await _saveAllCompletions();
-            Navigator.of(context).pop();
+            if (mounted) {
+              navigator.pop();
+            }
           },
           child: const Text('Complete'),
         ),

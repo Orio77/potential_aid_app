@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/screens/project_screen.dart';
-import 'package:potential_aid_app/widgets/projects/project_info.dart';
+import 'package:potential_aid_app/widgets/projects/project_progress_info.dart';
 import 'package:potential_aid_app/widgets/projects/project_title.dart';
 
 class ProjectCard extends ConsumerWidget {
@@ -24,7 +24,8 @@ class ProjectCard extends ConsumerWidget {
         child: Column(
           children: [
             ProjectTitle(title: project.name),
-            ProjectInfo(project: project),
+            const SizedBox(height: 12.0),
+            ProjectProgressInfo(project: project),
           ],
         ),
       ),

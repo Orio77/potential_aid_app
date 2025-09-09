@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:potential_aid_app/data/database.dart';
+import 'package:potential_aid_app/widgets/stats/progress_bar.dart';
 import 'package:time_machine/time_machine.dart';
 
 class TaskListItem extends StatelessWidget {
@@ -29,7 +30,7 @@ class TaskListItem extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            LinearProgressIndicator(value: progress),
+            ProgressBar(completionValue: progress),
             const SizedBox(height: 4),
             Text('${task.current}/${task.endGoal} ${task.unit}'),
             Text(

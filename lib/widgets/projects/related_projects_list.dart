@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
-import 'package:potential_aid_app/widgets/projects/project_info.dart';
+import 'package:potential_aid_app/widgets/projects/project_progress_info.dart';
 
 class RelatedProjectsList extends ConsumerWidget {
   const RelatedProjectsList({super.key});
@@ -67,7 +67,7 @@ class RelatedProjectsList extends ConsumerWidget {
                         elevation: 2,
                         child: Padding(
                           padding: const EdgeInsets.all(8.0),
-                          child: ProjectInfo(project: projects[index]),
+                          child: ProjectProgressInfo(project: projects[index]),
                         ),
                       );
                     },

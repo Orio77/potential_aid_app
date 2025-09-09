@@ -228,9 +228,10 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
           onPressed: _selectedProject == null
               ? null
               : () async {
+                  final navigator = Navigator.of(context);
                   await _saveBlock();
                   if (mounted && _errorMessage == null) {
-                    Navigator.of(context).pop();
+                    navigator.pop();
                   }
                 },
           child: const Text('Save'),
