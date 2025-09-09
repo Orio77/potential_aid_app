@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:potential_aid_app/data/database.dart';
+import 'package:time_machine/time_machine.dart';
 
 class CompletionUtils {
   static Color getCompletionColor(double completionPercentage) {
@@ -67,6 +69,27 @@ class CompletionUtils {
     }
 
     return colorStops.last.color;
+  }
+
+  static List<double> formatCompletionData(
+    List<TaskCompletionData> completions,
+    LocalDate monthYearDate,
+  ) {
+    final daysInMonth = monthYearDate.calendar.getDaysInMonth(
+      monthYearDate.yearOfEra,
+      monthYearDate.monthOfYear,
+    );
+
+    final dailyCounts = List<double>.filled(daysInMonth, 0.0);
+
+    for (final completion in completions) {
+      final dayOfMonth = completion.completedAt.day;
+      if (dayOfMonth >= 1 && dayOfMonth <= daysInMonth) {
+        dailyCounts[dayOfMonth - 1] += 1;
+      }
+    }
+
+    return dailyCounts;
   }
 }
 

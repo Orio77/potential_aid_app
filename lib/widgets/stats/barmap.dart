@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/stats_provider.dart';
+import 'package:potential_aid_app/utils/completion_utils.dart';
 import 'package:time_machine/time_machine.dart';
 
 class BarMap extends ConsumerWidget {
@@ -11,7 +12,11 @@ class BarMap extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final completions = ref.watch(barMapStatsNotifier(monthYearDate));
+    final completions = ref.watch(
+      taskCompletionMonthlyNotifier(
+        TaskCompletionParams(monthYearDate: monthYearDate),
+      ),
+    );
 
     return completions.when(
       data: (data) => _buildBarMap(data),
@@ -20,29 +25,11 @@ class BarMap extends ConsumerWidget {
     );
   }
 
-  List<double> _formatCompletionData(
-    List<TaskCompletionData> completions,
-    LocalDate monthYearDate,
-  ) {
-    final daysInMonth = monthYearDate.calendar.getDaysInMonth(
-      monthYearDate.yearOfEra,
-      monthYearDate.monthOfYear,
-    );
-
-    final dailyCounts = List<double>.filled(daysInMonth, 0.0);
-
-    for (final completion in completions) {
-      final dayOfMonth = completion.completedAt.day;
-      if (dayOfMonth >= 1 && dayOfMonth <= daysInMonth) {
-        dailyCounts[dayOfMonth - 1] += 1;
-      }
-    }
-
-    return dailyCounts;
-  }
-
   Widget _buildBarMap(List<TaskCompletionData> completions) {
-    final completionCounts = _formatCompletionData(completions, monthYearDate);
+    final completionCounts = CompletionUtils.formatCompletionData(
+      completions,
+      monthYearDate,
+    );
     final barGroupData = List.generate(completionCounts.length, (i) {
       return BarChartGroupData(
         x: i + 1,

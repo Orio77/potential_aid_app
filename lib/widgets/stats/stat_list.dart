@@ -25,7 +25,11 @@ class StatList extends ConsumerWidget {
   }
 
   Widget _buildBarMapCard(WidgetRef ref, LocalDate monthYearDate) {
-    final completions = ref.watch(barMapStatsNotifier(monthYearDate));
+    final completions = ref.watch(
+      taskCompletionMonthlyNotifier(
+        TaskCompletionParams(monthYearDate: monthYearDate),
+      ),
+    );
 
     return completions.when(
       data: (data) {

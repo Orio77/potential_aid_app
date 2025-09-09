@@ -232,7 +232,11 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
     _ref.invalidate(projectStatsNotifier(task.projectId));
 
     final monthYearDate = LocalDate.today();
-    _ref.invalidate(barMapStatsNotifier(monthYearDate));
+    _ref.invalidate(
+      taskCompletionMonthlyNotifier(
+        TaskCompletionParams(monthYearDate: monthYearDate),
+      ),
+    );
 
     return result;
   }
@@ -255,7 +259,11 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
     _ref.invalidate(projectStatsNotifier(block.projectId));
 
     final monthYearDate = LocalDate.today();
-    _ref.invalidate(barMapStatsNotifier(monthYearDate));
+    _ref.invalidate(
+      taskCompletionMonthlyNotifier(
+        TaskCompletionParams(monthYearDate: monthYearDate),
+      ),
+    );
 
     return completionId;
   }

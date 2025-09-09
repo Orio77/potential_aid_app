@@ -16,6 +16,24 @@ class ProjectStats {
   });
 }
 
+class TaskCompletionParams {
+  final LocalDate monthYearDate;
+  final int? projectId;
+
+  const TaskCompletionParams({required this.monthYearDate, this.projectId});
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TaskCompletionParams &&
+          runtimeType == other.runtimeType &&
+          monthYearDate == other.monthYearDate &&
+          projectId == other.projectId;
+
+  @override
+  int get hashCode => monthYearDate.hashCode ^ projectId.hashCode;
+}
+
 Future<int> calculateTimeSpentTotal(AppDatabase database, int projectId) async {
   return await _getBlockCompletionSum(database, projectId);
 }
@@ -93,24 +111,52 @@ Future<int> _getBlockCompletionSum(
 
 Future<List<TaskCompletionData>> getTaskCompletions(
   AppDatabase database,
-  LocalDate monthYearDate,
-) async {
-  final query = database.select(database.taskCompletion);
+  LocalDate monthYearDate, [
+  int? projectId,
+]) async {
+  if (projectId != null) {
+    final query = database.select(database.taskCompletion).join([
+      innerJoin(
+        database.task,
+        database.taskCompletion.taskId.equalsExp(database.task.id),
+      ),
+    ]);
 
-  query.where(
-    (tc) => tc.completedAt.isBetweenValues(
-      DateTime(monthYearDate.yearOfEra, monthYearDate.monthOfYear, 1),
-      DateTime(
-        monthYearDate.yearOfEra,
-        monthYearDate.monthOfYear + 1,
-        1,
-      ).subtract(Duration(days: 1)),
-    ),
-  );
+    query.where(database.task.projectId.equals(projectId));
 
-  query.orderBy([(tc) => OrderingTerm.asc(tc.completedAt)]);
+    query.where(
+      database.taskCompletion.completedAt.isBetweenValues(
+        DateTime(monthYearDate.yearOfEra, monthYearDate.monthOfYear, 1),
+        DateTime(
+          monthYearDate.yearOfEra,
+          monthYearDate.monthOfYear + 1,
+          1,
+        ).subtract(Duration(days: 1)),
+      ),
+    );
 
-  return await query.get();
+    query.orderBy([OrderingTerm.asc(database.taskCompletion.completedAt)]);
+
+    final rows = await query.get();
+    return rows.map((row) => row.readTable(database.taskCompletion)).toList();
+  } else {
+    final query = database.select(database.taskCompletion);
+
+    query.where(
+      (tc) => tc.completedAt.isBetweenValues(
+        DateTime(monthYearDate.yearOfEra, monthYearDate.monthOfYear, 1),
+        DateTime(
+          monthYearDate.yearOfEra,
+          monthYearDate.monthOfYear + 1,
+          1,
+        ).subtract(Duration(days: 1)),
+      ),
+    );
+
+    query.orderBy([(tc) => OrderingTerm.asc(tc.completedAt)]);
+
+    return await query.get();
+  }
 }
 
 final projectStatsNotifier = FutureProvider.family<ProjectStats, int>((
@@ -132,12 +178,16 @@ final projectStatsNotifier = FutureProvider.family<ProjectStats, int>((
   );
 });
 
-final barMapStatsNotifier =
-    FutureProvider.family<List<TaskCompletionData>, LocalDate>((
+final taskCompletionMonthlyNotifier =
+    FutureProvider.family<List<TaskCompletionData>, TaskCompletionParams>((
       ref,
-      monthYearDate,
+      params,
     ) async {
       final database = ref.watch(databaseProvider);
 
-      return await getTaskCompletions(database, monthYearDate);
+      return await getTaskCompletions(
+        database,
+        params.monthYearDate,
+        params.projectId,
+      );
     });

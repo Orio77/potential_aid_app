@@ -5,6 +5,7 @@ import 'package:potential_aid_app/widgets/add_task_dialog.dart';
 import 'package:potential_aid_app/widgets/projects/project_info.dart';
 import 'package:potential_aid_app/widgets/projects/project_task_list.dart';
 import 'package:potential_aid_app/widgets/projects/project_title.dart';
+import 'package:potential_aid_app/widgets/stats/heatmap.dart';
 
 class ProjectScreen extends ConsumerWidget {
   final ProjectData data;
@@ -25,6 +26,7 @@ class ProjectScreen extends ConsumerWidget {
       body: Column(
         children: [
           ProjectInfo(project: data),
+          Heatmap(title: "HeatMap", projectId: data.id),
           Expanded(child: ProjectTaskList(projectId: data.id)),
         ],
       ),
