@@ -30,14 +30,54 @@ class BarMap extends ConsumerWidget {
       completions,
       monthYearDate,
     );
-    final barGroupData = List.generate(completionCounts.length, (i) {
-      return BarChartGroupData(
-        x: i + 1,
-        barRods: [BarChartRodData(toY: completionCounts[i], width: 10)],
-      );
-    });
 
-    final chartData = BarChartData(barGroups: barGroupData);
-    return BarChart(chartData);
+    return Builder(
+      builder: (context) {
+        final maxCount = completionCounts.isEmpty
+            ? 1.0
+            : completionCounts.reduce((a, b) => a > b ? a : b);
+
+        final barGroupData = List.generate(completionCounts.length, (i) {
+          final percentage = maxCount > 0
+              ? (completionCounts[i] / maxCount) * 100
+              : 0.0;
+          final color = CompletionUtils.getCompletionColor(percentage);
+
+          return BarChartGroupData(
+            x: i + 1,
+            barRods: [
+              BarChartRodData(
+                toY: completionCounts[i],
+                width: 10,
+                color: color,
+              ),
+            ],
+          );
+        });
+
+        final chartData = BarChartData(
+          barGroups: barGroupData,
+          barTouchData: _getBarTouchData(),
+        );
+        return BarChart(chartData);
+      },
+    );
+  }
+
+  BarTouchData _getBarTouchData() {
+    return BarTouchData(
+      enabled: true,
+      touchTooltipData: BarTouchTooltipData(
+        getTooltipItem: (group, groupIndex, rod, rodIndex) {
+          final dayNumber = group.x;
+          final completionCount = rod.toY.toInt();
+
+          return BarTooltipItem(
+            'Day $dayNumber\n$completionCount completions',
+            const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          );
+        },
+      ),
+    );
   }
 }

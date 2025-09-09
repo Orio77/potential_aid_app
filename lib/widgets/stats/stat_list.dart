@@ -40,9 +40,21 @@ class StatList extends ConsumerWidget {
         return Card(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: SizedBox(
-              height: 300,
-              child: BarMap(monthYearDate: monthYearDate),
+            child: Column(
+              children: [
+                Text(
+                  "${monthYearDate.monthOfYear.toString().padLeft(2, '0')} ${monthYearDate.year}",
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 300,
+                  child: BarMap(monthYearDate: monthYearDate),
+                ),
+              ],
             ),
           ),
         );
