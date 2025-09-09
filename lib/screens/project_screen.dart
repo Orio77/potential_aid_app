@@ -34,9 +34,18 @@ class ProjectScreen extends ConsumerWidget {
           ],
         ),
       ),
-      floatingActionButton: ElevatedButton(
-        onPressed: () => showAddTaskDialog(context, data.id),
-        child: Icon(Icons.add_task),
+      floatingActionButton: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          ElevatedButton(
+            onPressed: () => print('connect!'),
+            child: Icon(Icons.link_rounded),
+          ),
+          ElevatedButton(
+            onPressed: () => showAddTaskDialog(context, data.id),
+            child: Icon(Icons.add_task),
+          ),
+        ],
       ),
     );
   }
