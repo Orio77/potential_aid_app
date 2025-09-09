@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/stats_provider.dart';
 import 'package:potential_aid_app/utils/time_utils.dart';
+import 'package:potential_aid_app/widgets/stats/progress_bar.dart';
 
 class ProjectInfo extends ConsumerWidget {
   final ProjectData project;
@@ -33,6 +34,7 @@ class ProjectInfo extends ConsumerWidget {
     return Column(
       children: [
         Text('$current / $goal $unit'),
+        ProgressBar(completionValue: current / goal),
         Text('Deadline: ${TimeUtils.formatDateTime(deadline)}'),
         Text("Time Spent Total: ${stats.timeSpentTotal}"),
         Text("Avg: ${stats.averageUnitPerDay} $unit per day"),

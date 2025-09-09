@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/completion_notifier.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
-import 'package:potential_aid_app/utils/completion_utils.dart';
+import 'package:potential_aid_app/widgets/stats/progress_bar.dart';
 import 'package:time_machine/time_machine.dart';
 
 class ScheduleProgressBar extends ConsumerWidget {
@@ -20,52 +20,11 @@ class ScheduleProgressBar extends ConsumerWidget {
     return blocksWithCompletionsAsync.when(
       data: (data) {
         return (date.isBefore(today) || date.isAtSameMomentAs(today))
-            ? _buildProgressBar(context, calculateCompletionPercentage(data))
+            ? ProgressBar(completionValue: calculateCompletionPercentage(data))
             : SizedBox.shrink();
       },
       loading: () => const CircularProgressIndicator(),
       error: (error, stackTrace) => Text("Error: $error"),
-    );
-  }
-
-  Widget _buildProgressBar(BuildContext context, double completionValue) {
-    final color = CompletionUtils.getCompletionColor(completionValue * 100);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 8),
-          Container(
-            height: 8,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(4),
-              color: Colors.grey[200],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: completionValue,
-                backgroundColor: Colors.transparent,
-                valueColor: AlwaysStoppedAnimation<Color>(color),
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Align(
-            alignment: Alignment.center,
-            child: Text(
-              '${(completionValue * 100).toStringAsFixed(2)}%',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w500,
-                fontSize: 15,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
