@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
+import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/project_search_notifier.dart';
+import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/providers/settings_notifier.dart';
 import 'package:potential_aid_app/utils/time_utils.dart';
@@ -32,11 +34,11 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
 
     final settings = ref.read(settingsNotifierProvider);
     _projectNameController.addListener(() {
-      if (_projectNameController.text.isEmpty) {
-        setState(() {
+      setState(() {
+        if (_projectNameController.text.isEmpty) {
           _selectedProject = null;
-        });
-      }
+        }
+      });
     });
 
     final defaultStartTime = settings.defaultStartTime;
@@ -111,10 +113,23 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
       return;
     }
 
-    if (_selectedProject == null) {
-      setState(() {
-        _errorMessage = 'Please select a project';
-      });
+    if (_selectedProject == null && _projectNameController.text.isNotEmpty) {
+      final now = ref.read(dateNotifierProvider).toDateTimeUnspecified();
+      final newProjectId = await ref
+          .read(projectsNotifierProvider.notifier)
+          .addProject(
+            _projectNameController.text.trim(),
+            now,
+            now.add(Duration(days: 7)),
+            0,
+            0,
+            1,
+            "completed",
+          );
+
+      // Get the newly created project
+      final projects = ref.read(projectsNotifierProvider);
+      _selectedProject = projects.firstWhere((p) => p.id == newProjectId);
     }
 
     setState(() {
@@ -225,7 +240,7 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
           child: const Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: _selectedProject == null
+          onPressed: (_projectNameController.text.isEmpty)
               ? null
               : () async {
                   final navigator = Navigator.of(context);
