@@ -246,14 +246,12 @@ class ScheduleBlock extends ConsumerWidget {
     LocalDateTime dateTime,
   ) {
     final isCompleted = completionPercentage != null;
-    final isAfterBlock = blockWithTasks != null
-        ? (dateTime.hourOfDay * 60 + dateTime.minuteOfHour) >
-              (blockWithTasks.block.startMinuteOfDay +
-                  blockWithTasks.block.lengthMinutes)
-        : false;
+    // Calculate if the block's scheduled time has passed
+    final canComplete =
+        blockWithTasks != null && _isBlockTimePasssed(blockWithTasks, dateTime);
 
     return IconButton(
-      onPressed: isCompleted || blockWithTasks == null || !isAfterBlock
+      onPressed: isCompleted || !canComplete
           ? null
           : () {
               showDialog(
@@ -267,8 +265,8 @@ class ScheduleBlock extends ConsumerWidget {
               );
             },
       icon: Icon(
-        (isCompleted || !isAfterBlock) ? Icons.check_circle : Icons.task_alt,
-        color: (isCompleted || !isAfterBlock)
+        (isCompleted || !canComplete) ? Icons.check_circle : Icons.task_alt,
+        color: (isCompleted || !canComplete)
             ? Colors.grey
             : Theme.of(context).colorScheme.onSurface,
       ),
@@ -324,5 +322,35 @@ class ScheduleBlock extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// Helper method to check if a block can be completed (same day, after block time only)
+  bool _isBlockTimePasssed(
+    BlockWithTasks blockWithTasks,
+    LocalDateTime currentTime,
+  ) {
+    final blockDate = blockWithTasks.block.dayLocal;
+    final currentDate = currentTime.toDateTimeLocal();
+
+    // Only allow completion on the same day
+    if (!_isSameDay(blockDate, currentDate)) {
+      return false;
+    }
+
+    // Same day: check if current time is after block end time
+    final currentMinutes =
+        currentTime.hourOfDay * 60 + currentTime.minuteOfHour;
+    final blockEndMinutes =
+        blockWithTasks.block.startMinuteOfDay +
+        blockWithTasks.block.lengthMinutes;
+
+    return currentMinutes > blockEndMinutes;
+  }
+
+  /// Helper method to check if two dates are the same day
+  bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
   }
 }
