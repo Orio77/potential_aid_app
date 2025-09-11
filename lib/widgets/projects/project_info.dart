@@ -1,9 +1,13 @@
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
+import 'package:potential_aid_app/providers/date_notifier.dart';
+import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/providers/stats_provider.dart';
 import 'package:potential_aid_app/utils/time_utils.dart';
 import 'package:potential_aid_app/widgets/projects/project_progress_info.dart';
+import 'package:time_machine/time_machine.dart';
 
 class ProjectInfo extends ConsumerWidget {
   final ProjectData project;
@@ -12,9 +16,17 @@ class ProjectInfo extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(projectStatsNotifier(project.id));
+    final projectAsync = ref.watch(projectProvider(project.id));
+    final date = ref.read(dateNotifierProvider);
 
     return statsAsync.when(
-      data: (data) => _buildProjectStats(context, project, data),
+      data: (stats) => projectAsync.when(
+        data: (projectData) => projectData != null
+            ? _buildProjectStats(context, ref, projectData, stats, date)
+            : _buildErrorState(context, 'Project not found'),
+        error: (error, stack) => _buildErrorState(context, error),
+        loading: () => _buildLoadingState(),
+      ),
       error: (error, stack) => _buildErrorState(context, error),
       loading: () => _buildLoadingState(),
     );
@@ -56,8 +68,10 @@ class ProjectInfo extends ConsumerWidget {
 
   Widget _buildProjectStats(
     BuildContext context,
+    WidgetRef ref,
     ProjectData project,
     ProjectStats stats,
+    LocalDate date,
   ) {
     final unit = project.unit;
     final deadline = project.deadline;
@@ -90,11 +104,13 @@ class ProjectInfo extends ConsumerWidget {
           // Stats Grid
           _buildStatsGrid(
             context,
+            ref,
             deadline,
             daysUntilDeadline,
             isOverdue,
             stats,
             unit,
+            date,
           ),
         ],
       ),
@@ -103,11 +119,13 @@ class ProjectInfo extends ConsumerWidget {
 
   Widget _buildStatsGrid(
     BuildContext context,
+    WidgetRef ref,
     DateTime deadline,
     int daysUntilDeadline,
     bool isOverdue,
     ProjectStats stats,
     String unit,
+    LocalDate date,
   ) {
     final theme = Theme.of(context);
 
@@ -140,6 +158,9 @@ class ProjectInfo extends ConsumerWidget {
                   : '$daysUntilDeadline days left',
               isWarning: isOverdue,
               isUrgent: daysUntilDeadline <= 3 && daysUntilDeadline > 0,
+              onClick: isOverdue
+                  ? () => _chooseNewDeadline(context, ref, date)
+                  : null,
             ),
 
             _buildStatCard(
@@ -179,6 +200,7 @@ class ProjectInfo extends ConsumerWidget {
     required String subtitle,
     bool isWarning = false,
     bool isUrgent = false,
+    VoidCallback? onClick,
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -201,7 +223,7 @@ class ProjectInfo extends ConsumerWidget {
       textColor = colorScheme.onSurface;
     }
 
-    return Container(
+    Widget cardContent = Container(
       constraints: const BoxConstraints(minWidth: 120),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -244,6 +266,78 @@ class ProjectInfo extends ConsumerWidget {
         ],
       ),
     );
+
+    if (onClick != null) {
+      return GestureDetector(onTap: onClick, child: cardContent);
+    }
+
+    return cardContent;
+  }
+
+  Future<void> _chooseNewDeadline(
+    BuildContext context,
+    WidgetRef ref,
+    LocalDate date,
+  ) async {
+    try {
+      DateTime? newDeadline = await showDatePicker(
+        context: context,
+        firstDate: date.toDateTimeUnspecified(),
+        initialDate: date.toDateTimeUnspecified(),
+        lastDate: date.toDateTimeUnspecified().add(Duration(days: 1826)),
+        helpText: 'Select new deadline',
+        confirmText: 'UPDATE',
+        cancelText: 'CANCEL',
+      );
+
+      if (newDeadline != null && context.mounted) {
+        await _updateProjectDeadline(context, ref, newDeadline);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error selecting deadline: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _updateProjectDeadline(
+    BuildContext context,
+    WidgetRef ref,
+    DateTime newDeadline,
+  ) async {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: 8),
+              Text('Updating deadline...'),
+            ],
+          ),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
+
+    await ref
+        .read(projectsNotifierProvider.notifier)
+        .updateProject(
+          project.id,
+          ProjectCompanion(deadline: Value(newDeadline)),
+        );
+
+    ref.invalidate(projectStatsNotifier(project.id));
+    ref.invalidate(projectProvider(project.id));
   }
 
   String _formatTimeSpent(int totalMinutes) {
