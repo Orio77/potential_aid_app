@@ -5,6 +5,7 @@ import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
 
 class ProjectsNotifier extends StateNotifier<List<ProjectData>> {
+  List<Expression<bool> Function($ProjectTable)>? predicates;
   final AppDatabase _database;
 
   ProjectsNotifier(this._database) : super([]) {
@@ -12,8 +13,15 @@ class ProjectsNotifier extends StateNotifier<List<ProjectData>> {
   }
 
   Future<void> _loadProjects() async {
-    final projects = await _database.getAllProjects();
+    final projects = await _database.getAllProjects(predicates);
     state = projects;
+  }
+
+  void setPredicates(
+    List<Expression<bool> Function($ProjectTable)>? newPredicates,
+  ) {
+    predicates = newPredicates;
+    _loadProjects();
   }
 
   Future<int> addProject(

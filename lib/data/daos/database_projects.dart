@@ -31,8 +31,16 @@ extension AppDatabaseProjects on AppDatabase {
     return await query.go();
   }
 
-  Future<List<ProjectData>> getAllProjects() {
+  Future<List<ProjectData>> getAllProjects([
+    List<Expression<bool> Function($ProjectTable)>? predicates,
+  ]) {
     final query = select(project);
+
+    if (predicates != null && predicates.isNotEmpty) {
+      for (final pred in predicates) {
+        query.where(pred);
+      }
+    }
 
     return query.get();
   }
