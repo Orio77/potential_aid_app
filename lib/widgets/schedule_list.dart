@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:potential_aid_app/providers/completion_notifier.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/widgets/delete_task_dialog.dart';
 import 'package:potential_aid_app/widgets/edit_block_dialog.dart';
@@ -42,7 +43,7 @@ class ScheduleList extends ConsumerWidget {
       itemCount: blockIds.length,
       itemBuilder: (context, index) {
         final blockId = blockIds[index];
-        return _buildBlockPlaceholder(context, blockId, index);
+        return _buildBlockPlaceholder(context, ref, blockId, index);
       },
       onReorder: (int oldIndex, int newIndex) async {
         ref
@@ -52,34 +53,71 @@ class ScheduleList extends ConsumerWidget {
     );
   }
 
-  Widget _buildBlockPlaceholder(BuildContext context, int blockId, int index) {
-    return Dismissible(
-      key: ValueKey(blockId),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsetsDirectional.symmetric(horizontal: 20),
-        color: Colors.red,
-        child: const Icon(Icons.delete, color: Colors.white, size: 24),
-      ),
-      confirmDismiss: (direction) async {
-        return await showDialog<bool>(
-              context: context,
-              builder: (BuildContext dialogContext) {
-                return DeleteTaskDialog(blockId: blockId);
+  Widget _buildBlockPlaceholder(
+    BuildContext context,
+    WidgetRef ref,
+    int blockId,
+    int index,
+  ) {
+    final completionAsync = ref.watch(
+      blockCompletionPercentageProvider(blockId),
+    );
+
+    return completionAsync.when(
+      data: (data) {
+        final isCompleted = data != null;
+
+        if (isCompleted) {
+          return Padding(
+            key: ValueKey(blockId),
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: ScheduleBlock(
+              blockId: blockId,
+              onTap: () {
+                showEditBlockDialog(context, blockId: blockId);
               },
-            ) ??
-            false;
+            ),
+          );
+        } else {
+          return Dismissible(
+            key: ValueKey(blockId),
+            direction: DismissDirection.endToStart,
+            background: Container(
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsetsDirectional.symmetric(horizontal: 20),
+              color: Colors.red,
+              child: const Icon(Icons.delete, color: Colors.white, size: 24),
+            ),
+            confirmDismiss: (direction) async {
+              return await showDialog<bool>(
+                    context: context,
+                    builder: (BuildContext dialogContext) {
+                      return DeleteTaskDialog(blockId: blockId);
+                    },
+                  ) ??
+                  false;
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: ScheduleBlock(
+                blockId: blockId,
+                onTap: () {
+                  showEditBlockDialog(context, blockId: blockId);
+                },
+              ),
+            ),
+          );
+        }
       },
-      child: Padding(
+      loading: () => Padding(
+        key: ValueKey(blockId),
         padding: const EdgeInsets.symmetric(vertical: 4),
-        child: ScheduleBlock(
-          key: ValueKey(blockId),
-          blockId: blockId,
-          onTap: () {
-            showEditBlockDialog(context, blockId: blockId);
-          },
-        ),
+        child: const CircularProgressIndicator(),
+      ),
+      error: (error, stackTrace) => Padding(
+        key: ValueKey(blockId),
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Text("Error: $error"),
       ),
     );
   }
