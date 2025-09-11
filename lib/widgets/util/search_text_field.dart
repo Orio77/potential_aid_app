@@ -7,7 +7,7 @@ mixin SearchCapability<T> on StateNotifier<List<T>> {
 
 class SearchTextField<T, N extends StateNotifier<List<T>>>
     extends ConsumerStatefulWidget {
-  final TextEditingController controller;
+  final TextEditingController? controller;
   final FocusNode? focusNode;
   final String labelText;
   final String? Function(String?)? validator;
@@ -24,7 +24,7 @@ class SearchTextField<T, N extends StateNotifier<List<T>>>
 
   const SearchTextField({
     super.key,
-    required this.controller,
+    this.controller,
     this.focusNode,
     required this.labelText,
     this.validator,
@@ -54,7 +54,7 @@ class _SearchTextFieldState<T, N extends StateNotifier<List<T>>>
   @override
   void initState() {
     super.initState();
-    _controller = widget.controller;
+    _controller = widget.controller ?? TextEditingController();
     _focusNode = widget.focusNode ?? FocusNode();
 
     _focusNode.addListener(_onFocusChange);

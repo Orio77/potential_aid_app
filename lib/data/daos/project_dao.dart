@@ -35,6 +35,12 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
     });
   }
 
+  Future<int> updateProject(int projectId, ProjectCompanion updates) async {
+    return await (update(
+      project,
+    )..where((p) => p.id.equals(projectId))).write(updates);
+  }
+
   Future<List<ProjectData>> searchProjects({
     required String query,
     int? limit,
@@ -66,5 +72,42 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
     )..where((p) => p.id.equals(projectId))).write(projectCompanion);
 
     return res;
+  }
+
+  Future<List<ProjectData>> getChildProjects(int parentId) async {
+    return await (select(
+      project,
+    )..where((p) => p.parentProjectId.equals(parentId))).get();
+  }
+
+  Future<ProjectData?> getParentProject(int projectId) async {
+    return await (select(
+      project,
+    )..where((p) => p.parentProjectId.equals(projectId))).getSingleOrNull();
+  }
+
+  Future<List<ProjectData>> getAllDescendants(int projectId) async {
+    final descendants = <ProjectData>[];
+    final children = await getChildProjects(projectId);
+
+    for (final child in children) {
+      descendants.add(child);
+      descendants.addAll(await getAllDescendants(child.id));
+    }
+
+    return descendants;
+  }
+
+  Future<List<ProjectData>> getProjectHierarchy(int projectId) async {
+    final hierarchy = <ProjectData>[];
+    ProjectData? current = await getById(projectId);
+
+    while (current != null) {
+      hierarchy.insert(0, current);
+      if (current.parentProjectId == null) break;
+      current = await getById(current.parentProjectId!);
+    }
+
+    return hierarchy;
   }
 }

@@ -2,6 +2,11 @@ import 'package:drift/drift.dart';
 
 class Project extends Table {
   IntColumn get id => integer().autoIncrement()();
+  IntColumn get parentProjectId => integer().nullable().references(
+    Project,
+    #id,
+    onDelete: KeyAction.cascade,
+  )();
   TextColumn get name => text()();
   DateTimeColumn get startDate => dateTime()();
   DateTimeColumn get deadline => dateTime()();

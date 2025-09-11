@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/daos/database_projects.dart';
 import 'package:potential_aid_app/data/database.dart';
@@ -42,6 +43,25 @@ class ProjectsNotifier extends StateNotifier<List<ProjectData>> {
   Future<ProjectData?> getProjectData(String name) async {
     return await _database.projectDao.getByName(name);
   }
+
+  Future<void> moveProject(int projectId, int newParentId) async {
+    if (await _wouldCreateCircle(projectId, newParentId)) {
+      throw Exception('Cannot move project: would create circular reference');
+    }
+
+    await _database.projectDao.updateProject(
+      projectId,
+      ProjectCompanion(parentProjectId: Value(newParentId)),
+    );
+    await _loadProjects();
+  }
+
+  Future<bool> _wouldCreateCircle(int projectId, int potentialParentId) async {
+    final ancestors = await _database.projectDao.getProjectHierarchy(
+      potentialParentId,
+    );
+    return ancestors.any((p) => p.id == projectId);
+  }
 }
 
 final projectsNotifierProvider =
@@ -65,3 +85,10 @@ final projectByBlockProvider = FutureProvider.family<ProjectData?, int>((
   final database = ref.watch(databaseProvider);
   return await database.projectDao.getByBlockId(blockId);
 });
+
+final descendantProjectProvider = FutureProvider.family<List<ProjectData>, int>(
+  (ref, projectId) async {
+    final database = ref.watch(databaseProvider);
+    return await database.projectDao.getAllDescendants(projectId);
+  },
+);

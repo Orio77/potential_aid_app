@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/widgets/add_task_dialog.dart';
+import 'package:potential_aid_app/widgets/projects/link_project_dialog.dart';
 import 'package:potential_aid_app/widgets/projects/project_info.dart';
 import 'package:potential_aid_app/widgets/projects/project_task_list.dart';
 import 'package:potential_aid_app/widgets/projects/project_title.dart';
@@ -29,7 +30,7 @@ class ProjectScreen extends ConsumerWidget {
           children: [
             ProjectInfo(project: data),
             Heatmap(projectId: data.id),
-            RelatedProjectsList(),
+            RelatedProjectsList(projectId: data.id),
             SizedBox(height: 400, child: ProjectTaskList(projectId: data.id)),
           ],
         ),
@@ -38,7 +39,7 @@ class ProjectScreen extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           ElevatedButton(
-            onPressed: () => print('connect!'),
+            onPressed: () => showLinkProjectDialog(context, data.id),
             child: Icon(Icons.link_rounded),
           ),
           ElevatedButton(
