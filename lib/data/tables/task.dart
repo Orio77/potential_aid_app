@@ -15,4 +15,8 @@ class Task extends Table {
   DateTimeColumn get deadline => dateTime().nullable()();
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
   DateTimeColumn get completedAt => dateTime().nullable()();
+  IntColumn get parentTaskId =>
+      integer().nullable().references(Task, #id, onDelete: KeyAction.cascade)();
+  IntColumn get orderIndex => integer().withDefault(const Constant(0))();
+  IntColumn get depth => integer().withDefault(const Constant(0))();
 }

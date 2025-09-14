@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:potential_aid_app/data/database.dart';
+import 'package:potential_aid_app/screens/task_breakdown_screen.dart';
 import 'package:potential_aid_app/widgets/stats/progress_bar.dart';
 import 'package:time_machine/time_machine.dart';
 
@@ -38,9 +39,28 @@ class TaskListItem extends StatelessWidget {
             ),
           ],
         ),
-        trailing: IconButton(
-          icon: const Icon(Icons.check_circle_outline),
-          onPressed: onComplete,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.check_circle_outline, size: 20),
+              onPressed: onComplete,
+              padding: const EdgeInsets.all(8),
+              constraints: const BoxConstraints(minHeight: 40, minWidth: 40),
+            ),
+            IconButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => TaskBreakdownScreen(taskId: task.id),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.account_tree_rounded, size: 20),
+              padding: const EdgeInsets.all(8),
+              constraints: const BoxConstraints(minHeight: 40, minWidth: 40),
+            ),
+          ],
         ),
       ),
     );

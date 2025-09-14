@@ -30,7 +30,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 19;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -38,6 +38,11 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
     },
     onUpgrade: (Migrator m, int from, int to) async {
+      if (from < 19) {
+        await m.addColumn(task, task.parentTaskId);
+        await m.addColumn(task, task.orderIndex);
+        await m.addColumn(task, task.depth);
+      }
       if (from < 18) {
         await m.addColumn(project, project.parentProjectId);
       }
