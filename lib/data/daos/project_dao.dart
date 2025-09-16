@@ -35,6 +35,10 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
     });
   }
 
+  Future<void> deleteProject(int projectId) async {
+    await (delete(project)..where((p) => p.id.equals(projectId))).go();
+  }
+
   Future<int> updateProject(int projectId, ProjectCompanion updates) async {
     return await (update(
       project,

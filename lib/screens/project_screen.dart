@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/widgets/add_task_dialog.dart';
+import 'package:potential_aid_app/widgets/projects/delete_project.dart';
 import 'package:potential_aid_app/widgets/projects/link_project_dialog.dart';
 import 'package:potential_aid_app/widgets/projects/project_info.dart';
 import 'package:potential_aid_app/widgets/projects/project_task_list.dart';
@@ -24,6 +25,7 @@ class ProjectScreen extends ConsumerWidget {
           onPressed: () => Navigator.of(context).pop(),
           icon: Icon(Icons.arrow_back_ios),
         ),
+        actions: [DeleteProject(data: data)],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -32,10 +34,7 @@ class ProjectScreen extends ConsumerWidget {
             Heatmap(projectId: data.id),
             RelatedProjectsList(projectId: data.id),
             ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: 400,
-                minHeight: 200,
-              ),
+              constraints: BoxConstraints(maxHeight: 400, minHeight: 200),
               child: ProjectTaskList(projectId: data.id),
             ),
           ],
