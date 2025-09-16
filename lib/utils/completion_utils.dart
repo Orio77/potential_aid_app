@@ -72,7 +72,7 @@ class CompletionUtils {
   }
 
   static List<double> formatCompletionData(
-    List<TaskCompletionData> completions,
+    List<BlockCompletionData> completions,
     LocalDate monthYearDate,
   ) {
     final daysInMonth = monthYearDate.calendar.getDaysInMonth(
@@ -85,7 +85,7 @@ class CompletionUtils {
     for (final completion in completions) {
       final dayOfMonth = completion.completedAt.day;
       if (dayOfMonth >= 1 && dayOfMonth <= daysInMonth) {
-        dailyCounts[dayOfMonth - 1] += 1;
+        dailyCounts[dayOfMonth - 1] += completion.count;
       }
     }
 

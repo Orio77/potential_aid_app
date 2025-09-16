@@ -13,9 +13,7 @@ class BarMap extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final completions = ref.watch(
-      taskCompletionMonthlyNotifier(
-        TaskCompletionParams(monthYearDate: monthYearDate),
-      ),
+      blockCompletionMonthlyNotifier(monthYearDate),
     );
 
     return completions.when(
@@ -25,7 +23,7 @@ class BarMap extends ConsumerWidget {
     );
   }
 
-  Widget _buildBarMap(List<TaskCompletionData> completions) {
+  Widget _buildBarMap(List<BlockCompletionData> completions) {
     final completionCounts = CompletionUtils.formatCompletionData(
       completions,
       monthYearDate,
@@ -71,9 +69,13 @@ class BarMap extends ConsumerWidget {
         getTooltipItem: (group, groupIndex, rod, rodIndex) {
           final dayNumber = group.x;
           final completionCount = rod.toY.toInt();
+          final hours = completionCount ~/ 60;
+          final minutes = completionCount % 60;
+          final tooltipText =
+              'Day $dayNumber\n${hours > 0 ? '$hours ${hours == 1 ? "hour" : "hours"} ' : ''}$minutes ${minutes == 1 ? "minute" : "minutes"}';
 
           return BarTooltipItem(
-            'Day $dayNumber\n$completionCount completions',
+            tooltipText,
             const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           );
         },

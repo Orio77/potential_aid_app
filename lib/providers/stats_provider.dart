@@ -159,6 +159,28 @@ Future<List<TaskCompletionData>> getTaskCompletions(
   }
 }
 
+Future<List<BlockCompletionData>> getBlockCompletions(
+  AppDatabase database,
+  LocalDate monthYearDate,
+) async {
+  final query = database.select(database.blockCompletion);
+
+  query.where(
+    (table) => table.completedAt.isBetweenValues(
+      DateTime(monthYearDate.yearOfEra, monthYearDate.monthOfYear, 1),
+      DateTime(
+        monthYearDate.yearOfEra,
+        monthYearDate.monthOfYear + 1,
+        1,
+      ).subtract(Duration(days: 1)),
+    ),
+  );
+
+  query.orderBy([(bc) => OrderingTerm.asc(bc.completedAt)]);
+
+  return await query.get();
+}
+
 final projectStatsNotifier = FutureProvider.family<ProjectStats, int>((
   ref,
   projectId,
@@ -190,4 +212,14 @@ final taskCompletionMonthlyNotifier =
         params.monthYearDate,
         params.projectId,
       );
+    });
+
+final blockCompletionMonthlyNotifier =
+    FutureProvider.family<List<BlockCompletionData>, LocalDate>((
+      ref,
+      date,
+    ) async {
+      final database = ref.watch(databaseProvider);
+
+      return await getBlockCompletions(database, date);
     });
