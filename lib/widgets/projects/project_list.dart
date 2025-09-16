@@ -40,20 +40,39 @@ class _ProjectListState extends ConsumerState<ProjectList> {
           ],
         ),
         Expanded(
-          child: GridView.builder(
-            shrinkWrap: true,
-            physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
-            ),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 16.0,
-              mainAxisSpacing: 16.0,
-            ),
-            itemCount: projects.length,
-            itemBuilder: (context, index) {
-              final project = projects[index];
-              return ProjectCard(projectId: project.id);
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              int crossAxisCount;
+              double childAspectRatio;
+
+              if (constraints.maxWidth < 600) {
+                crossAxisCount = 1;
+                childAspectRatio = 2.5;
+              } else if (constraints.maxWidth < 900) {
+                crossAxisCount = 2;
+                childAspectRatio = 1.3;
+              } else {
+                crossAxisCount = 3;
+                childAspectRatio = 1.0;
+              }
+
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: 16.0,
+                  mainAxisSpacing: 16.0,
+                  childAspectRatio: childAspectRatio,
+                ),
+                itemCount: projects.length,
+                itemBuilder: (context, index) {
+                  final project = projects[index];
+                  return ProjectCard(projectId: project.id);
+                },
+              );
             },
           ),
         ),

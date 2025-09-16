@@ -21,12 +21,16 @@ class ProjectCard extends ConsumerWidget {
             ),
           );
         },
-        child: Column(
-          children: [
-            ProjectTitle(title: project.name),
-            const SizedBox(height: 12.0),
-            ProjectProgressInfo(project: project),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(child: ProjectTitle(title: project.name)),
+              const SizedBox(height: 8.0),
+              Flexible(flex: 2, child: ProjectProgressInfo(project: project)),
+            ],
+          ),
         ),
       ),
     );

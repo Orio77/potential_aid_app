@@ -37,72 +37,127 @@ Widget _buildProgressSection(
     theme.colorScheme,
   );
 
-  return Padding(
-    padding: EdgeInsets.all(8.0),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      bool isVeryCompact =
+          constraints.maxHeight < 100 || constraints.maxWidth < 200;
+      bool isCompact =
+          constraints.maxWidth < 300 || constraints.maxHeight < 150;
+
+      final availableHeight = constraints.maxHeight;
+      final hasVeryTightHeight = availableHeight < 90;
+
+      return Padding(
+        padding: EdgeInsets.all(isVeryCompact ? 2.0 : (isCompact ? 4.0 : 8.0)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              'Progress',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onSurface,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Flexible(
+                  child: Text(
+                    'Progress',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
+                      fontSize: hasVeryTightHeight
+                          ? 10
+                          : (isVeryCompact ? 12 : (isCompact ? 14 : null)),
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: hasVeryTightHeight
+                        ? 3
+                        : (isVeryCompact ? 4 : (isCompact ? 6 : 8)),
+                    vertical: hasVeryTightHeight
+                        ? 0.5
+                        : (isVeryCompact ? 1 : (isCompact ? 2 : 4)),
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: progressColor.withValues(alpha: 0.1),
+                  ),
+                  child: Text(
+                    CompletionUtils.getCompletionText(completionPercentage),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: progressColor,
+                      fontWeight: FontWeight.w500,
+                      fontSize: hasVeryTightHeight
+                          ? 7
+                          : (isVeryCompact ? 8 : (isCompact ? 10 : null)),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: progressColor.withValues(alpha: 0.1),
-              ),
-              child: Text(
-                CompletionUtils.getCompletionText(completionPercentage),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: progressColor,
-                  fontWeight: FontWeight.w500,
+
+            SizedBox(
+              height: hasVeryTightHeight
+                  ? 1
+                  : (isVeryCompact ? 2 : (isCompact ? 4 : 12)),
+            ),
+
+            Expanded(
+              flex: 2,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      '$current',
+                      style: theme.textTheme.headlineLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: progressColor,
+                        fontSize: hasVeryTightHeight
+                            ? 14
+                            : (isVeryCompact ? 18 : (isCompact ? 22 : null)),
+                      ),
+                    ),
+                    Text(
+                      ' / $goal',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontSize: hasVeryTightHeight
+                            ? 10
+                            : (isVeryCompact ? 12 : (isCompact ? 14 : null)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      unit,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                        fontSize: hasVeryTightHeight
+                            ? 8
+                            : (isVeryCompact ? 10 : (isCompact ? 12 : null)),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ],
-        ),
 
-        const SizedBox(height: 12),
+            SizedBox(
+              height: hasVeryTightHeight
+                  ? 1
+                  : (isVeryCompact ? 2 : (isCompact ? 4 : 8)),
+            ),
 
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            Text(
-              '$current',
-              style: theme.textTheme.headlineLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: progressColor,
-              ),
-            ),
-            Text(
-              ' / $goal',
-              style: theme.textTheme.titleLarge?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              unit,
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w500,
-              ),
+            Expanded(
+              flex: 1,
+              child: ProgressBar(completionValue: current / goal),
             ),
           ],
         ),
-
-        const SizedBox(height: 16),
-
-        ProgressBar(completionValue: current / goal),
-      ],
-    ),
+      );
+    },
   );
 }
