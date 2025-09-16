@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
+import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
 
@@ -102,6 +103,8 @@ class TaskCompletionElementState extends ConsumerState<TaskCompletionElement> {
             .read(scheduleNotifierProvider.notifier)
             .addProjectCompletion(widget.task.projectId, completionCount);
       }
+
+      ref.invalidate(projectTasksNotifier(widget.task.projectId));
 
       return res;
     } catch (e) {

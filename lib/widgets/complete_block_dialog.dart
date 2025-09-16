@@ -5,11 +5,11 @@ import 'package:potential_aid_app/providers/block_with_tasks_notifier.dart';
 import 'package:potential_aid_app/widgets/block_completion_element.dart';
 import 'package:potential_aid_app/widgets/task_completion_element.dart';
 
-class CompleteTaskDialog extends ConsumerStatefulWidget {
+class CompleteBlockDialog extends ConsumerStatefulWidget {
   final int blockId;
   final int blockLength;
 
-  const CompleteTaskDialog({
+  const CompleteBlockDialog({
     super.key,
     required this.blockId,
     required this.blockLength,
@@ -20,7 +20,7 @@ class CompleteTaskDialog extends ConsumerStatefulWidget {
       _CompleteTaskDialogState();
 }
 
-class _CompleteTaskDialogState extends ConsumerState<CompleteTaskDialog> {
+class _CompleteTaskDialogState extends ConsumerState<CompleteBlockDialog> {
   final List<GlobalKey<TaskCompletionElementState>> _taskKeys = [];
   final GlobalKey<BlockCompletionElementState> _blockKey =
       GlobalKey<BlockCompletionElementState>();

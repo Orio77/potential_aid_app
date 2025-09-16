@@ -25,16 +25,11 @@ class ProjectTaskList extends ConsumerWidget {
       return _buildEmptyState();
     }
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        return await ref.refresh(projectTasksNotifier(projectId));
-      },
-      child: Card(
-        child: ListView.separated(
-          itemBuilder: (context, index) => TaskListItem(task: taskList[index]),
-          separatorBuilder: (context, index) => SizedBox(height: 8),
-          itemCount: taskList.length,
-        ),
+    return Card(
+      child: ListView.separated(
+        itemBuilder: (context, index) => TaskListItem(task: taskList[index]),
+        separatorBuilder: (context, index) => SizedBox(height: 8),
+        itemCount: taskList.length,
       ),
     );
   }

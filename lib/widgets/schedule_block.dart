@@ -246,7 +246,6 @@ class ScheduleBlock extends ConsumerWidget {
     LocalDateTime dateTime,
   ) {
     final isCompleted = completionPercentage != null;
-    // Calculate if the block's scheduled time has passed
     final canComplete =
         blockWithTasks != null && _isBlockTimePasssed(blockWithTasks, dateTime);
 
@@ -257,7 +256,7 @@ class ScheduleBlock extends ConsumerWidget {
               showDialog(
                 context: context,
                 builder: (BuildContext buildContext) {
-                  return CompleteTaskDialog(
+                  return CompleteBlockDialog(
                     blockId: blockWithTasks.block.id,
                     blockLength: blockWithTasks.block.lengthMinutes,
                   );
@@ -324,7 +323,6 @@ class ScheduleBlock extends ConsumerWidget {
     );
   }
 
-  /// Helper method to check if a block can be completed (same day, after block time only)
   bool _isBlockTimePasssed(
     BlockWithTasks blockWithTasks,
     LocalDateTime currentTime,
@@ -332,12 +330,10 @@ class ScheduleBlock extends ConsumerWidget {
     final blockDate = blockWithTasks.block.dayLocal;
     final currentDate = currentTime.toDateTimeLocal();
 
-    // Only allow completion on the same day
     if (!_isSameDay(blockDate, currentDate)) {
       return false;
     }
 
-    // Same day: check if current time is after block end time
     final currentMinutes =
         currentTime.hourOfDay * 60 + currentTime.minuteOfHour;
     final blockEndMinutes =
@@ -347,7 +343,6 @@ class ScheduleBlock extends ConsumerWidget {
     return currentMinutes > blockEndMinutes;
   }
 
-  /// Helper method to check if two dates are the same day
   bool _isSameDay(DateTime date1, DateTime date2) {
     return date1.year == date2.year &&
         date1.month == date2.month &&
