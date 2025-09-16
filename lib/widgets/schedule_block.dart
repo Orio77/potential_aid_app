@@ -90,13 +90,18 @@ class ScheduleBlock extends ConsumerWidget {
     LocalDateTime dateTime,
   ) {
     final isCompleted = completionPercentage != null;
+    final isBlockInTheFuture =
+        (blockWithTasks != null &&
+        blockWithTasks.block.dayLocal.day > dateTime.dayOfMonth &&
+        blockWithTasks.block.dayLocal.month >= dateTime.monthOfYear &&
+        blockWithTasks.block.dayLocal.year >= dateTime.yearOfEra);
 
     return Opacity(
       opacity: isCompleted ? 0.6 : 1.0,
       child: Card(
         color: _getCardColor(theme, completionPercentage),
         child: InkWell(
-          onTap: isCompleted
+          onTap: isCompleted || !isBlockInTheFuture
               ? null
               : () => showEditBlockDialog(context, blockId: blockId),
           onLongPress: isCompleted ? null : onLongPress,

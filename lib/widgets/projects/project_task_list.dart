@@ -29,7 +29,10 @@ class ProjectTaskList extends ConsumerWidget {
       child: ListView.separated(
         shrinkWrap: true,
         physics: const AlwaysScrollableScrollPhysics(),
-        itemBuilder: (context, index) => TaskListItem(task: taskList[index]),
+        itemBuilder: (context, index) => TaskListItem(
+          task: taskList[index],
+          onDelete: () => _deleteTask(ref, taskList[index]),
+        ),
         separatorBuilder: (context, index) => SizedBox(height: 8),
         itemCount: taskList.length,
       ),
@@ -46,5 +49,11 @@ class ProjectTaskList extends ConsumerWidget {
 
   Widget _buildEmptyState() {
     return Text('Empty');
+  }
+
+  Future<void> _deleteTask(WidgetRef ref, TaskData task) async {
+    await ref
+        .read(projectTasksNotifier(task.projectId).notifier)
+        .deleteTask(task.id);
   }
 }

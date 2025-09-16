@@ -8,59 +8,105 @@ class TaskListItem extends StatelessWidget {
   final TaskData task;
   final VoidCallback? onTap;
   final VoidCallback? onComplete;
+  final VoidCallback? onDelete;
 
   const TaskListItem({
     super.key,
     required this.task,
     this.onTap,
     this.onComplete,
+    this.onDelete,
   });
+
+  Future<void> _handleDeleteConfirmation(BuildContext context) async {
+    if (onDelete != null) {
+      onDelete!();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final progress = task.endGoal > 0 ? task.current / task.endGoal : 0.0;
-    return Card(
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        onTap: onTap,
-        title: Text(
-          task.name,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ProgressBar(completionValue: progress),
-            const SizedBox(height: 4),
-            Text('${task.current}/${task.endGoal} ${task.unit}'),
-            Text(
-              'Deadline: ${task.deadline != null ? LocalDate.dateTime(task.deadline!).toString('dd-MM-yyyy') : 'No deadline set'}',
-            ),
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.check_circle_outline, size: 20),
-              onPressed: onComplete,
-              padding: const EdgeInsets.all(8),
-              constraints: const BoxConstraints(minHeight: 40, minWidth: 40),
-            ),
-            IconButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => TaskBreakdownScreen(task: task),
+
+    return Dismissible(
+      key: ValueKey(task.id),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsetsDirectional.symmetric(horizontal: 20),
+        color: Colors.red,
+        child: const Icon(Icons.delete, color: Colors.white, size: 24),
+      ),
+      confirmDismiss: (direction) async {
+        return await showDialog<bool>(
+              context: context,
+              builder: (BuildContext dialogContext) {
+                return AlertDialog(
+                  title: const Text('Delete Task'),
+                  content: Text(
+                    'Are you sure you want to delete "${task.name}"?',
                   ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(dialogContext).pop(true),
+                      child: const Text('Delete'),
+                    ),
+                  ],
                 );
               },
-              icon: const Icon(Icons.account_tree_rounded, size: 20),
-              padding: const EdgeInsets.all(8),
-              constraints: const BoxConstraints(minHeight: 40, minWidth: 40),
-            ),
-          ],
+            ) ??
+            false;
+      },
+      onDismissed: (direction) {
+        _handleDeleteConfirmation(context);
+      },
+      child: Card(
+        child: ListTile(
+          contentPadding: const EdgeInsets.all(16),
+          onTap: onTap,
+          title: Text(
+            task.name,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ProgressBar(completionValue: progress),
+              const SizedBox(height: 4),
+              Text('${task.current}/${task.endGoal} ${task.unit}'),
+              Text(
+                'Deadline: ${task.deadline != null ? LocalDate.dateTime(task.deadline!).toString('dd-MM-yyyy') : 'No deadline set'}',
+              ),
+            ],
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.check_circle_outline, size: 20),
+                onPressed: onComplete,
+                padding: const EdgeInsets.all(8),
+                constraints: const BoxConstraints(minHeight: 40, minWidth: 40),
+              ),
+              IconButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => TaskBreakdownScreen(task: task),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.account_tree_rounded, size: 20),
+                padding: const EdgeInsets.all(8),
+                constraints: const BoxConstraints(minHeight: 40, minWidth: 40),
+              ),
+            ],
+          ),
         ),
       ),
     );
