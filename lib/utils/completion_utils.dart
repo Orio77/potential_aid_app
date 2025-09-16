@@ -7,14 +7,14 @@ class CompletionUtils {
     final clamped = completionPercentage.clamp(0.0, 100.0);
 
     if (clamped == 0) return Colors.grey.shade300;
-    if (clamped == 100) return Colors.green.shade600;
+    if (clamped == 100) return Colors.purple.shade600;
 
     final colorStops = [
       _ColorStop(0, Colors.red.shade400),
       _ColorStop(25, Colors.orange.shade400),
-      _ColorStop(50, Colors.amber.shade400),
-      _ColorStop(75, Colors.lightGreen.shade400),
-      _ColorStop(100, Colors.green.shade600),
+      _ColorStop(50, Colors.yellow.shade400),
+      _ColorStop(75, Colors.blue.shade400),
+      _ColorStop(100, Colors.purple.shade600),
     ];
 
     return _interpolateColor(clamped, colorStops);
@@ -27,13 +27,16 @@ class CompletionUtils {
     final clamped = completionPercentage.clamp(0.0, 100.0);
 
     if (clamped == 0) return colorScheme.outline;
-    if (clamped == 100) return colorScheme.primary;
+    if (clamped == 100) {
+      return Colors.purple.shade600;
+    }
 
     final colorStops = [
       _ColorStop(0, colorScheme.error),
-      _ColorStop(30, colorScheme.tertiary),
-      _ColorStop(70, colorScheme.secondary),
-      _ColorStop(100, colorScheme.primary),
+      _ColorStop(25, Colors.orange.shade400),
+      _ColorStop(50, Colors.amber.shade400),
+      _ColorStop(75, Colors.indigo.shade400),
+      _ColorStop(100, Colors.purple.shade600),
     ];
 
     return _interpolateColor(clamped, colorStops);

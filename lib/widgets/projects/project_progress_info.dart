@@ -12,7 +12,7 @@ class ProjectProgressInfo extends StatelessWidget {
     final current = project.current;
     final goal = project.goal;
     final unit = project.unit;
-    final completionPercentage = (current / goal);
+    final completionPercentage = (current / goal) * 100;
 
     return _buildProgressSection(
       context,

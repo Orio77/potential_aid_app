@@ -7,7 +7,11 @@ class ProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = CompletionUtils.getCompletionColor(completionValue * 100);
+    final theme = Theme.of(context);
+    final color = CompletionUtils.getCompletionColorM3(
+      completionValue * 100,
+      theme.colorScheme,
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
