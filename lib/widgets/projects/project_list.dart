@@ -42,13 +42,29 @@ class _ProjectListState extends ConsumerState<ProjectList> {
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
+              // Use ListView for mobile screens to avoid overflow issues
+              if (constraints.maxWidth < 600) {
+                return ListView.builder(
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  itemCount: projects.length,
+                  itemBuilder: (context, index) {
+                    final project = projects[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: ProjectCard(projectId: project.id),
+                    );
+                  },
+                );
+              }
+
+              // Use GridView for larger screens
               int crossAxisCount;
               double childAspectRatio;
 
-              if (constraints.maxWidth < 600) {
-                crossAxisCount = 1;
-                childAspectRatio = 2.5;
-              } else if (constraints.maxWidth < 900) {
+              if (constraints.maxWidth < 900) {
                 crossAxisCount = 2;
                 childAspectRatio = 1.3;
               } else {

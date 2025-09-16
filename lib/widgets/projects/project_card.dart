@@ -25,10 +25,11 @@ class ProjectCard extends ConsumerWidget {
           padding: const EdgeInsets.all(12.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Flexible(child: ProjectTitle(title: project.name)),
+              ProjectTitle(title: project.name),
               const SizedBox(height: 8.0),
-              Flexible(flex: 2, child: ProjectProgressInfo(project: project)),
+              ProjectProgressInfo(project: project),
             ],
           ),
         ),
