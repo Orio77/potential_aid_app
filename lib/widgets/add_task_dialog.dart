@@ -178,10 +178,9 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
             taskName,
             widget.projectId,
             _deadline,
-            unit,
-            0,
-            current,
-            endGoal,
+            unit: unit,
+            current: current,
+            endGoal: endGoal,
           );
 
       if (mounted) {

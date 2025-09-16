@@ -52,7 +52,7 @@ class TaskListItem extends StatelessWidget {
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (context) => TaskBreakdownScreen(taskId: task.id),
+                    builder: (context) => TaskBreakdownScreen(task: task),
                   ),
                 );
               },

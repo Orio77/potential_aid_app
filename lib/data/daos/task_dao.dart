@@ -34,6 +34,9 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
     int? startPoint,
     int? current,
     int? endGoal,
+    int? parentTaskId,
+    int? depth,
+    int? orderIndex
   ]) async {
     final taskData = TaskCompanion.insert(
       name: name,
@@ -43,6 +46,9 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
       startPoint: Value(startPoint ?? 0),
       current: Value(current ?? 0),
       endGoal: Value(endGoal ?? 1),
+      parentTaskId: Value(parentTaskId),
+      depth: Value(depth ?? 0),
+      orderIndex: Value(orderIndex ?? 0)
     );
 
     final query = into(task).insert(taskData);
@@ -85,5 +91,9 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
 
       return completionId;
     });
+  }
+
+  Future<List<TaskData>> getSubtasks(int taskId) async {
+    return await (select(task)..where((t) => t.parentTaskId.equals(taskId))).get();
   }
 }
