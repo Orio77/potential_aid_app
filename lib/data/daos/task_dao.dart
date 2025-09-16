@@ -9,6 +9,15 @@ part 'task_dao.g.dart';
 class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
   TaskDao(super.db);
 
+  Future<TaskData> getTask(int taskId) async {
+    return await (select(task)..where((t) => t.id.equals(taskId))).getSingle();
+  }
+
+  Future<TaskData?> getParentTask(int taskId) async {
+    final task = await getTask(taskId);
+    return task.parentTaskId != null ? getTask(task.parentTaskId!) : null;
+  }
+
   Future<List<TaskData>> searchTasks({
     required String query,
     int? limit,
@@ -36,7 +45,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
     int? endGoal,
     int? parentTaskId,
     int? depth,
-    int? orderIndex
+    int? orderIndex,
   ]) async {
     final taskData = TaskCompanion.insert(
       name: name,
@@ -48,7 +57,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
       endGoal: Value(endGoal ?? 1),
       parentTaskId: Value(parentTaskId),
       depth: Value(depth ?? 0),
-      orderIndex: Value(orderIndex ?? 0)
+      orderIndex: Value(orderIndex ?? 0),
     );
 
     final query = into(task).insert(taskData);
@@ -58,7 +67,11 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
 
   Future<List<TaskData>> getTasksByProject(int projectId) async {
     final query = select(task)
-      ..where((task) => task.projectId.equals(projectId));
+      ..where((task) => task.projectId.equals(projectId))
+      ..orderBy([
+        (task) => OrderingTerm(expression: task.depth),
+        (task) => OrderingTerm(expression: task.orderIndex),
+      ]);
 
     return await query.get();
   }
@@ -94,6 +107,8 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
   }
 
   Future<List<TaskData>> getSubtasks(int taskId) async {
-    return await (select(task)..where((t) => t.parentTaskId.equals(taskId))).get();
+    return await (select(
+      task,
+    )..where((t) => t.parentTaskId.equals(taskId))).get();
   }
 }

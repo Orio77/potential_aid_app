@@ -25,6 +25,14 @@ class ProjectTasksNotifier extends StateNotifier<AsyncValue<List<TaskData>>> {
     await _loadTasks();
   }
 
+  Future<TaskData> getTask(int taskId) async {
+    return await _database.taskDao.getTask(taskId);
+  }
+
+  Future<TaskData?> getParent(int taskId) async {
+    return await _database.taskDao.getParentTask(taskId);
+  }
+
   Future<int> addTask(
     String name,
     int projectId,
@@ -35,7 +43,7 @@ class ProjectTasksNotifier extends StateNotifier<AsyncValue<List<TaskData>>> {
     int? endGoal,
     int? parentTaskId,
     int? depth,
-    int? orderIndex
+    int? orderIndex,
   }) async {
     int taskId = await _database.taskDao.addTask(
       name,
@@ -47,7 +55,7 @@ class ProjectTasksNotifier extends StateNotifier<AsyncValue<List<TaskData>>> {
       endGoal,
       parentTaskId,
       depth,
-      orderIndex
+      orderIndex,
     );
 
     await refresh();
