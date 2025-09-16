@@ -27,6 +27,8 @@ class ProjectTaskList extends ConsumerWidget {
 
     return Card(
       child: ListView.separated(
+        shrinkWrap: true,
+        physics: const AlwaysScrollableScrollPhysics(),
         itemBuilder: (context, index) => TaskListItem(task: taskList[index]),
         separatorBuilder: (context, index) => SizedBox(height: 8),
         itemCount: taskList.length,

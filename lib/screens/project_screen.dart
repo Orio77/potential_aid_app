@@ -31,7 +31,13 @@ class ProjectScreen extends ConsumerWidget {
             ProjectInfo(project: data),
             Heatmap(projectId: data.id),
             RelatedProjectsList(projectId: data.id),
-            SizedBox(height: 400, child: ProjectTaskList(projectId: data.id)),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: 400,
+                minHeight: 200,
+              ),
+              child: ProjectTaskList(projectId: data.id),
+            ),
           ],
         ),
       ),

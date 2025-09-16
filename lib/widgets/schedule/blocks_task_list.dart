@@ -18,54 +18,29 @@ class BlocksTaskList extends ConsumerWidget {
     }
 
     final List<TaskData> tasks = block.tasks!;
-    final theme = Theme.of(context);
 
     return Card(
       child: Padding(
         padding: EdgeInsets.all(8.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
-          children: tasks
-              .map(
-                (task) => task.isCompleted
-                    ? _buildTaskCompletedState(task)
-                    : _buildDefaultTaskState(task, theme),
-              )
-              .toList(),
+          children: tasks.map((task) => _buildTaskState(task)).toList(),
         ),
       ),
     );
   }
 
-  Widget _buildTaskCompletedState(TaskData task) {
-    return Text('completed');
-  }
+  Widget _buildTaskState(TaskData task) {
+    final completedStyle = TextStyle(
+      decoration: TextDecoration.lineThrough,
+      fontStyle: FontStyle.italic,
+    );
+    final defaultStyle = TextStyle();
 
-  Widget _buildDefaultTaskState(TaskData task, ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 2.0),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.fiber_manual_record,
-            size: 10.0,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            task.name,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              decoration: task.isCompleted ? TextDecoration.lineThrough : null,
-            ),
-
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
+    return Text(
+      task.name,
+      style: task.isCompleted ? completedStyle : defaultStyle,
     );
   }
 

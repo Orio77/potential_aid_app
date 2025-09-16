@@ -101,47 +101,44 @@ Widget _buildProgressSection(
                   : (isVeryCompact ? 2 : (isCompact ? 4 : 12)),
             ),
 
-            Expanded(
-              flex: 2,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text(
-                      '$current',
-                      style: theme.textTheme.headlineLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: progressColor,
-                        fontSize: hasVeryTightHeight
-                            ? 14
-                            : (isVeryCompact ? 18 : (isCompact ? 22 : null)),
-                      ),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    '$current',
+                    style: theme.textTheme.headlineLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: progressColor,
+                      fontSize: hasVeryTightHeight
+                          ? 14
+                          : (isVeryCompact ? 18 : (isCompact ? 22 : null)),
                     ),
-                    Text(
-                      ' / $goal',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontSize: hasVeryTightHeight
-                            ? 10
-                            : (isVeryCompact ? 12 : (isCompact ? 14 : null)),
-                      ),
+                  ),
+                  Text(
+                    ' / $goal',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontSize: hasVeryTightHeight
+                          ? 10
+                          : (isVeryCompact ? 12 : (isCompact ? 14 : null)),
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      unit,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w500,
-                        fontSize: hasVeryTightHeight
-                            ? 8
-                            : (isVeryCompact ? 10 : (isCompact ? 12 : null)),
-                      ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    unit,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                      fontSize: hasVeryTightHeight
+                          ? 8
+                          : (isVeryCompact ? 10 : (isCompact ? 12 : null)),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
 
@@ -151,10 +148,7 @@ Widget _buildProgressSection(
                   : (isVeryCompact ? 2 : (isCompact ? 4 : 8)),
             ),
 
-            Expanded(
-              flex: 1,
-              child: ProgressBar(completionValue: current / goal),
-            ),
+            ProgressBar(completionValue: current / goal),
           ],
         ),
       );

@@ -51,6 +51,8 @@ class _TaskListState extends ConsumerState<BlockAddTaskList> {
     _predicates = widget.project != null
         ? [(task) => task.projectId == widget.project!.id]
         : [];
+
+    _predicates.add((task) => !task.isCompleted);
   }
 
   @override
