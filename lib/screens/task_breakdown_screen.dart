@@ -149,7 +149,6 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
           final subtask = await ref
               .read(projectTasksNotifier(widget.task.projectId).notifier)
               .getTask(savedIds[index]);
-          // Replace current screen instead of pushing
           navigator.pushReplacement(
             MaterialPageRoute(
               builder: (context) => TaskBreakdownScreen(task: subtask),
@@ -181,7 +180,6 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
         final parentTask = await ref
             .read(projectTasksNotifier(widget.task.projectId).notifier)
             .getTask(widget.task.parentTaskId!);
-        // Replace current screen instead of pushing
         navigator.pushReplacement(
           MaterialPageRoute(
             builder: (context) => TaskBreakdownScreen(task: parentTask),

@@ -97,6 +97,8 @@ class Heatmap extends ConsumerWidget {
       ),
       child: date != null
           ? Tooltip(
+              enableTapToDismiss: true,
+              triggerMode: TooltipTriggerMode.tap,
               message: '${date.toString()}: $completion completions',
               child: Container(),
             )
@@ -105,19 +107,18 @@ class Heatmap extends ConsumerWidget {
   }
 
   Color _getColorForActivity(int activity) {
-    // GitHub-like green color scheme
     switch (activity) {
       case 0:
         return Colors.grey.shade200;
       case 1:
-        return Colors.green.shade100;
+        return Colors.deepPurpleAccent.shade100;
       case 2:
-        return Colors.green.shade300;
+        return Colors.deepPurpleAccent.shade200;
       case 3:
-        return Colors.green.shade500;
+        return Colors.deepPurpleAccent.shade400;
       case 4:
       default:
-        return Colors.green.shade700;
+        return Colors.deepPurpleAccent.shade700;
     }
   }
 
