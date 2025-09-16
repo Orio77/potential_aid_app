@@ -24,6 +24,7 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
   final _endGoalController = TextEditingController();
   final _unitController = TextEditingController();
   final _focusNode = FocusNode();
+  final _progressInputController = GoalProgressInputController();
   late DateTime _deadline;
   late DateTime _currentDate;
   bool _isLoading = false;
@@ -93,6 +94,9 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
                   color: Colors.grey,
                 ),
                 predicates: [(task) => !task.isCompleted],
+                onFieldSubmitted: (_) {
+                  _progressInputController.focusFirst();
+                },
               ),
 
               const SizedBox(height: 16),
@@ -101,6 +105,7 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
                 currentController: _currentController,
                 endGoalController: _endGoalController,
                 unitController: _unitController,
+                controller: _progressInputController,
               ),
 
               const SizedBox(height: 16),

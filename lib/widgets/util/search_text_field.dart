@@ -21,6 +21,7 @@ class SearchTextField<T, N extends StateNotifier<List<T>>>
   final void Function(String)? onChanged;
   final List<bool Function(T)>? predicates;
   final InputDecoration? textFieldDecoration;
+  final void Function(String)? onFieldSubmitted;
 
   const SearchTextField({
     super.key,
@@ -38,6 +39,7 @@ class SearchTextField<T, N extends StateNotifier<List<T>>>
     this.onChanged,
     this.predicates,
     this.textFieldDecoration,
+    this.onFieldSubmitted,
   });
 
   @override
@@ -140,6 +142,7 @@ class _SearchTextFieldState<T, N extends StateNotifier<List<T>>>
           validator: widget.validator,
           enabled: widget.enabled,
           onChanged: _onTextChanged,
+          onFieldSubmitted: widget.onFieldSubmitted,
         ),
 
         if (_showSuggestions && limitedResults.isNotEmpty) ...[
