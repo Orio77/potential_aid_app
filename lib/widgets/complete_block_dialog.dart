@@ -46,14 +46,11 @@ class _CompleteTaskDialogState extends ConsumerState<CompleteBlockDialog> {
             const SizedBox(height: 12),
             blockWithTasksAsync.when(
               data: (blockWithTasks) {
-                if (blockWithTasks.tasks == null ||
-                    blockWithTasks.tasks!.isEmpty) {
-                  return const Text('No tasks found for this block');
-                }
-
-                _taskKeys.clear();
-                for (int i = 0; i < blockWithTasks.tasks!.length; i++) {
-                  _taskKeys.add(GlobalKey<TaskCompletionElementState>());
+                if (blockWithTasks.tasks != null) {
+                  _taskKeys.clear();
+                  for (int i = 0; i < blockWithTasks.tasks!.length; i++) {
+                    _taskKeys.add(GlobalKey<TaskCompletionElementState>());
+                  }
                 }
 
                 return ConstrainedBox(
@@ -67,18 +64,20 @@ class _CompleteTaskDialogState extends ConsumerState<CompleteBlockDialog> {
                         block: blockWithTasks.block,
                         onBlockCompletion: (blockId, minutesCompleted) {},
                       ),
-                      ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: blockWithTasks.tasks!.length,
-                        itemBuilder: (context, index) {
-                          final task = blockWithTasks.tasks![index];
-                          return TaskCompletionElement(
-                            key: _taskKeys[index],
-                            task: task,
-                            onTaskCompletion: (taskId, completionCount) {},
-                          );
-                        },
-                      ),
+                      if (blockWithTasks.tasks != null) ...[
+                        ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: blockWithTasks.tasks!.length,
+                          itemBuilder: (context, index) {
+                            final task = blockWithTasks.tasks![index];
+                            return TaskCompletionElement(
+                              key: _taskKeys[index],
+                              task: task,
+                              onTaskCompletion: (taskId, completionCount) {},
+                            );
+                          },
+                        ),
+                      ],
                     ],
                   ),
                 );
