@@ -217,19 +217,31 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
                 key: mainTaskKey,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (widget.task.parentTaskId != null) ...[
-                        _buildGoToParentTaskButton(),
-                      ],
-
-                      Text(
-                        task.name,
-                        style: Theme.of(context).textTheme.headlineSmall,
-                        textAlign: TextAlign.center,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxHeight: 200.0, // Maximum height before scrolling
+                      minHeight: 60.0, // Minimum height
+                    ),
+                    child: IntrinsicWidth(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (widget.task.parentTaskId != null)
+                            _buildGoToParentTaskButton(),
+                          Flexible(
+                            child: SingleChildScrollView(
+                              child: Text(
+                                task.name,
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.headlineSmall,
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
