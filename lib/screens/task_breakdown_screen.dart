@@ -18,6 +18,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
   List<TextEditingController> subtasks = [];
   List<bool> isExistingSubtask = [];
   List<GlobalKey> subtaskKeys = [];
+  List<FocusNode> subtaskFocusNodes = [];
   List<int> savedIds = [];
   final GlobalKey mainTaskKey = GlobalKey();
   bool isLoading = true;
@@ -26,6 +27,15 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
   void initState() {
     super.initState();
     _initializeSubtasks();
+  }
+
+  @override
+  void dispose() {
+    // Dispose all focus nodes
+    for (var focusNode in subtaskFocusNodes) {
+      focusNode.dispose();
+    }
+    super.dispose();
   }
 
   void _initializeSubtasks() async {
@@ -37,6 +47,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
         subtasks = [TextEditingController()];
         isExistingSubtask = [false];
         subtaskKeys = [GlobalKey()];
+        subtaskFocusNodes = [FocusNode()];
         savedIds = [-1]; // Initialize with -1 for new subtask
       } else {
         subtasks = subtasksData
@@ -46,6 +57,10 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
         subtaskKeys = List.generate(
           subtasksData.length,
           (index) => GlobalKey(),
+        );
+        subtaskFocusNodes = List.generate(
+          subtasksData.length,
+          (index) => FocusNode(),
         );
         savedIds = subtasksData.map((subt) => subt.id).toList();
       }
@@ -58,7 +73,16 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
       subtasks.add(TextEditingController());
       isExistingSubtask.add(false);
       subtaskKeys.add(GlobalKey());
+      subtaskFocusNodes.add(FocusNode());
       savedIds.add(-1);
+    });
+
+    // Focus on the newly added subtask after the widget is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final newIndex = subtasks.length - 1;
+      if (newIndex >= 0 && newIndex < subtaskFocusNodes.length) {
+        subtaskFocusNodes[newIndex].requestFocus();
+      }
     });
   }
 
@@ -69,6 +93,11 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     final date = ref.read(dateNotifierProvider).toDateTimeUnspecified();
 
     for (int i = 0; i < subtasks.length; i++) {
+      // Bounds checking for all lists
+      if (i >= isExistingSubtask.length || i >= savedIds.length) {
+        break;
+      }
+
       if (!isExistingSubtask[i] && savedIds[i] == -1) {
         final subtask = subtasks[i];
         if (subtask.text.trim().isNotEmpty) {
@@ -81,8 +110,11 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
             orderIndex: i,
           );
           setState(() {
-            savedIds[i] = taskId;
-            isExistingSubtask[i] = true;
+            // Check bounds again before setting
+            if (i < savedIds.length && i < isExistingSubtask.length) {
+              savedIds[i] = taskId;
+              isExistingSubtask[i] = true;
+            }
           });
         }
       }
@@ -145,6 +177,9 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
 
     return IconButton(
       onPressed: () async {
+        // Bounds checking
+        if (index >= savedIds.length) return;
+
         if (savedIds[index] != -1) {
           final subtask = await ref
               .read(projectTasksNotifier(widget.task.projectId).notifier)
@@ -156,7 +191,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
           );
         } else {
           await _saveSubtasks();
-          if (savedIds[index] != -1) {
+          if (index < savedIds.length && savedIds[index] != -1) {
             final subtask = await ref
                 .read(projectTasksNotifier(widget.task.projectId).notifier)
                 .getTask(savedIds[index]);
@@ -193,10 +228,23 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
   Widget _buildRemoveSubtaskButton(int index) {
     return IconButton(
       onPressed: () {
+        // Bounds checking
+        if (index >= subtasks.length ||
+            index >= subtaskFocusNodes.length ||
+            index >= isExistingSubtask.length ||
+            index >= subtaskKeys.length ||
+            index >= savedIds.length) {
+          return;
+        }
+
         setState(() {
+          // Dispose of the FocusNode before removing
+          subtaskFocusNodes[index].dispose();
+
           subtasks.removeAt(index);
           isExistingSubtask.removeAt(index);
           subtaskKeys.removeAt(index);
+          subtaskFocusNodes.removeAt(index);
           savedIds.removeAt(index);
         });
       },
@@ -258,6 +306,14 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
                     shrinkWrap: true,
                     itemCount: subtasks.length,
                     itemBuilder: (context, index) {
+                      // Bounds checking to prevent RangeError
+                      if (index >= subtasks.length ||
+                          index >= subtaskKeys.length ||
+                          index >= subtaskFocusNodes.length ||
+                          index >= isExistingSubtask.length) {
+                        return const SizedBox.shrink();
+                      }
+
                       return Card(
                         key: subtaskKeys[index],
                         margin: const EdgeInsets.symmetric(vertical: 4.0),
@@ -268,6 +324,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
                               Expanded(
                                 child: TextField(
                                   controller: subtasks[index],
+                                  focusNode: subtaskFocusNodes[index],
                                   readOnly: isExistingSubtask[index],
                                   decoration: InputDecoration(
                                     border: OutlineInputBorder(),
@@ -306,6 +363,8 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
                           final GlobalKey movedKey = subtaskKeys.removeAt(
                             oldIndex,
                           );
+                          final FocusNode movedFocusNode = subtaskFocusNodes
+                              .removeAt(oldIndex);
                           final int movedSavedId = savedIds.removeAt(oldIndex);
 
                           subtasks.insert(adjustedIndex, movedController);
@@ -314,6 +373,10 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
                             movedExisting,
                           );
                           subtaskKeys.insert(adjustedIndex, movedKey);
+                          subtaskFocusNodes.insert(
+                            adjustedIndex,
+                            movedFocusNode,
+                          );
                           savedIds.insert(adjustedIndex, movedSavedId);
                         });
                       }
