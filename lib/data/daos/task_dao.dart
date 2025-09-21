@@ -26,7 +26,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
     if (q.isEmpty) return [];
 
     final selectQuery = select(task)
-      ..where((t) => t.name.lower().like('${q.toLowerCase()}%'));
+      ..where((t) => t.name.lower().contains('${q.toLowerCase()}%'));
 
     if (limit != null) {
       selectQuery.limit(limit);

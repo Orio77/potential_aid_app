@@ -53,7 +53,7 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
     if (q.isEmpty) return [];
 
     final selectQuery = select(project)
-      ..where((p) => p.name.lower().like('${q.toLowerCase()}%'));
+      ..where((p) => p.name.lower().contains('${q.toLowerCase()}%'));
 
     if (limit != null) {
       selectQuery.limit(limit);
