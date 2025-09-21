@@ -158,37 +158,27 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
   Future<void> reorderBlocks(int oldIndex, int newIndex) async {
     final blocks = await _getBlocksWithTasks();
 
-    if (oldIndex == newIndex ||
-        oldIndex >= blocks.length ||
-        newIndex > blocks.length ||
-        oldIndex < 0 ||
-        newIndex < 0) {
-      return;
-    }
-
     final first = blocks[oldIndex];
-    final second = blocks[newIndex];
     final firstCompletionPercentage = await _database
         .getBlockCompletionPercentage(first.block.id);
+    final second = blocks[newIndex];
     final secondCompletionPercentage = await _database
         .getBlockCompletionPercentage(second.block.id);
 
-    if (firstCompletionPercentage == null ||
-        secondCompletionPercentage == null) {
+    if (firstCompletionPercentage != null ||
+        secondCompletionPercentage != null) {
       return;
     }
 
-    final anyCompleted =
-        firstCompletionPercentage > 0 || secondCompletionPercentage > 0;
-
-    if (anyCompleted || oldIndex == newIndex) {
-      return;
-    }
     if (newIndex > oldIndex) {
       newIndex--;
     }
 
     final reorderedBlocks = List<BlockWithTasks>.from(blocks);
+    print(blocks[0].block);
+    print(blocks[1].block);
+    print(blocks[2].block);
+    print("---");
     final movedBlock = reorderedBlocks.removeAt(oldIndex);
     reorderedBlocks.insert(newIndex, movedBlock);
 
