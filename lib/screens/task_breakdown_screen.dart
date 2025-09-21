@@ -19,6 +19,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
   List<bool> isExistingSubtask = [];
   List<GlobalKey> subtaskKeys = [];
   List<FocusNode> subtaskFocusNodes = [];
+  List<int> subtasksOfSubtasksCount = [];
   List<int> savedIds = [];
   final GlobalKey mainTaskKey = GlobalKey();
   bool isLoading = true;
@@ -42,6 +43,12 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     final subtasksData = await ref
         .read(projectTasksNotifier(widget.task.projectId).notifier)
         .getSubtasks(widget.task.id);
+    for (final subt in subtasksData) {
+      final subtasksOfSubtaskData = await ref
+          .read(projectTasksNotifier(subt.projectId).notifier)
+          .getSubtasks(subt.id);
+      subtasksOfSubtasksCount.add(subtasksOfSubtaskData.length);
+    }
     setState(() {
       if (subtasksData.isEmpty) {
         subtasks = [TextEditingController()];
@@ -49,6 +56,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
         subtaskKeys = [GlobalKey()];
         subtaskFocusNodes = [FocusNode()];
         savedIds = [-1]; // Initialize with -1 for new subtask
+        subtasksOfSubtasksCount = [0];
       } else {
         subtasks = subtasksData
             .map((subt) => TextEditingController(text: subt.name))
@@ -75,6 +83,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
       subtaskKeys.add(GlobalKey());
       subtaskFocusNodes.add(FocusNode());
       savedIds.add(-1);
+      subtasksOfSubtasksCount.add(0);
     });
 
     // Focus on the newly added subtask after the widget is built
@@ -247,9 +256,36 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
           subtaskKeys.removeAt(index);
           subtaskFocusNodes.removeAt(index);
           savedIds.removeAt(index);
+          subtasksOfSubtasksCount.removeAt(index);
         });
       },
       icon: Icon(Icons.delete),
+    );
+  }
+
+  Widget _buildSubtaskCountInfo(int index) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(3, 0, 0, 0),
+      child: Container(
+        width: 24,
+        height: 24,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        child: Center(
+          child: Text(
+            subtasksOfSubtasksCount.length > index
+                ? subtasksOfSubtasksCount[index].toString()
+                : "0",
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onPrimary,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -337,6 +373,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
                                   ),
                                 ),
                               ),
+                              _buildSubtaskCountInfo(index),
                               _buildBreakdownSubtaskButton(index),
                               _buildRemoveSubtaskButton(index),
                             ],
@@ -367,6 +404,8 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
                           final FocusNode movedFocusNode = subtaskFocusNodes
                               .removeAt(oldIndex);
                           final int movedSavedId = savedIds.removeAt(oldIndex);
+                          final int movedSavedSubtaskCount =
+                              subtasksOfSubtasksCount.removeAt(oldIndex);
 
                           subtasks.insert(adjustedIndex, movedController);
                           isExistingSubtask.insert(
@@ -379,6 +418,10 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
                             movedFocusNode,
                           );
                           savedIds.insert(adjustedIndex, movedSavedId);
+                          subtasksOfSubtasksCount.insert(
+                            adjustedIndex,
+                            movedSavedSubtaskCount,
+                          );
                         });
                       }
                     },
