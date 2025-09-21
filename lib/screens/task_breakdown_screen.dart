@@ -126,7 +126,8 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text('Task Breakdown'),
+        title: Text('Depth: ${widget.task.depth + 1}'),
+        centerTitle: true,
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
