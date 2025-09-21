@@ -44,7 +44,14 @@ class ScheduleList extends ConsumerWidget {
       itemCount: blockIds.length,
       itemBuilder: (context, index) {
         final blockId = blockIds[index];
-        return _buildBlockPlaceholder(context, ref, blockId, index);
+        final int? previousBlockId = index > 0 ? blockIds[index - 1] : null;
+        return _buildBlockPlaceholder(
+          context,
+          ref,
+          previousBlockId,
+          blockId,
+          index,
+        );
       },
       onReorder: (int oldIndex, int newIndex) async {
         await ref
@@ -59,58 +66,86 @@ class ScheduleList extends ConsumerWidget {
   Widget _buildBlockPlaceholder(
     BuildContext context,
     WidgetRef ref,
+    int? previousBlockId,
     int blockId,
     int index,
   ) {
     final completionAsync = ref.watch(
       blockCompletionPercentageProvider(blockId),
     );
+    final previousCompletionAsync = previousBlockId != null
+        ? ref.watch(blockCompletionPercentageProvider(previousBlockId))
+        : const AsyncValue.data(1.0); // First block is always unlocked
 
     return completionAsync.when(
       data: (data) {
-        final isCompleted = data != null;
+        return previousCompletionAsync.when(
+          data: (previousData) {
+            final isCompleted = data != null;
+            final isPreviousCompleted =
+                previousData != null || previousBlockId == null;
 
-        if (isCompleted) {
-          return Padding(
+            if (isCompleted) {
+              return Padding(
+                key: ValueKey(blockId),
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: ScheduleBlock(
+                  blockId: blockId,
+                  isPreviousBlockCompleted: isPreviousCompleted,
+                  onTap: () {
+                    showEditBlockDialog(context, blockId: blockId);
+                  },
+                ),
+              );
+            } else {
+              return Dismissible(
+                key: ValueKey(blockId),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: 20,
+                  ),
+                  color: Colors.red,
+                  child: const Icon(
+                    Icons.delete,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                confirmDismiss: (direction) async {
+                  return await showDialog<bool>(
+                        context: context,
+                        builder: (BuildContext dialogContext) {
+                          return DeleteTaskDialog(blockId: blockId);
+                        },
+                      ) ??
+                      false;
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: ScheduleBlock(
+                    blockId: blockId,
+                    isPreviousBlockCompleted: isPreviousCompleted,
+                    onTap: () {
+                      showEditBlockDialog(context, blockId: blockId);
+                    },
+                  ),
+                ),
+              );
+            }
+          },
+          loading: () => Padding(
             key: ValueKey(blockId),
             padding: const EdgeInsets.symmetric(vertical: 4),
-            child: ScheduleBlock(
-              blockId: blockId,
-              onTap: () {
-                showEditBlockDialog(context, blockId: blockId);
-              },
-            ),
-          );
-        } else {
-          return Dismissible(
+            child: const CircularProgressIndicator(),
+          ),
+          error: (error, stackTrace) => Padding(
             key: ValueKey(blockId),
-            direction: DismissDirection.endToStart,
-            background: Container(
-              alignment: Alignment.centerRight,
-              padding: const EdgeInsetsDirectional.symmetric(horizontal: 20),
-              color: Colors.red,
-              child: const Icon(Icons.delete, color: Colors.white, size: 24),
-            ),
-            confirmDismiss: (direction) async {
-              return await showDialog<bool>(
-                    context: context,
-                    builder: (BuildContext dialogContext) {
-                      return DeleteTaskDialog(blockId: blockId);
-                    },
-                  ) ??
-                  false;
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: ScheduleBlock(
-                blockId: blockId,
-                onTap: () {
-                  showEditBlockDialog(context, blockId: blockId);
-                },
-              ),
-            ),
-          );
-        }
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Text("Error: $error"),
+          ),
+        );
       },
       loading: () => Padding(
         key: ValueKey(blockId),

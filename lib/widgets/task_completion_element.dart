@@ -23,6 +23,7 @@ class TaskCompletionElement extends ConsumerStatefulWidget {
 
 class TaskCompletionElementState extends ConsumerState<TaskCompletionElement> {
   final _completionController = TextEditingController();
+  bool saveAllSubtasks = true;
   late int taskLength;
   late int completionCount;
 
@@ -67,6 +68,20 @@ class TaskCompletionElementState extends ConsumerState<TaskCompletionElement> {
           },
           child: Text('>>'),
         ),
+        // Column(
+        //   children: [
+        //     Transform.scale(
+        //       scale: 0.8,
+        //       child: Switch(
+        //         value: saveAllSubtasks,
+        //         onChanged: (value) {
+        //           saveAllSubtasks = !saveAllSubtasks;
+        //         },
+        //       ),
+        //     ),
+        //     Text('Save Subtasks'),
+        //   ],
+        // ),
       ],
     );
   }

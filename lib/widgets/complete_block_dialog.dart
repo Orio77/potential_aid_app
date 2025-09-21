@@ -17,10 +17,10 @@ class CompleteBlockDialog extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<ConsumerStatefulWidget> createState() =>
-      _CompleteTaskDialogState();
+      _CompleteBlockDialogState();
 }
 
-class _CompleteTaskDialogState extends ConsumerState<CompleteBlockDialog> {
+class _CompleteBlockDialogState extends ConsumerState<CompleteBlockDialog> {
   final List<GlobalKey<TaskCompletionElementState>> _taskKeys = [];
   final GlobalKey<BlockCompletionElementState> _blockKey =
       GlobalKey<BlockCompletionElementState>();

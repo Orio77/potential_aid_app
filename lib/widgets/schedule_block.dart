@@ -16,12 +16,15 @@ class ScheduleBlock extends ConsumerWidget {
   final int blockId;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+  final bool isPreviousBlockCompleted;
 
   const ScheduleBlock({
     super.key,
     required this.blockId,
     this.onTap,
     this.onLongPress,
+    this.isPreviousBlockCompleted =
+        true, // Default to true for backwards compatibility
   });
 
   @override
@@ -48,6 +51,7 @@ class ScheduleBlock extends ConsumerWidget {
                 block,
                 project!,
                 dateTime,
+                isPreviousBlockCompleted,
               ),
               error: (error, stack) {
                 return _buildTaskBlock(
@@ -57,6 +61,7 @@ class ScheduleBlock extends ConsumerWidget {
                   null,
                   null,
                   dateTime,
+                  isPreviousBlockCompleted,
                 );
               },
               loading: () {
@@ -88,6 +93,7 @@ class ScheduleBlock extends ConsumerWidget {
     BlockWithTasks? blockWithTasks,
     ProjectData? project,
     LocalDateTime dateTime,
+    bool isPreviousBlockCompleted,
   ) {
     final isCompleted = completionPercentage != null;
     final isBlockInTheFuture =
@@ -101,7 +107,8 @@ class ScheduleBlock extends ConsumerWidget {
       child: Card(
         color: _getCardColor(theme, completionPercentage),
         child: InkWell(
-          onTap: isCompleted || !isBlockInTheFuture
+          onTap:
+              isCompleted || (!isPreviousBlockCompleted && isBlockInTheFuture)
               ? null
               : () => showEditBlockDialog(context, blockId: blockId),
           onLongPress: isCompleted ? null : onLongPress,
@@ -136,6 +143,7 @@ class ScheduleBlock extends ConsumerWidget {
                     completionPercentage,
                     blockWithTasks,
                     dateTime,
+                    isPreviousBlockCompleted,
                   ),
                 ],
               ),
@@ -249,10 +257,14 @@ class ScheduleBlock extends ConsumerWidget {
     double? completionPercentage,
     BlockWithTasks? blockWithTasks,
     LocalDateTime dateTime,
+    bool isPreviousBlockCompleted,
   ) {
     final isCompleted = completionPercentage != null;
+    // Allow completion if: previous block is completed OR the block time has passed
     final canComplete =
-        blockWithTasks != null && _isBlockTimePasssed(blockWithTasks, dateTime);
+        blockWithTasks != null &&
+        (isPreviousBlockCompleted ||
+            _isBlockTimePasssed(blockWithTasks, dateTime));
 
     return IconButton(
       onPressed: isCompleted || !canComplete
@@ -341,11 +353,9 @@ class ScheduleBlock extends ConsumerWidget {
 
     final currentMinutes =
         currentTime.hourOfDay * 60 + currentTime.minuteOfHour;
-    final blockEndMinutes =
-        blockWithTasks.block.startMinuteOfDay +
-        blockWithTasks.block.lengthMinutes;
+    final blockStartMinutes = blockWithTasks.block.startMinuteOfDay;
 
-    return currentMinutes > blockEndMinutes;
+    return currentMinutes > blockStartMinutes;
   }
 
   bool _isSameDay(DateTime date1, DateTime date2) {
