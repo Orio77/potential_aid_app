@@ -23,8 +23,7 @@ class ScheduleBlock extends ConsumerWidget {
     required this.blockId,
     this.onTap,
     this.onLongPress,
-    this.isPreviousBlockCompleted =
-        true, // Default to true for backwards compatibility
+    this.isPreviousBlockCompleted = true,
   });
 
   @override
@@ -107,8 +106,7 @@ class ScheduleBlock extends ConsumerWidget {
       child: Card(
         color: _getCardColor(theme, completionPercentage),
         child: InkWell(
-          onTap:
-              isCompleted || (!isPreviousBlockCompleted && isBlockInTheFuture)
+          onTap: isCompleted || !isBlockInTheFuture
               ? null
               : () => showEditBlockDialog(context, blockId: blockId),
           onLongPress: isCompleted ? null : onLongPress,
@@ -260,10 +258,15 @@ class ScheduleBlock extends ConsumerWidget {
     bool isPreviousBlockCompleted,
   ) {
     final isCompleted = completionPercentage != null;
-    // Allow completion if: previous block is completed OR the block time has passed
+    // Allow completion if: previous block is completed and it's on current day OR the block time has passed
+    final isBlockToday =
+        (blockWithTasks != null &&
+        blockWithTasks.block.dayLocal.day == dateTime.dayOfMonth &&
+        blockWithTasks.block.dayLocal.month == dateTime.monthOfYear &&
+        blockWithTasks.block.dayLocal.year == dateTime.yearOfEra);
     final canComplete =
         blockWithTasks != null &&
-        (isPreviousBlockCompleted ||
+        ((isPreviousBlockCompleted && isBlockToday) ||
             _isBlockTimePasssed(blockWithTasks, dateTime));
 
     return IconButton(
