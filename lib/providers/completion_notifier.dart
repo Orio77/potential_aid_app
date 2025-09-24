@@ -21,9 +21,6 @@ final blockCompletionPercentageProvider = FutureProvider.family<double?, int>((
 final scheduleDayCompletionPercentagesProvider =
     FutureProvider.family<double, DateTime>((ref, DateTime dateParam) async {
       final database = ref.read(databaseProvider);
-
-      print('DEBUG: dateParam = $dateParam');
-
       // Fetch data concurrently for better performance
       final results = await Future.wait([
         database.blockDao.getBlocksWithTasks(dateParam),
@@ -35,12 +32,7 @@ final scheduleDayCompletionPercentagesProvider =
       final blockCompletions = results[1] as List<BlockCompletionData>;
       final taskCompletions = results[2] as List<TaskCompletionData>;
 
-      print(blocksWithTasks.length);
-      print(blockCompletions.length);
-      print(taskCompletions.length);
-
       if (blocksWithTasks.isEmpty) {
-        print("empty");
         return 0.0; // No blocks scheduled, return 0%
       }
 
@@ -91,13 +83,7 @@ final scheduleDayCompletionPercentagesProvider =
             totalCompletedMinutes += blockCompletionMap[blockId] ?? 0;
           }
         }
-        print(
-          "${blockWithTasks.block.projectId}, block length: $blockLength, completed minutes: $totalCompletedMinutes, planned minutes: $totalPlannedMinutes",
-        );
       }
-
-      print(totalCompletedMinutes);
-      print(totalPlannedMinutes);
 
       if (totalPlannedMinutes == 0) {
         return 0.0;
