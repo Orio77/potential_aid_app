@@ -6,7 +6,9 @@ import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/widgets/projects/project_card.dart';
 
 class ProjectList extends ConsumerStatefulWidget {
-  const ProjectList({super.key});
+  final String searchQuery;
+
+  const ProjectList({super.key, this.searchQuery = ''});
 
   @override
   ConsumerState<ProjectList> createState() => _ProjectListState();
@@ -20,6 +22,12 @@ class _ProjectListState extends ConsumerState<ProjectList> {
   }
 
   Widget _buildProjectList(List<ProjectData> projects) {
+    final filteredProjects = widget.searchQuery.isEmpty
+        ? projects
+        : projects
+              .where((p) => p.name.toLowerCase().contains(widget.searchQuery))
+              .toList();
+
     return Column(
       children: [
         Row(
@@ -49,9 +57,9 @@ class _ProjectListState extends ConsumerState<ProjectList> {
                     parent: AlwaysScrollableScrollPhysics(),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  itemCount: projects.length,
+                  itemCount: filteredProjects.length,
                   itemBuilder: (context, index) {
-                    final project = projects[index];
+                    final project = filteredProjects[index];
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 16.0),
                       child: ProjectCard(projectId: project.id),
@@ -83,9 +91,9 @@ class _ProjectListState extends ConsumerState<ProjectList> {
                   mainAxisSpacing: 16.0,
                   childAspectRatio: childAspectRatio,
                 ),
-                itemCount: projects.length,
+                itemCount: filteredProjects.length,
                 itemBuilder: (context, index) {
-                  final project = projects[index];
+                  final project = filteredProjects[index];
                   return ProjectCard(projectId: project.id);
                 },
               );
