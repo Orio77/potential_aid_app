@@ -64,12 +64,19 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
   }
 
   Future<List<BlockWithTasks>> getBlocksWithTasks(DateTime date) async {
+    // Normalize date to start of day to handle timezone differences
+    final startOfDay = DateTime(date.year, date.month, date.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
     final query =
         select(block).join([
             leftOuterJoin(blockTask, blockTask.blockId.equalsExp(block.id)),
             leftOuterJoin(task, task.id.equalsExp(blockTask.taskId)),
           ])
-          ..where(block.dayLocal.equals(date))
+          ..where(
+            block.dayLocal.isBiggerOrEqualValue(startOfDay) &
+                block.dayLocal.isSmallerThanValue(endOfDay),
+          )
           ..orderBy([OrderingTerm.asc(block.startMinuteOfDay)]);
 
     final rows = await query.get();
@@ -136,29 +143,19 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
     return completionId;
   }
 
-  Future<Map<BlockData, BlockCompletionData>> getBlockCompletionsForDate(
+  Future<List<BlockCompletionData>> getBlockCompletionsForDate(
     DateTime date,
   ) async {
     final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
-    final blocksWithCompletions = <BlockData, BlockCompletionData>{};
 
-    final query =
-        select(blockCompletion).join([
-          innerJoin(block, block.id.equalsExp(blockCompletion.blockId)),
-        ])..where(
-          blockCompletion.completedAt.isBiggerOrEqualValue(startOfDay) &
-              blockCompletion.completedAt.isSmallerThanValue(endOfDay),
-        );
+    final query = select(blockCompletion)
+      ..where(
+        (bc) =>
+            bc.completedAt.isBiggerOrEqualValue(startOfDay) &
+            bc.completedAt.isSmallerThanValue(endOfDay),
+      );
 
-    final rows = await query.get();
-
-    for (final row in rows) {
-      final blockData = row.readTable(block);
-      final completionData = row.readTable(blockCompletion);
-      blocksWithCompletions[blockData] = completionData;
-    }
-
-    return blocksWithCompletions;
+    return await query.get();
   }
 }

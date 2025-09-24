@@ -110,6 +110,20 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
     });
   }
 
+  Future<List<TaskCompletionData>> getTaskCompletionsForDate(
+    DateTime date,
+  ) async {
+    final startOfDay = DateTime(date.year, date.month, date.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
+    return await (select(taskCompletion)..where(
+          (tc) =>
+              tc.completedAt.isBiggerOrEqualValue(startOfDay) &
+              tc.completedAt.isSmallerOrEqualValue(endOfDay),
+        ))
+        .get();
+  }
+
   Future<List<TaskData>> getSubtasks(int taskId) async {
     return await (select(
       task,

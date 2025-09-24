@@ -30,12 +30,12 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
   }
 
   Future<void> _loadScheduleForCurrentDate() async {
-    final blocks = await _getBlocksWithTasks();
+    final blocks = await getBlocksWithTasks();
 
     state = blocks.map((b) => b.block.id).toList();
   }
 
-  Future<List<BlockWithTasks>> _getBlocksWithTasks() async {
+  Future<List<BlockWithTasks>> getBlocksWithTasks() async {
     final currentDate = _ref.read(dateNotifierProvider);
     final dateTime = currentDate.atMidnight().toDateTimeLocal();
 
@@ -156,7 +156,7 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
   }
 
   Future<void> reorderBlocks(int oldIndex, int newIndex) async {
-    final blocks = await _getBlocksWithTasks();
+    final blocks = await getBlocksWithTasks();
 
     final first = blocks[oldIndex];
     final firstCompletionPercentage = await _database
@@ -175,10 +175,6 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
     }
 
     final reorderedBlocks = List<BlockWithTasks>.from(blocks);
-    print(blocks[0].block);
-    print(blocks[1].block);
-    print(blocks[2].block);
-    print("---");
     final movedBlock = reorderedBlocks.removeAt(oldIndex);
     reorderedBlocks.insert(newIndex, movedBlock);
 
