@@ -8,6 +8,7 @@ import 'package:potential_aid_app/data/tables/block.dart';
 import 'package:potential_aid_app/data/tables/block_completion.dart';
 import 'package:potential_aid_app/data/tables/block_task.dart';
 import 'package:potential_aid_app/data/tables/project.dart';
+import 'package:potential_aid_app/data/tables/project_category.dart';
 import 'package:potential_aid_app/data/tables/settings.dart';
 import 'package:potential_aid_app/data/tables/task.dart';
 import 'package:potential_aid_app/data/tables/task_completion.dart';
@@ -22,6 +23,7 @@ part 'database.g.dart';
     Block,
     BlockTask,
     Project,
+    ProjectCategory,
     Settings,
   ],
   daos: [TaskDao, BlockDao, ProjectDao],
@@ -30,7 +32,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 19;
+  int get schemaVersion => 23;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -38,6 +40,11 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
     },
     onUpgrade: (Migrator m, int from, int to) async {
+      if (from < 23) {
+        // Create the project category table (includes orderIndex in the table definition)
+        await m.createTable(projectCategory);
+        await m.addColumn(project, project.category);
+      }
       if (from < 19) {
         await m.addColumn(task, task.parentTaskId);
         await m.addColumn(task, task.orderIndex);

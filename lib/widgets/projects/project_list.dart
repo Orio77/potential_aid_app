@@ -7,8 +7,9 @@ import 'package:potential_aid_app/widgets/projects/project_card.dart';
 
 class ProjectList extends ConsumerStatefulWidget {
   final String searchQuery;
+  final int? category;
 
-  const ProjectList({super.key, this.searchQuery = ''});
+  const ProjectList({super.key, this.searchQuery = '', this.category});
 
   @override
   ConsumerState<ProjectList> createState() => _ProjectListState();
@@ -24,8 +25,19 @@ class _ProjectListState extends ConsumerState<ProjectList> {
   Widget _buildProjectList(List<ProjectData> projects) {
     final filteredProjects = widget.searchQuery.isEmpty
         ? projects
+              .where(
+                (p) => widget.category == null || p.category == widget.category,
+              )
+              .toList()
         : projects
-              .where((p) => p.name.toLowerCase().contains(widget.searchQuery))
+              .where(
+                (p) => p.name.toLowerCase().contains(
+                  widget.searchQuery.toLowerCase(),
+                ),
+              )
+              .where(
+                (p) => widget.category == null || p.category == widget.category,
+              )
               .toList();
 
     return Column(
@@ -138,3 +150,9 @@ class _ProjectListState extends ConsumerState<ProjectList> {
         : _buildProjectList(projectsData);
   }
 }
+
+// add iconbutton next to trash inb project screen to add it to category
+// make category cards smaller and tappable -> moving to projectscreen with filters
+// add projectpicker inside of category
+// add separator under categories
+// add projects list under categories

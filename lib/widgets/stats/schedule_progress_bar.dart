@@ -16,9 +16,6 @@ class ScheduleProgressBar extends ConsumerWidget {
     final completionValue = ref.watch(
       scheduleDayCompletionPercentagesProvider(dateTime),
     );
-    print(date);
-    print(dateTime);
-
     return completionValue.when(
       data: (data) {
         return (dateTime.isBefore(today) || dateTime.isAtSameMomentAs(today))

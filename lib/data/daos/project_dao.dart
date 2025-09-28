@@ -2,10 +2,11 @@ import 'package:drift/drift.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/data/tables/project.dart';
 import 'package:potential_aid_app/data/tables/block.dart';
+import 'package:potential_aid_app/data/tables/project_category.dart';
 
 part 'project_dao.g.dart';
 
-@DriftAccessor(tables: [Project, Block])
+@DriftAccessor(tables: [Project, ProjectCategory, Block])
 class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
   ProjectDao(super.attachedDatabase);
 
@@ -113,5 +114,40 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
     }
 
     return hierarchy;
+  }
+
+  Future<int> addCategory({
+    String? title,
+    int? iconCode,
+    int? orderIndex,
+  }) async {
+    var companion = ProjectCategoryCompanion.insert(
+      title: Value(title),
+      iconCodePoint: Value(iconCode),
+      orderIndex: Value(orderIndex),
+    );
+    return await into(projectCategory).insert(companion);
+  }
+
+  Future<ProjectCategoryData> getProjectCategoryById(
+    int projectCategoryId,
+  ) async {
+    return await (select(
+      projectCategory,
+    )..where((pc) => pc.id.equals(projectCategoryId))).getSingle();
+  }
+
+  Future<List<ProjectCategoryData>> getAllProjectCategories() async {
+    return await (select(projectCategory)).get();
+  }
+
+  Future<int> updateProjectCategory(ProjectCategoryCompanion updates) async {
+    return await (update(projectCategory).write(updates));
+  }
+
+  Future<void> deleteProjectCategoryById(int projectCategoryId) async {
+    await (delete(
+      projectCategory,
+    )..where((pc) => pc.id.equals(projectCategoryId))).go();
   }
 }

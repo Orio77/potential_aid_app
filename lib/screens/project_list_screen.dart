@@ -4,7 +4,9 @@ import 'package:potential_aid_app/widgets/projects/add_project_dialog.dart';
 import 'package:potential_aid_app/widgets/projects/project_list.dart';
 
 class ProjectListScreen extends ConsumerStatefulWidget {
-  const ProjectListScreen({super.key});
+  final int? categoryId;
+
+  const ProjectListScreen({super.key, this.categoryId});
 
   @override
   ConsumerState<ProjectListScreen> createState() => _ProjectListScreenState();
@@ -65,7 +67,10 @@ class _ProjectListScreenState extends ConsumerState<ProjectListScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: ProjectList(searchQuery: _searchController.text.toLowerCase()),
+          child: ProjectList(
+            searchQuery: _searchController.text.toLowerCase(),
+            category: widget.categoryId,
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(

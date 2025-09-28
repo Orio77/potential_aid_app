@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:potential_aid_app/screens/project_category_list_screen.dart';
 import 'package:potential_aid_app/screens/project_list_screen.dart';
 import 'package:potential_aid_app/screens/stats_screen.dart';
 import 'package:potential_aid_app/widgets/add_block_dialog.dart';
@@ -36,7 +37,7 @@ class MainScreen extends ConsumerWidget {
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => const ProjectListScreen(),
+                  builder: (context) => const ProjectCategoryListScreen(),
                 ),
               );
             },

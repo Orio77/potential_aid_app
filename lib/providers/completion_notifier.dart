@@ -77,7 +77,6 @@ final scheduleDayCompletionPercentagesProvider =
           if (allTasksCompleted) {
             // All tasks completed - credit the full block length
             totalCompletedMinutes += blockLength;
-            print(allTasksCompleted);
           } else {
             // Partial completion - use block completion data as fallback
             totalCompletedMinutes += blockCompletionMap[blockId] ?? 0;
