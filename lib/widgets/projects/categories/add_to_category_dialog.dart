@@ -45,15 +45,21 @@ class _AddToCategoryDialogState extends ConsumerState<AddToCategoryDialog> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text("Selected Category: "),
-                  (_selectedCategory != null &&
-                          _selectedCategory?.iconCodePoint != null)
-                      ? Icon(
-                          IconData(
-                            _selectedCategory!.iconCodePoint!,
-                            fontFamily: 'MaterialIcons',
-                          ),
-                        )
-                      : Text("null"),
+
+                  if (_selectedCategory != null) ...[
+                    if (_selectedCategory!.iconCodePoint != null)
+                      Icon(
+                        IconData(
+                          _selectedCategory!.iconCodePoint!,
+                          fontFamily: 'MaterialIcons',
+                        ),
+                      ),
+                    if (_selectedCategory!.title != null)
+                      Text(_selectedCategory!.title!)
+                    else
+                      Text("Untitled"),
+                  ] else
+                    Text("None selected"),
                 ],
               ),
               trailing: IconButton(
