@@ -6,37 +6,156 @@ import 'package:potential_aid_app/screens/project_list_screen.dart';
 import 'package:potential_aid_app/widgets/common/reorderable_grid.dart';
 import 'package:potential_aid_app/widgets/projects/categories/category_card.dart';
 
-class CategoryList extends ConsumerWidget {
+class CategoryList extends ConsumerStatefulWidget {
   const CategoryList({super.key});
+
+  @override
+  ConsumerState<CategoryList> createState() => _CategoryListState();
+}
+
+class _CategoryListState extends ConsumerState<CategoryList> {
+  bool _isEditMode = false;
+
+  void _toggleEditMode() {
+    setState(() {
+      _isEditMode = !_isEditMode;
+    });
+  }
+
+  Future<void> _showDeleteConfirmation(ProjectCategoryData category) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Category'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Are you sure you want to delete "${category.title}"?'),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Projects in this category will be moved to "Uncategorized"',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await ref
+          .read(projectCategoriesProvider.notifier)
+          .deleteProjectCategoryById(category.id);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Category "${category.title}" deleted'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
 
   Widget _buildEmptyListView() {
     return Center(child: Text("Create Your First Category to Begin!"));
   }
 
-  Widget _buildCategoryListView(List<ProjectCategoryData> data, WidgetRef ref) {
+  Widget _buildCategoryListView(List<ProjectCategoryData> data) {
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < 600) {
           return ReorderableListView.builder(
-            buildDefaultDragHandles: true,
+            buildDefaultDragHandles: !_isEditMode,
             onReorder: (oldIndex, newIndex) async {
-              await ref
-                  .read(projectCategoriesProvider.notifier)
-                  .reorderCategories(oldIndex, newIndex);
+              if (!_isEditMode) {
+                await ref
+                    .read(projectCategoriesProvider.notifier)
+                    .reorderCategories(oldIndex, newIndex);
+              }
             },
             physics: const BouncingScrollPhysics(
               parent: AlwaysScrollableScrollPhysics(),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
             itemCount: data.length,
             itemBuilder: (context, index) {
               final category = data[index];
               return Padding(
                 key: Key(category.id.toString()),
                 padding: const EdgeInsets.only(bottom: 8.0),
-                child: InkWell(
-                  onTap: () => _pushProjectListScreen(context, category.id),
-                  child: CategoryCard(data: category),
+                child: Stack(
+                  children: [
+                    InkWell(
+                      onTap: _isEditMode
+                          ? null
+                          : () => _pushProjectListScreen(context, category.id),
+                      child: CategoryCard(data: category),
+                    ),
+                    if (_isEditMode)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.error,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.remove, color: Colors.white),
+                            iconSize: 18,
+                            padding: const EdgeInsets.all(6),
+                            constraints: const BoxConstraints(
+                              minWidth: 30,
+                              minHeight: 30,
+                            ),
+                            onPressed: () => _showDeleteConfirmation(category),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               );
             },
@@ -48,10 +167,11 @@ class CategoryList extends ConsumerWidget {
 
         if (constraints.maxWidth < 900) {
           crossAxisCount = 2;
-          childAspectRatio = 1.3;
+          childAspectRatio =
+              0.9; // Slightly taller than wide for better text/icon layout
         } else {
           crossAxisCount = 3;
-          childAspectRatio = 1.0;
+          childAspectRatio = 0.9;
         }
 
         return ReorderableGrid<ProjectCategoryData>(
@@ -60,16 +180,56 @@ class CategoryList extends ConsumerWidget {
           childAspectRatio: childAspectRatio,
           constraints: constraints,
           onReorder: (oldIndex, newIndex) async {
-            await ref
-                .read(projectCategoriesProvider.notifier)
-                .reorderCategories(oldIndex, newIndex);
+            if (!_isEditMode) {
+              await ref
+                  .read(projectCategoriesProvider.notifier)
+                  .reorderCategories(oldIndex, newIndex);
+            }
           },
-          onTap: (context, category) =>
-              _pushProjectListScreen(context, category.id),
-          itemBuilder: (category) => CategoryCard(data: category),
+          onTap: _isEditMode
+              ? (context, category) {} // Disable tap in edit mode
+              : (context, category) =>
+                    _pushProjectListScreen(context, category.id),
+          itemBuilder: (category) => _buildCategoryCardWithDelete(category),
         );
       },
     );
+  }
+
+  Widget _buildCategoryCardWithDelete(ProjectCategoryData category) {
+    if (_isEditMode) {
+      return Stack(
+        children: [
+          CategoryCard(data: category),
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.error,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.remove, color: Colors.white),
+                iconSize: 18,
+                padding: const EdgeInsets.all(6),
+                constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                onPressed: () => _showDeleteConfirmation(category),
+              ),
+            ),
+          ),
+        ],
+      );
+    } else {
+      return CategoryCard(data: category);
+    }
   }
 
   void _pushProjectListScreen(BuildContext context, int? categoryId) {
@@ -81,10 +241,44 @@ class CategoryList extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final data = ref.watch(projectCategoriesProvider);
-    return data.isEmpty
-        ? _buildEmptyListView()
-        : _buildCategoryListView(data, ref);
+
+    if (data.isEmpty) {
+      return _buildEmptyListView();
+    }
+
+    return Column(
+      children: [
+        // Edit mode header
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                _isEditMode ? 'Select categories to delete' : 'Categories',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: _isEditMode
+                      ? Theme.of(context).colorScheme.error
+                      : null,
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _toggleEditMode,
+                icon: Icon(_isEditMode ? Icons.done : Icons.edit),
+                label: Text(_isEditMode ? 'Done' : 'Edit'),
+                style: TextButton.styleFrom(
+                  foregroundColor: _isEditMode
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(child: _buildCategoryListView(data)),
+      ],
+    );
   }
 }

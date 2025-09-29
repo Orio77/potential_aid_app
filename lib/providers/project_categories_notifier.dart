@@ -81,7 +81,6 @@ class ProjectCategoriesNotifier
       await _updateOrderIndicesInDatabase(currentState);
     } catch (e) {
       // If database update fails, reload from database to ensure consistency
-      print('Error updating order indices: $e');
       await _loadCategories();
     }
   }
