@@ -27,8 +27,9 @@ class ProjectScreen extends ConsumerWidget {
           icon: Icon(Icons.arrow_back_ios),
         ),
         actions: [
-          AddToCategory(projectId: data.id,),
-          DeleteProject(data: data)],
+          AddToCategory(projectId: data.id, categoryId: data.category),
+          DeleteProject(data: data),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(

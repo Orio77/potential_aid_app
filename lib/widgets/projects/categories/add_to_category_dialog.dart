@@ -5,18 +5,34 @@ import 'package:potential_aid_app/providers/project_categories_notifier.dart';
 
 class AddToCategoryDialog extends ConsumerStatefulWidget {
   final int projectId;
-  const AddToCategoryDialog({super.key, required this.projectId});
+  final int iconCodePoint;
+  const AddToCategoryDialog({
+    super.key,
+    required this.projectId,
+    required this.iconCodePoint,
+  });
 
   @override
-  ConsumerState<AddToCategoryDialog> createState() => _AddToCategoryDialogState();
+  ConsumerState<AddToCategoryDialog> createState() =>
+      _AddToCategoryDialogState();
 }
 
 class _AddToCategoryDialogState extends ConsumerState<AddToCategoryDialog> {
-  ProjectCategoryData? category;
+  ProjectCategoryData? _selectedCategory;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedCategory = ProjectCategoryData(
+      id: -1,
+      iconCodePoint: widget.iconCodePoint,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final categories = ref.watch(projectCategoriesProvider);
+    final navigator = Navigator.of(context);
 
     return AlertDialog(
       content: SizedBox(
@@ -24,6 +40,32 @@ class _AddToCategoryDialogState extends ConsumerState<AddToCategoryDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            ListTile(
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text("Selected Category: "),
+                  (_selectedCategory != null &&
+                          _selectedCategory?.iconCodePoint != null)
+                      ? Icon(
+                          IconData(
+                            _selectedCategory!.iconCodePoint!,
+                            fontFamily: 'MaterialIcons',
+                          ),
+                        )
+                      : Text("null"),
+                ],
+              ),
+              trailing: IconButton(
+                onPressed: () {
+                  setState(() {
+                    _selectedCategory = null;
+                  });
+                },
+                icon: Icon(Icons.cancel_rounded),
+              ),
+            ),
+            const SizedBox(height: 8),
             if (categories.isEmpty)
               const Padding(
                 padding: EdgeInsets.all(16.0),
@@ -39,16 +81,45 @@ class _AddToCategoryDialogState extends ConsumerState<AddToCategoryDialog> {
                     return ListTile(
                       title: Text(category.title ?? 'Untitled Category'),
                       leading: category.iconCodePoint != null
-                          ? Icon(IconData(category.iconCodePoint!, fontFamily: 'MaterialIcons'))
+                          ? Icon(
+                              IconData(
+                                category.iconCodePoint!,
+                                fontFamily: 'MaterialIcons',
+                              ),
+                            )
                           : const Icon(Icons.category),
                       onTap: () {
-                        _addProjectToCategory(widget.projectId, category.id);
-                        Navigator.of(context).pop(category);
+                        setState(() {
+                          _selectedCategory = category;
+                        });
                       },
                     );
                   },
                 ),
               ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(
+                  onPressed: () => navigator.pop(),
+                  child: Text("cancel"),
+                ),
+                TextButton(
+                  onPressed:
+                      (_selectedCategory != null && _selectedCategory!.id == -1)
+                      ? null
+                      : () async {
+                          await _addProjectToCategory(
+                            widget.projectId,
+                            _selectedCategory!.id,
+                          );
+                          navigator.pop();
+                        },
+
+                  child: Text("save"),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -56,13 +127,23 @@ class _AddToCategoryDialogState extends ConsumerState<AddToCategoryDialog> {
   }
 
   Future<void> _addProjectToCategory(int projectId, int categoryId) async {
-    await ref.read(projectCategoriesProvider.notifier).updateProjectsCategory(projectId, categoryId);
+    await ref
+        .read(projectCategoriesProvider.notifier)
+        .updateProjectsCategory(projectId, categoryId);
+
+    ref.invalidate(projectCategoryByProjectIdProvider(projectId));
+    ref.invalidate(projectCategoryByIdProvider(categoryId));
   }
 }
 
-Future<void> showAddToCategoryDialog(BuildContext context, int projectId) async {
+Future<void> showAddToCategoryDialog(
+  BuildContext context,
+  int projectId,
+  int iconCodePoint,
+) async {
   await showDialog(
     context: context,
-    builder: (context) => AddToCategoryDialog(projectId: projectId,),
+    builder: (context) =>
+        AddToCategoryDialog(projectId: projectId, iconCodePoint: iconCodePoint),
   );
 }

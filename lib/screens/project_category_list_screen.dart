@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:potential_aid_app/providers/project_categories_notifier.dart';
 import 'package:potential_aid_app/widgets/projects/categories/add_category_dialog.dart';
 import 'package:potential_aid_app/widgets/projects/categories/category_list.dart';
 import 'package:potential_aid_app/widgets/projects/project_list.dart';
