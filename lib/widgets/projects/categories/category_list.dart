@@ -12,11 +12,17 @@ class CategoryList extends ConsumerWidget {
     return Center(child: Text("Create Your First Category to Begin!"));
   }
 
-  Widget _buildCategoryListView(List<ProjectCategoryData> data) {
+  Widget _buildCategoryListView(List<ProjectCategoryData> data, WidgetRef ref) {
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < 600) {
-          return ListView.builder(
+          return ReorderableListView.builder(
+            buildDefaultDragHandles: true,
+            onReorder: (oldIndex, newIndex) async {
+              await ref
+                  .read(projectCategoriesProvider.notifier)
+                  .reorderCategories(oldIndex, newIndex);
+            },
             physics: const BouncingScrollPhysics(
               parent: AlwaysScrollableScrollPhysics(),
             ),
@@ -25,6 +31,7 @@ class CategoryList extends ConsumerWidget {
             itemBuilder: (context, index) {
               final category = data[index];
               return Padding(
+                key: Key(category.id.toString()),
                 padding: const EdgeInsets.only(bottom: 8.0),
                 child: InkWell(
                   onTap: () => _pushProjectListScreen(context, category.id),
@@ -81,6 +88,8 @@ class CategoryList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(projectCategoriesProvider);
-    return data.isEmpty ? _buildEmptyListView() : _buildCategoryListView(data);
+    return data.isEmpty
+        ? _buildEmptyListView()
+        : _buildCategoryListView(data, ref);
   }
 }

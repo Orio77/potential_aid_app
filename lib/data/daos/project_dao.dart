@@ -150,11 +150,18 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
   }
 
   Future<List<ProjectCategoryData>> getAllProjectCategories() async {
-    return await (select(projectCategory)).get();
+    return await (select(
+      projectCategory,
+    )..orderBy([(pc) => OrderingTerm.asc(pc.orderIndex)])).get();
   }
 
-  Future<int> updateProjectCategory(ProjectCategoryCompanion updates) async {
-    return await (update(projectCategory).write(updates));
+  Future<int> updateProjectCategory(
+    int categoryId,
+    ProjectCategoryCompanion updates,
+  ) async {
+    return await (update(
+      projectCategory,
+    )..where((pc) => pc.id.equals(categoryId))).write(updates);
   }
 
   Future<void> deleteProjectCategoryById(int projectCategoryId) async {

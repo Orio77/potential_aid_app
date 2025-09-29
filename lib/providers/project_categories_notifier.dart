@@ -46,12 +46,16 @@ class ProjectCategoriesNotifier
     return await _database.projectDao.getAllProjectCategories();
   }
 
-  Future<int> updateProjectCategory(ProjectCategoryCompanion updates) async {
-    final categoryId = await _database.projectDao.updateProjectCategory(
+  Future<int> updateProjectCategory(
+    int categoryId,
+    ProjectCategoryCompanion updates,
+  ) async {
+    final updatedCategoryId = await _database.projectDao.updateProjectCategory(
+      categoryId,
       updates,
     );
     await _loadCategories();
-    return categoryId;
+    return updatedCategoryId;
   }
 
   Future<void> deleteProjectCategoryById(int projectCategoryId) async {
@@ -69,22 +73,35 @@ class ProjectCategoriesNotifier
     final item = currentState.removeAt(oldIndex);
     currentState.insert(newIndex, item);
 
+    // Update state immediately for UI responsiveness
     state = currentState;
 
-    await _updateOrderIndicesInDatabase(currentState);
+    // Update database in background
+    try {
+      await _updateOrderIndicesInDatabase(currentState);
+    } catch (e) {
+      // If database update fails, reload from database to ensure consistency
+      print('Error updating order indices: $e');
+      await _loadCategories();
+    }
   }
 
   Future<void> _updateOrderIndicesInDatabase(
     List<ProjectCategoryData> orderedCategories,
   ) async {
-    for (int i = 0; i < orderedCategories.length; i++) {
-      final category = orderedCategories[i];
-      await _database.projectDao.updateProjectCategory(
-        ProjectCategoryCompanion(id: Value(category.id), orderIndex: Value(i)),
-      );
-    }
+    // Use a transaction to ensure all updates happen atomically
+    await _database.transaction(() async {
+      for (int i = 0; i < orderedCategories.length; i++) {
+        final category = orderedCategories[i];
+        await _database.projectDao.updateProjectCategory(
+          category.id,
+          ProjectCategoryCompanion(orderIndex: Value(i)),
+        );
+      }
+    });
 
-    await _loadCategories();
+    // Don't reload immediately - let the current state persist
+    // The database is updated, and the state is already correct
   }
 
   Future<void> updateProjectsCategory(int projectId, int categoryId) async {
