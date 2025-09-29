@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/project_categories_notifier.dart';
 import 'package:potential_aid_app/screens/project_list_screen.dart';
+import 'package:potential_aid_app/widgets/common/reorderable_grid.dart';
 import 'package:potential_aid_app/widgets/projects/categories/category_card.dart';
 
 class CategoryList extends ConsumerWidget {
@@ -53,25 +54,19 @@ class CategoryList extends ConsumerWidget {
           childAspectRatio = 1.0;
         }
 
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics(),
-          ),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 16.0,
-            mainAxisSpacing: 16.0,
-            childAspectRatio: childAspectRatio,
-          ),
-          itemCount: data.length,
-          itemBuilder: (context, index) {
-            final category = data[index];
-            return InkWell(
-              onTap: () => _pushProjectListScreen(context, category.id),
-              child: CategoryCard(data: category),
-            );
+        return ReorderableGrid<ProjectCategoryData>(
+          data: data,
+          crossAxisCount: crossAxisCount,
+          childAspectRatio: childAspectRatio,
+          constraints: constraints,
+          onReorder: (oldIndex, newIndex) async {
+            await ref
+                .read(projectCategoriesProvider.notifier)
+                .reorderCategories(oldIndex, newIndex);
           },
+          onTap: (context, category) =>
+              _pushProjectListScreen(context, category.id),
+          itemBuilder: (category) => CategoryCard(data: category),
         );
       },
     );

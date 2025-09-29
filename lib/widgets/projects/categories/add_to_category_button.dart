@@ -10,7 +10,6 @@ class AddToCategory extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Use the project-based provider instead of relying on passed categoryId
     final categoryAsync = ref.watch(
       projectCategoryByProjectIdProvider(projectId),
     );
@@ -18,7 +17,6 @@ class AddToCategory extends ConsumerWidget {
     return categoryAsync.when(
       data: (category) {
         if (category == null) {
-          // No category assigned to this project
           return IconButton(
             onPressed: () => showAddToCategoryDialog(
               context,
@@ -28,7 +26,6 @@ class AddToCategory extends ConsumerWidget {
             icon: Icon(Icons.category_rounded),
           );
         } else {
-          // Project has a category
           return IconButton(
             onPressed: () => showAddToCategoryDialog(
               context,
