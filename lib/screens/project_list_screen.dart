@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide SearchBar;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/widgets/projects/add_project_dialog.dart';
 import 'package:potential_aid_app/widgets/projects/project_list.dart';
+import 'package:potential_aid_app/widgets/projects/search_bar.dart';
 
 class ProjectListScreen extends ConsumerStatefulWidget {
   final int? categoryId;
@@ -13,62 +14,31 @@ class ProjectListScreen extends ConsumerStatefulWidget {
 }
 
 class _ProjectListScreenState extends ConsumerState<ProjectListScreen> {
-  bool _isSearching = false;
-  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _toggleSearch() {
+  void _onSearchChanged(String query) {
     setState(() {
-      _isSearching = !_isSearching;
+      _searchQuery = query.toLowerCase();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: _isSearching
-            ? TextField(
-                controller: _searchController,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'Search projects...',
-                  border: InputBorder.none,
-                  hintStyle: TextStyle(color: Colors.grey),
-                ),
-                style: const TextStyle(fontSize: 18),
-                onChanged: (query) {
-                  setState(() {});
-                },
-              )
-            : const Text(
-                'Projects',
-                style: TextStyle(fontWeight: FontWeight.w400, fontSize: 35),
-              ),
-        centerTitle: true,
+      appBar: SearchAppBar(
+        normalTitle: 'Projects',
+        searchHint: 'Search projects...',
+        onSearchChanged: _onSearchChanged,
         leading: IconButton(
           onPressed: () => Navigator.of(context).pop(),
           icon: const Icon(Icons.arrow_back),
         ),
-        actions: [
-          IconButton(
-            onPressed: _toggleSearch,
-            icon: Icon(_isSearching ? Icons.close : Icons.search),
-          ),
-        ],
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: ProjectList(
-            searchQuery: _searchController.text.toLowerCase(),
+            searchQuery: _searchQuery,
             category: widget.categoryId,
           ),
         ),

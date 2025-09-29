@@ -1,0 +1,73 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:potential_aid_app/data/database.dart';
+import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
+import 'package:potential_aid_app/widgets/projects/task_list_item.dart';
+
+class ProjectTaskListData extends ConsumerWidget {
+  final int projectId;
+  final List<bool Function(TaskData)>? predicates;
+  final String? query;
+  final int? depthLevel;
+
+  const ProjectTaskListData({super.key, required this.projectId, this.predicates, this.query, this.depthLevel});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tasksAsync = ref.watch(projectTasksNotifier(projectId));
+
+    return tasksAsync.when(
+      data: (tasks) {
+        if (query != null) {
+          tasks = tasks.where((t) => t.name.toLowerCase().contains(query!.toLowerCase())).toList();
+        }
+        if (depthLevel != null) {
+          tasks = tasks.where((t) => t.depth == depthLevel).toList();
+        }
+        else {
+          tasks = tasks.where((t) => t.depth == 0).toList();
+        }
+        return _buildTaskList(tasks, ref);
+      },
+      loading: () => _buildLoadingState(),
+      error: (error, stack) => _buildErrorState(error),
+    );
+  }
+
+  Widget _buildTaskList(List<TaskData> taskList, WidgetRef ref) {
+    if (taskList.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    return Card(
+      child: ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemBuilder: (context, index) => TaskListItem(
+          task: taskList[index],
+          onDelete: () => _deleteTask(ref, taskList[index]),
+        ),
+        separatorBuilder: (context, index) => SizedBox(height: 8),
+        itemCount: taskList.length,
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Text('Loading...');
+  }
+
+  Widget _buildErrorState(Object error) {
+    return Text('Error: $error');
+  }
+
+  Widget _buildEmptyState() {
+    return Text('No tasks found..');
+  }
+
+  Future<void> _deleteTask(WidgetRef ref, TaskData task) async {
+    await ref
+        .read(projectTasksNotifier(task.projectId).notifier)
+        .deleteTask(task.id);
+  }
+}

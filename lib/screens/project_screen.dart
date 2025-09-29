@@ -24,7 +24,7 @@ class ProjectScreen extends ConsumerWidget {
         centerTitle: true,
         leading: IconButton(
           onPressed: () => Navigator.of(context).pop(),
-          icon: Icon(Icons.arrow_back_ios),
+          icon: Icon(Icons.arrow_back_rounded),
         ),
         actions: [
           AddToCategory(projectId: data.id, categoryId: data.category),
@@ -37,7 +37,6 @@ class ProjectScreen extends ConsumerWidget {
             ProjectInfo(project: data),
             Heatmap(projectId: data.id),
             RelatedProjectsList(projectId: data.id),
-
             ProjectTaskList(projectId: data.id),
           ],
         ),
