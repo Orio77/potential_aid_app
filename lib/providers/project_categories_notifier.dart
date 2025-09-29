@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
@@ -51,9 +52,14 @@ class ProjectCategoriesNotifier
     await _database.projectDao.deleteProjectCategoryById(projectCategoryId);
     await _loadCategories();
   }
+
+  Future<void> updateProjectsCategory(int projectId, int categoryId) async {
+    final updates = ProjectCompanion(category: Value(categoryId));
+    await _database.projectDao.updateProject(projectId, updates);
+  }
 }
 
-final projectCategoriesNotifier =
+final projectCategoriesProvider =
     StateNotifierProvider<ProjectCategoriesNotifier, List<ProjectCategoryData>>(
       (ref) {
         final database = ref.watch(databaseProvider);

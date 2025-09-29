@@ -132,7 +132,7 @@ class _AddCategoryDialogState extends ConsumerState<AddCategoryDialog> {
 
   Future<void> _saveCategory(int? iconCode, String? title) async {
     await ref
-        .read(projectCategoriesNotifier.notifier)
+        .read(projectCategoriesProvider.notifier)
         .addCategory(iconCode: iconCode, title: title);
   }
 }

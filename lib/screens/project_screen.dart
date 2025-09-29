@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/widgets/add_task_dialog.dart';
+import 'package:potential_aid_app/widgets/projects/categories/add_to_category_button.dart';
 import 'package:potential_aid_app/widgets/projects/delete_project.dart';
 import 'package:potential_aid_app/widgets/projects/link_project_dialog.dart';
 import 'package:potential_aid_app/widgets/projects/project_info.dart';
@@ -25,7 +26,9 @@ class ProjectScreen extends ConsumerWidget {
           onPressed: () => Navigator.of(context).pop(),
           icon: Icon(Icons.arrow_back_ios),
         ),
-        actions: [DeleteProject(data: data)],
+        actions: [
+          AddToCategory(projectId: data.id,),
+          DeleteProject(data: data)],
       ),
       body: SingleChildScrollView(
         child: Column(

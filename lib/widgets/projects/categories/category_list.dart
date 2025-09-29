@@ -80,7 +80,7 @@ class CategoryList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final data = ref.watch(projectCategoriesNotifier);
+    final data = ref.watch(projectCategoriesProvider);
     return data.isEmpty ? _buildEmptyListView() : _buildCategoryListView(data);
   }
 }
