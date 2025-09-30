@@ -158,6 +158,7 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
   Future<void> reorderBlocks(int oldIndex, int newIndex) async {
     final blocks = await getBlocksWithTasks();
 
+    // Check if any of the blocks are completed - prevent reordering if so
     final first = blocks[oldIndex];
     final firstCompletionPercentage = await _database
         .getBlockCompletionPercentage(first.block.id);
@@ -170,32 +171,55 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
       return;
     }
 
+    // Adjust newIndex for the removal (same as working categories method)
     if (newIndex > oldIndex) {
       newIndex--;
     }
 
+    // Reorder the blocks list
     final reorderedBlocks = List<BlockWithTasks>.from(blocks);
     final movedBlock = reorderedBlocks.removeAt(oldIndex);
     reorderedBlocks.insert(newIndex, movedBlock);
 
-    await _database.transaction(() async {
-      for (int i = 0; i < reorderedBlocks.length; i++) {
-        final block = reorderedBlocks[i];
-        final originalBlock = blocks[i];
+    // Update database with new start times based on reordered sequence
+    try {
+      // Extract the original start times before reordering
+      final originalStartTimes = blocks
+          .map((b) => b.block.startMinuteOfDay)
+          .toList()
+        ..sort(); // Sort to maintain chronological order
+      
+      await _updateBlockTimesInDatabase(reorderedBlocks, originalStartTimes);
+      
+      // Invalidate all block providers to refresh the UI with new start times
+      for (final block in reorderedBlocks) {
+        _ref.invalidate(blockTasksNotifier(block.block.id));
+      }
+      
+      await _loadScheduleForCurrentDate();
+    } catch (e) {
+      // If database update fails, reload from database to ensure consistency
+      await _loadScheduleForCurrentDate();
+    }
+  }
 
-        if (block.block.id != originalBlock.block.id) {
-          await (_database.update(
-            _database.block,
-          )..where((b) => b.id.equals(block.block.id))).write(
-            BlockCompanion(
-              startMinuteOfDay: Value(originalBlock.block.startMinuteOfDay),
-            ),
-          );
-        }
+  Future<void> _updateBlockTimesInDatabase(
+    List<BlockWithTasks> orderedBlocks,
+    List<int> originalStartTimes,
+  ) async {
+    // Use a transaction to ensure all updates happen atomically
+    await _database.transaction(() async {
+      for (int i = 0; i < orderedBlocks.length; i++) {
+        final block = orderedBlocks[i];
+        
+        // Assign the i-th earliest start time to the block at position i
+        await (_database.update(_database.block)
+              ..where((b) => b.id.equals(block.block.id)))
+            .write(BlockCompanion(
+          startMinuteOfDay: Value(originalStartTimes[i]),
+        ));
       }
     });
-
-    await _loadScheduleForCurrentDate();
   }
 
   Future<void> assignTasksToBlock(int blockId, List<int> taskIds) async {

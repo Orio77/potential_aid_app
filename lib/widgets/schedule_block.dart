@@ -95,11 +95,8 @@ class ScheduleBlock extends ConsumerWidget {
     bool isPreviousBlockCompleted,
   ) {
     final isCompleted = completionPercentage != null;
-    final isBlockInTheFuture =
-        (blockWithTasks != null &&
-        blockWithTasks.block.dayLocal.day > dateTime.dayOfMonth &&
-        blockWithTasks.block.dayLocal.month >= dateTime.monthOfYear &&
-        blockWithTasks.block.dayLocal.year >= dateTime.yearOfEra);
+    final isBlockInTheFuture = blockWithTasks != null &&
+        _isBlockInFuture(blockWithTasks, dateTime);
 
     return Opacity(
       opacity: isCompleted ? 0.6 : 1.0,
@@ -365,5 +362,21 @@ class ScheduleBlock extends ConsumerWidget {
     return date1.year == date2.year &&
         date1.month == date2.month &&
         date1.day == date2.day;
+  }
+
+  bool _isBlockInFuture(BlockWithTasks blockWithTasks, LocalDateTime currentDateTime) {
+    final blockDate = blockWithTasks.block.dayLocal;
+    final currentDate = DateTime(
+      currentDateTime.yearOfEra,
+      currentDateTime.monthOfYear,
+      currentDateTime.dayOfMonth,
+    );
+    
+    // Normalize both dates to midnight for proper day comparison
+    final blockDateNormalized = DateTime(blockDate.year, blockDate.month, blockDate.day);
+    final currentDateNormalized = DateTime(currentDate.year, currentDate.month, currentDate.day);
+    
+    // Block should be editable only if it's in a future day
+    return blockDateNormalized.isAfter(currentDateNormalized);
   }
 }

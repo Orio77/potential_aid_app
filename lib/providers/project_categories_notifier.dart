@@ -6,6 +6,7 @@ import 'package:potential_aid_app/providers/database_provider.dart';
 class ProjectCategoriesNotifier
     extends StateNotifier<List<ProjectCategoryData>> {
   final AppDatabase _database;
+  // ignore: unused_field
   final Ref _ref;
 
   ProjectCategoriesNotifier(this._database, this._ref) : super([]) {
@@ -98,9 +99,6 @@ class ProjectCategoriesNotifier
         );
       }
     });
-
-    // Don't reload immediately - let the current state persist
-    // The database is updated, and the state is already correct
   }
 
   Future<void> updateProjectsCategory(int projectId, int categoryId) async {
