@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
+import 'package:potential_aid_app/widgets/projects/complete_task_dialog.dart';
 import 'package:potential_aid_app/widgets/projects/task_list_item.dart';
 
 class ProjectTaskListData extends ConsumerWidget {
@@ -10,7 +11,13 @@ class ProjectTaskListData extends ConsumerWidget {
   final String? query;
   final int? depthLevel;
 
-  const ProjectTaskListData({super.key, required this.projectId, this.predicates, this.query, this.depthLevel});
+  const ProjectTaskListData({
+    super.key,
+    required this.projectId,
+    this.predicates,
+    this.query,
+    this.depthLevel,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -19,12 +26,13 @@ class ProjectTaskListData extends ConsumerWidget {
     return tasksAsync.when(
       data: (tasks) {
         if (query != null) {
-          tasks = tasks.where((t) => t.name.toLowerCase().contains(query!.toLowerCase())).toList();
+          tasks = tasks
+              .where((t) => t.name.toLowerCase().contains(query!.toLowerCase()))
+              .toList();
         }
         if (depthLevel != null) {
           tasks = tasks.where((t) => t.depth == depthLevel).toList();
-        }
-        else {
+        } else {
           tasks = tasks.where((t) => t.depth == 0).toList();
         }
         return _buildTaskList(tasks, ref);
@@ -45,7 +53,9 @@ class ProjectTaskListData extends ConsumerWidget {
         physics: const NeverScrollableScrollPhysics(),
         itemBuilder: (context, index) => TaskListItem(
           task: taskList[index],
-          onDelete: () => _deleteTask(ref, taskList[index]),
+          onComplete: () async =>
+              await showCompleteTaskDialog(context, taskList[index]),
+          onDelete: () async => await _deleteTask(ref, taskList[index]),
         ),
         separatorBuilder: (context, index) => SizedBox(height: 8),
         itemCount: taskList.length,

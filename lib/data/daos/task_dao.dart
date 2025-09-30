@@ -72,6 +72,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
   Future<List<TaskData>> getTasksByProject(int projectId) async {
     final query = select(task)
       ..where((task) => task.projectId.equals(projectId))
+      ..where((task) => task.isCompleted.equals(false))
       ..orderBy([
         (task) => OrderingTerm(expression: task.depth),
         (task) => OrderingTerm(expression: task.orderIndex),

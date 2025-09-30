@@ -184,18 +184,17 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
     // Update database with new start times based on reordered sequence
     try {
       // Extract the original start times before reordering
-      final originalStartTimes = blocks
-          .map((b) => b.block.startMinuteOfDay)
-          .toList()
-        ..sort(); // Sort to maintain chronological order
-      
+      final originalStartTimes =
+          blocks.map((b) => b.block.startMinuteOfDay).toList()
+            ..sort(); // Sort to maintain chronological order
+
       await _updateBlockTimesInDatabase(reorderedBlocks, originalStartTimes);
-      
+
       // Invalidate all block providers to refresh the UI with new start times
       for (final block in reorderedBlocks) {
         _ref.invalidate(blockTasksNotifier(block.block.id));
       }
-      
+
       await _loadScheduleForCurrentDate();
     } catch (e) {
       // If database update fails, reload from database to ensure consistency
@@ -211,13 +210,13 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
     await _database.transaction(() async {
       for (int i = 0; i < orderedBlocks.length; i++) {
         final block = orderedBlocks[i];
-        
+
         // Assign the i-th earliest start time to the block at position i
-        await (_database.update(_database.block)
-              ..where((b) => b.id.equals(block.block.id)))
-            .write(BlockCompanion(
-          startMinuteOfDay: Value(originalStartTimes[i]),
-        ));
+        await (_database.update(
+          _database.block,
+        )..where((b) => b.id.equals(block.block.id))).write(
+          BlockCompanion(startMinuteOfDay: Value(originalStartTimes[i])),
+        );
       }
     });
   }
@@ -244,7 +243,10 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
     final monthYearDate = LocalDate.today();
     _ref.invalidate(
       taskCompletionMonthlyNotifier(
-        TaskCompletionParams(monthYearDate: monthYearDate),
+        TaskCompletionParams(
+          monthYearDate: monthYearDate,
+          projectId: task.projectId,
+        ),
       ),
     );
 
@@ -271,7 +273,10 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
     final monthYearDate = LocalDate.today();
     _ref.invalidate(
       taskCompletionMonthlyNotifier(
-        TaskCompletionParams(monthYearDate: monthYearDate),
+        TaskCompletionParams(
+          monthYearDate: monthYearDate,
+          projectId: block.projectId,
+        ),
       ),
     );
 
