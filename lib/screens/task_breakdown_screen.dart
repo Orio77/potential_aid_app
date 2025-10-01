@@ -1,10 +1,14 @@
 import 'dart:math';
 
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
+import 'package:potential_aid_app/providers/task_search_notifier.dart';
+import 'package:potential_aid_app/widgets/util/arrow_painter.dart';
+import 'package:potential_aid_app/widgets/util/search_text_field.dart';
 
 class TaskBreakdownScreen extends ConsumerStatefulWidget {
   final TaskData task;
@@ -23,6 +27,9 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
   List<FocusNode> subtaskFocusNodes = [];
   List<int> subtasksOfSubtasksCount = [];
   List<int> savedIds = [];
+  List<bool> isSearchMode = [];
+  List<TextEditingController> searchControllers = [];
+  List<FocusNode> searchFocusNodes = [];
   final GlobalKey mainTaskKey = GlobalKey();
   bool isLoading = true;
 
@@ -42,8 +49,14 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
 
   @override
   void dispose() {
-    // Dispose all focus nodes
+    // Dispose all focus nodes and controllers
+    for (var controller in searchControllers) {
+      controller.dispose();
+    }
     for (var focusNode in subtaskFocusNodes) {
+      focusNode.dispose();
+    }
+    for (var focusNode in searchFocusNodes) {
       focusNode.dispose();
     }
     super.dispose();
@@ -53,10 +66,10 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     final subtasksData = await ref
         .read(projectTasksNotifier(widget.task.projectId).notifier)
         .getSubtasks(widget.task.id);
-    for (final subt in subtasksData) {
+    for (final subtask in subtasksData) {
       final subtasksOfSubtaskData = await ref
-          .read(projectTasksNotifier(subt.projectId).notifier)
-          .getSubtasks(subt.id);
+          .read(projectTasksNotifier(subtask.projectId).notifier)
+          .getSubtasks(subtask.id);
       subtasksOfSubtasksCount.add(subtasksOfSubtaskData.length);
     }
     setState(() {
@@ -67,6 +80,10 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
         subtaskFocusNodes = [FocusNode()];
         savedIds = [-1]; // Initialize with -1 for new subtask
         subtasksOfSubtasksCount = [0];
+        // Initialize search-related lists for empty state
+        isSearchMode = [false];
+        searchControllers = [TextEditingController()];
+        searchFocusNodes = [FocusNode()];
       } else {
         subtasks = subtasksData
             .map((subt) => TextEditingController(text: subt.name))
@@ -81,6 +98,15 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
           (index) => FocusNode(),
         );
         savedIds = subtasksData.map((subt) => subt.id).toList();
+        isSearchMode = List.generate(subtasksData.length, (index) => false);
+        searchControllers = List.generate(
+          subtasksData.length,
+          (index) => TextEditingController(),
+        );
+        searchFocusNodes = List.generate(
+          subtasksData.length,
+          (index) => FocusNode(),
+        );
       }
       _dynamicTotalWidth = _calculateDynamicWidth();
       isLoading = false;
@@ -95,6 +121,9 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
       subtaskFocusNodes.add(FocusNode());
       savedIds.add(-1);
       subtasksOfSubtasksCount.add(0);
+      isSearchMode.add(false);
+      searchControllers.add(TextEditingController());
+      searchFocusNodes.add(FocusNode());
     });
 
     // Focus on the newly added subtask after the widget is built
@@ -136,48 +165,87 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
             }
           });
         }
+      } else if (isExistingSubtask[i]) {
+        final taskId = savedIds[i];
+        await notifier.updateTask(
+          taskId,
+          TaskCompanion(parentTaskId: Value(widget.task.id)),
+        );
       }
     }
   }
 
+  void _toggleSearchMode(int index) {
+    setState(() {
+      isSearchMode[index] = !isSearchMode[index];
+      if (isSearchMode[index]) {
+        searchControllers[index].clear();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          searchFocusNodes[index].requestFocus();
+        });
+      } else {
+        searchControllers[index].clear();
+      }
+    });
+  }
+
+  void _selectExistingTask(int index, TaskData selectedTask) {
+    setState(() {
+      subtasks[index].text = selectedTask.name;
+
+      isExistingSubtask[index] = true;
+      savedIds[index] = selectedTask.id;
+
+      _updateSubtaskCount(index, selectedTask.id);
+
+      isSearchMode[index] = false;
+      searchControllers[index].clear();
+
+      _dynamicTotalWidth = _calculateDynamicWidth();
+    });
+  }
+
+  Future<void> _updateSubtaskCount(int index, int taskId) async {
+    final subtasksOfTask = await ref
+        .read(projectTasksNotifier(widget.task.projectId).notifier)
+        .getSubtasks(taskId);
+    setState(() {
+      if (index < subtasksOfSubtasksCount.length) {
+        subtasksOfSubtasksCount[index] = subtasksOfTask.length;
+      }
+    });
+  }
+
   double _calculateDynamicWidth() {
-    // Calculate the maximum width needed for all text content
     double maxSubtaskWidth = subtasksWidth;
 
-    // Check all subtasks to find the longest text
     for (final controller in subtasks) {
       if (controller.text.isNotEmpty) {
         final textPainter = TextPainter(
           text: TextSpan(
             text: controller.text,
-            style: const TextStyle(
-              fontSize: 17,
-            ), // Match your TextField font size
+            style: const TextStyle(fontSize: 17),
           ),
           textDirection: TextDirection.ltr,
         );
         textPainter.layout();
-        // Add extra space for padding, icons, and breathing room
-        final neededWidth =
-            textPainter.width + 155; // 120 for icons, padding, etc.
+        final neededWidth = textPainter.width + 155;
         maxSubtaskWidth = max(maxSubtaskWidth, neededWidth);
       }
     }
 
     _dynamicSubtasksWidth = maxSubtaskWidth;
 
-    // Calculate main task width if needed
     double dynamicMainTaskWidth = mainTaskWidth;
     final taskTextPainter = TextPainter(
       text: TextSpan(
         text: widget.task.name,
-        style: const TextStyle(fontSize: 20), // Match your headline font size
+        style: const TextStyle(fontSize: 20),
       ),
       textDirection: TextDirection.ltr,
     );
     taskTextPainter.layout();
-    final neededMainWidth =
-        taskTextPainter.width + 60; // Extra space for padding
+    final neededMainWidth = taskTextPainter.width + 60;
     dynamicMainTaskWidth = max(dynamicMainTaskWidth, neededMainWidth);
 
     return dynamicMainTaskWidth + maxSubtaskWidth + spacing + padding;
@@ -246,7 +314,6 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
 
     return IconButton(
       onPressed: () async {
-        // Bounds checking
         if (index >= savedIds.length) return;
 
         if (savedIds[index] != -1) {
@@ -296,30 +363,50 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
 
   Widget _buildRemoveSubtaskButton(int index) {
     return IconButton(
-      onPressed: () {
-        // Bounds checking
-        if (index >= subtasks.length ||
-            index >= subtaskFocusNodes.length ||
-            index >= isExistingSubtask.length ||
-            index >= subtaskKeys.length ||
-            index >= savedIds.length) {
-          return;
+      onPressed: () async {
+        if (isExistingSubtask[index]) {
+          await _deleteParentTaskFromSubtasks(index);
         }
-
-        setState(() {
-          // Dispose of the FocusNode before removing
-          subtaskFocusNodes[index].dispose();
-
-          subtasks.removeAt(index);
-          isExistingSubtask.removeAt(index);
-          subtaskKeys.removeAt(index);
-          subtaskFocusNodes.removeAt(index);
-          savedIds.removeAt(index);
-          subtasksOfSubtasksCount.removeAt(index);
-        });
+        _correctIndexes(index);
       },
       icon: Icon(Icons.delete),
     );
+  }
+
+  void _correctIndexes(int index) {
+    if (index >= subtasks.length ||
+        index >= subtaskFocusNodes.length ||
+        index >= isExistingSubtask.length ||
+        index >= subtaskKeys.length ||
+        index >= savedIds.length ||
+        index >= searchControllers.length ||
+        index >= searchFocusNodes.length ||
+        index >= isSearchMode.length) {
+      return;
+    }
+
+    setState(() {
+      subtaskFocusNodes[index].dispose();
+      searchControllers[index].dispose();
+      searchFocusNodes[index].dispose();
+
+      subtasks.removeAt(index);
+      isExistingSubtask.removeAt(index);
+      subtaskKeys.removeAt(index);
+      subtaskFocusNodes.removeAt(index);
+      savedIds.removeAt(index);
+      subtasksOfSubtasksCount.removeAt(index);
+      isSearchMode.removeAt(index);
+      searchControllers.removeAt(index);
+      searchFocusNodes.removeAt(index);
+    });
+  }
+
+  Future<void> _deleteParentTaskFromSubtasks(int index) async {
+    final taskId = savedIds[index];
+    await ref
+        .read(projectTasksNotifier(widget.task.projectId).notifier)
+        .updateTask(taskId, TaskCompanion(parentTaskId: Value(null)));
   }
 
   Widget _buildSubtaskCountInfo(int index) {
@@ -345,6 +432,31 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSearchField(int index) {
+    return SearchTextField<TaskData, TaskSearchNotifier>(
+      controller: searchControllers[index],
+      focusNode: searchFocusNodes[index],
+      labelText: 'Search existing tasks',
+      searchProvider: taskSearchProvider,
+      getDisplayText: (task) => task.name,
+      onItemSelected: (task) => _selectExistingTask(index, task),
+      leadingIcon: (task) =>
+          const Icon(Icons.task_alt, size: 16, color: Colors.blue),
+      trailingIcon: const Icon(
+        Icons.arrow_forward_ios,
+        size: 12,
+        color: Colors.grey,
+      ),
+      predicates: [
+        (task) => task.projectId == widget.task.projectId, // Same project
+        (task) => !task.isCompleted, // Not completed
+        (task) => task.id != widget.task.id, // Not the current task
+        (task) => !savedIds.contains(task.id), // Not already added
+      ],
+      maxResults: 5,
     );
   }
 
@@ -404,11 +516,14 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
                       shrinkWrap: true,
                       itemCount: subtasks.length,
                       itemBuilder: (context, index) {
-                        // Bounds checking to prevent RangeError
+                        // Comprehensive bounds checking to prevent RangeError
                         if (index >= subtasks.length ||
                             index >= subtaskKeys.length ||
                             index >= subtaskFocusNodes.length ||
-                            index >= isExistingSubtask.length) {
+                            index >= isExistingSubtask.length ||
+                            index >= isSearchMode.length ||
+                            index >= searchControllers.length ||
+                            index >= searchFocusNodes.length) {
                           return const SizedBox.shrink();
                         }
 
@@ -420,25 +535,32 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
                             child: Row(
                               children: [
                                 Expanded(
-                                  child: TextField(
-                                    controller: subtasks[index],
-                                    focusNode: subtaskFocusNodes[index],
-                                    readOnly: isExistingSubtask[index],
-                                    decoration: InputDecoration(
-                                      border: OutlineInputBorder(),
-                                      hintText: 'Subtask ${index + 1}',
-                                      fillColor: isExistingSubtask[index]
-                                          ? Colors.grey
-                                          : null,
-                                      filled: isExistingSubtask[index],
-                                    ),
-                                    onChanged: (value) {
-                                      setState(() {
-                                        _dynamicTotalWidth =
-                                            _calculateDynamicWidth();
-                                      });
-                                    },
-                                  ),
+                                  child: isSearchMode[index]
+                                      ? _buildSearchField(index)
+                                      : GestureDetector(
+                                          onLongPress: () =>
+                                              _toggleSearchMode(index),
+                                          child: TextField(
+                                            controller: subtasks[index],
+                                            focusNode: subtaskFocusNodes[index],
+                                            readOnly: isExistingSubtask[index],
+                                            decoration: InputDecoration(
+                                              border: OutlineInputBorder(),
+                                              hintText: 'Subtask ${index + 1}',
+                                              fillColor:
+                                                  isExistingSubtask[index]
+                                                  ? Colors.grey
+                                                  : null,
+                                              filled: isExistingSubtask[index],
+                                            ),
+                                            onChanged: (value) {
+                                              setState(() {
+                                                _dynamicTotalWidth =
+                                                    _calculateDynamicWidth();
+                                              });
+                                            },
+                                          ),
+                                        ),
                                 ),
                                 _buildSubtaskCountInfo(index),
                                 _buildBreakdownSubtaskButton(index),
@@ -490,6 +612,18 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
                               adjustedIndex,
                               movedSavedSubtaskCount,
                             );
+                            isSearchMode.insert(
+                              adjustedIndex,
+                              isSearchMode.removeAt(oldIndex),
+                            );
+                            searchControllers.insert(
+                              adjustedIndex,
+                              searchControllers.removeAt(oldIndex),
+                            );
+                            searchFocusNodes.insert(
+                              adjustedIndex,
+                              searchFocusNodes.removeAt(oldIndex),
+                            );
                           });
                         }
                       },
@@ -503,120 +637,4 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
       ),
     );
   }
-}
-
-class ArrowPainter extends CustomPainter {
-  final GlobalKey mainTaskKey;
-  final List<GlobalKey> subtaskKeys;
-  final BuildContext stackContext;
-
-  ArrowPainter({
-    required this.mainTaskKey,
-    required this.subtaskKeys,
-    required this.stackContext,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.deepPurpleAccent.withValues(alpha: 0.6)
-      ..strokeWidth = 2.0
-      ..style = PaintingStyle.stroke;
-
-    final arrowPaint = Paint()
-      ..color = Colors.deepPurpleAccent.withValues(alpha: 0.8)
-      ..style = PaintingStyle.fill;
-
-    // Get main task position
-    final mainTaskRenderBox =
-        mainTaskKey.currentContext?.findRenderObject() as RenderBox?;
-    if (mainTaskRenderBox == null) return;
-
-    // Get the Stack's render box for coordinate conversion
-    final stackRenderBox = stackContext.findRenderObject() as RenderBox?;
-    if (stackRenderBox == null) return;
-
-    // Convert main task position to Stack's coordinate system
-    final mainTaskGlobalPosition = mainTaskRenderBox.localToGlobal(Offset.zero);
-    final mainTaskLocalPosition = stackRenderBox.globalToLocal(
-      mainTaskGlobalPosition,
-    );
-    final mainTaskSize = mainTaskRenderBox.size;
-
-    // Start point: right edge, center of main task
-    final startPoint = Offset(
-      mainTaskLocalPosition.dx + mainTaskSize.width,
-      mainTaskLocalPosition.dy + mainTaskSize.height / 2,
-    );
-
-    // Draw arrows to each subtask
-    for (final subtaskKey in subtaskKeys) {
-      // Check if the element is still mounted and active
-      final context = subtaskKey.currentContext;
-      if (context == null || !context.mounted) continue;
-
-      final subtaskRenderBox = context.findRenderObject() as RenderBox?;
-      if (subtaskRenderBox == null || !subtaskRenderBox.hasSize) continue;
-
-      // Convert subtask position to Stack's coordinate system
-      final subtaskGlobalPosition = subtaskRenderBox.localToGlobal(Offset.zero);
-      final subtaskLocalPosition = stackRenderBox.globalToLocal(
-        subtaskGlobalPosition,
-      );
-      final subtaskSize = subtaskRenderBox.size;
-
-      // End point: left edge, center of subtask
-      final endPoint = Offset(
-        subtaskLocalPosition.dx,
-        subtaskLocalPosition.dy + subtaskSize.height / 2,
-      );
-
-      // Only draw if there's a meaningful distance
-      if ((endPoint.dx - startPoint.dx).abs() < 10) continue;
-
-      // Draw curved line
-      final path = Path();
-      path.moveTo(startPoint.dx, startPoint.dy);
-
-      // Create smoother curve control points
-      final horizontalDistance = endPoint.dx - startPoint.dx;
-
-      final controlPoint1 = Offset(
-        startPoint.dx + horizontalDistance * 0.6,
-        startPoint.dy,
-      );
-      final controlPoint2 = Offset(
-        startPoint.dx + horizontalDistance * 0.4,
-        endPoint.dy,
-      );
-
-      path.cubicTo(
-        controlPoint1.dx,
-        controlPoint1.dy,
-        controlPoint2.dx,
-        controlPoint2.dy,
-        endPoint.dx,
-        endPoint.dy,
-      );
-
-      canvas.drawPath(path, paint);
-
-      _drawArrowhead(canvas, arrowPaint, endPoint);
-    }
-  }
-
-  void _drawArrowhead(Canvas canvas, Paint paint, Offset tip) {
-    const arrowSize = 10.0;
-    final path = Path();
-
-    path.moveTo(tip.dx, tip.dy);
-    path.lineTo(tip.dx - arrowSize, tip.dy - arrowSize / 2);
-    path.lineTo(tip.dx - arrowSize, tip.dy + arrowSize / 2);
-    path.close();
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

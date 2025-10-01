@@ -65,6 +65,12 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
     return await query;
   }
 
+  Future<int> updateTask(int taskId, TaskCompanion updates) async {
+    return await (update(
+      task,
+    )..where((t) => t.id.equals(taskId))).write(updates);
+  }
+
   Future<void> deleteTask(int taskId) async {
     await (delete(task)..where((t) => t.id.equals(taskId))).go();
   }

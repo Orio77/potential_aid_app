@@ -63,6 +63,10 @@ class ProjectTasksNotifier extends StateNotifier<AsyncValue<List<TaskData>>> {
     return taskId;
   }
 
+  Future<int> updateTask(int taskId, TaskCompanion updates) async {
+    return await _database.taskDao.updateTask(taskId, updates);
+  }
+
   Future<void> deleteTask(int taskId) async {
     await _database.taskDao.deleteTask(taskId);
   }
