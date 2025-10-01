@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
@@ -23,6 +25,14 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
   List<int> savedIds = [];
   final GlobalKey mainTaskKey = GlobalKey();
   bool isLoading = true;
+
+  static const double mainTaskWidth = 160.0;
+  static const double subtasksWidth = 260.0;
+  static const double spacing = 8.0;
+  static const double padding = 8.0;
+
+  double _dynamicTotalWidth = mainTaskWidth + subtasksWidth + spacing + padding;
+  double _dynamicSubtasksWidth = subtasksWidth;
 
   @override
   void initState() {
@@ -72,6 +82,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
         );
         savedIds = subtasksData.map((subt) => subt.id).toList();
       }
+      _dynamicTotalWidth = _calculateDynamicWidth();
       isLoading = false;
     });
   }
@@ -102,7 +113,6 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     final date = ref.read(dateNotifierProvider).toDateTimeUnspecified();
 
     for (int i = 0; i < subtasks.length; i++) {
-      // Bounds checking for all lists
       if (i >= isExistingSubtask.length || i >= savedIds.length) {
         break;
       }
@@ -130,6 +140,49 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     }
   }
 
+  double _calculateDynamicWidth() {
+    // Calculate the maximum width needed for all text content
+    double maxSubtaskWidth = subtasksWidth;
+
+    // Check all subtasks to find the longest text
+    for (final controller in subtasks) {
+      if (controller.text.isNotEmpty) {
+        final textPainter = TextPainter(
+          text: TextSpan(
+            text: controller.text,
+            style: const TextStyle(
+              fontSize: 17,
+            ), // Match your TextField font size
+          ),
+          textDirection: TextDirection.ltr,
+        );
+        textPainter.layout();
+        // Add extra space for padding, icons, and breathing room
+        final neededWidth =
+            textPainter.width + 155; // 120 for icons, padding, etc.
+        maxSubtaskWidth = max(maxSubtaskWidth, neededWidth);
+      }
+    }
+
+    _dynamicSubtasksWidth = maxSubtaskWidth;
+
+    // Calculate main task width if needed
+    double dynamicMainTaskWidth = mainTaskWidth;
+    final taskTextPainter = TextPainter(
+      text: TextSpan(
+        text: widget.task.name,
+        style: const TextStyle(fontSize: 20), // Match your headline font size
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    taskTextPainter.layout();
+    final neededMainWidth =
+        taskTextPainter.width + 60; // Extra space for padding
+    dynamicMainTaskWidth = max(dynamicMainTaskWidth, neededMainWidth);
+
+    return dynamicMainTaskWidth + maxSubtaskWidth + spacing + padding;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -140,11 +193,17 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Stack(
-              children: [
-                _buildTaskBreakdownScreen(widget.task),
-                if (!isLoading) IgnorePointer(child: _buildArrows()),
-              ],
+          : SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                width: _dynamicTotalWidth,
+                child: Stack(
+                  children: [
+                    _buildTaskBreakdownScreen(widget.task),
+                    if (!isLoading) IgnorePointer(child: _buildArrows()),
+                  ],
+                ),
+              ),
             ),
       floatingActionButton: isLoading
           ? null
@@ -153,7 +212,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
               children: [
                 FloatingActionButton(
                   heroTag: "add_subtask",
-                  onPressed: subtasks.length < 5 ? _addSubtask : null,
+                  onPressed: _addSubtask,
                   child: const Icon(Icons.add),
                 ),
                 const SizedBox(width: 16),
@@ -176,7 +235,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
             subtaskKeys: subtaskKeys,
             stackContext: context,
           ),
-          size: Size.infinite,
+          size: Size(_dynamicTotalWidth, double.infinity),
         );
       },
     );
@@ -290,147 +349,157 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
   }
 
   Widget _buildTaskBreakdownScreen(TaskData task) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            flex: 1,
-            child: Center(
-              child: Card(
-                key: mainTaskKey,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      maxHeight: 200.0, // Maximum height before scrolling
-                      minHeight: 60.0, // Minimum height
-                    ),
-                    child: IntrinsicWidth(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (widget.task.parentTaskId != null)
-                            _buildGoToParentTaskButton(),
-                          Flexible(
-                            child: SingleChildScrollView(
-                              child: Text(
-                                task.name,
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.headlineSmall,
-                                textAlign: TextAlign.center,
+    return Container(
+      width: _dynamicTotalWidth,
+      child: Padding(
+        padding: EdgeInsets.all(padding / 2),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: mainTaskWidth,
+              child: Center(
+                child: Card(
+                  key: mainTaskKey,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxHeight: 200.0,
+                        minHeight: 60.0,
+                      ),
+                      child: IntrinsicWidth(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (widget.task.parentTaskId != null)
+                              _buildGoToParentTaskButton(),
+                            Flexible(
+                              child: SingleChildScrollView(
+                                child: Text(
+                                  task.name,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.headlineSmall,
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            flex: 2,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Flexible(
-                  child: ReorderableListView.builder(
-                    shrinkWrap: true,
-                    itemCount: subtasks.length,
-                    itemBuilder: (context, index) {
-                      // Bounds checking to prevent RangeError
-                      if (index >= subtasks.length ||
-                          index >= subtaskKeys.length ||
-                          index >= subtaskFocusNodes.length ||
-                          index >= isExistingSubtask.length) {
-                        return const SizedBox.shrink();
-                      }
+            SizedBox(width: spacing),
+            SizedBox(
+              width: _dynamicSubtasksWidth,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: ReorderableListView.builder(
+                      shrinkWrap: true,
+                      itemCount: subtasks.length,
+                      itemBuilder: (context, index) {
+                        // Bounds checking to prevent RangeError
+                        if (index >= subtasks.length ||
+                            index >= subtaskKeys.length ||
+                            index >= subtaskFocusNodes.length ||
+                            index >= isExistingSubtask.length) {
+                          return const SizedBox.shrink();
+                        }
 
-                      return Card(
-                        key: subtaskKeys[index],
-                        margin: const EdgeInsets.symmetric(vertical: 4.0),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: subtasks[index],
-                                  focusNode: subtaskFocusNodes[index],
-                                  readOnly: isExistingSubtask[index],
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(),
-                                    hintText: 'Subtask ${index + 1}',
-                                    fillColor: isExistingSubtask[index]
-                                        ? Colors.grey
-                                        : null,
-                                    filled: isExistingSubtask[index],
+                        return Card(
+                          key: subtaskKeys[index],
+                          margin: const EdgeInsets.symmetric(vertical: 4.0),
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: subtasks[index],
+                                    focusNode: subtaskFocusNodes[index],
+                                    readOnly: isExistingSubtask[index],
+                                    decoration: InputDecoration(
+                                      border: OutlineInputBorder(),
+                                      hintText: 'Subtask ${index + 1}',
+                                      fillColor: isExistingSubtask[index]
+                                          ? Colors.grey
+                                          : null,
+                                      filled: isExistingSubtask[index],
+                                    ),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _dynamicTotalWidth =
+                                            _calculateDynamicWidth();
+                                      });
+                                    },
                                   ),
                                 ),
-                              ),
-                              _buildSubtaskCountInfo(index),
-                              _buildBreakdownSubtaskButton(index),
-                              _buildRemoveSubtaskButton(index),
-                            ],
+                                _buildSubtaskCountInfo(index),
+                                _buildBreakdownSubtaskButton(index),
+                                _buildRemoveSubtaskButton(index),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                    onReorder: (oldIndex, newIndex) {
-                      if (isExistingSubtask.length >= oldIndex &&
-                              isExistingSubtask[oldIndex] ||
-                          isExistingSubtask.length >= newIndex &&
-                              isExistingSubtask[newIndex]) {
-                        null;
-                      } else {
-                        setState(() {
-                          final adjustedIndex = newIndex > oldIndex
-                              ? newIndex - 1
-                              : newIndex;
+                        );
+                      },
+                      onReorder: (oldIndex, newIndex) {
+                        if (isExistingSubtask.length >= oldIndex &&
+                                isExistingSubtask[oldIndex] ||
+                            isExistingSubtask.length >= newIndex &&
+                                isExistingSubtask[newIndex]) {
+                          null;
+                        } else {
+                          setState(() {
+                            final adjustedIndex = newIndex > oldIndex
+                                ? newIndex - 1
+                                : newIndex;
 
-                          final TextEditingController movedController = subtasks
-                              .removeAt(oldIndex);
-                          final bool movedExisting = isExistingSubtask.removeAt(
-                            oldIndex,
-                          );
-                          final GlobalKey movedKey = subtaskKeys.removeAt(
-                            oldIndex,
-                          );
-                          final FocusNode movedFocusNode = subtaskFocusNodes
-                              .removeAt(oldIndex);
-                          final int movedSavedId = savedIds.removeAt(oldIndex);
-                          final int movedSavedSubtaskCount =
-                              subtasksOfSubtasksCount.removeAt(oldIndex);
+                            final TextEditingController movedController =
+                                subtasks.removeAt(oldIndex);
+                            final bool movedExisting = isExistingSubtask
+                                .removeAt(oldIndex);
+                            final GlobalKey movedKey = subtaskKeys.removeAt(
+                              oldIndex,
+                            );
+                            final FocusNode movedFocusNode = subtaskFocusNodes
+                                .removeAt(oldIndex);
+                            final int movedSavedId = savedIds.removeAt(
+                              oldIndex,
+                            );
+                            final int movedSavedSubtaskCount =
+                                subtasksOfSubtasksCount.removeAt(oldIndex);
 
-                          subtasks.insert(adjustedIndex, movedController);
-                          isExistingSubtask.insert(
-                            adjustedIndex,
-                            movedExisting,
-                          );
-                          subtaskKeys.insert(adjustedIndex, movedKey);
-                          subtaskFocusNodes.insert(
-                            adjustedIndex,
-                            movedFocusNode,
-                          );
-                          savedIds.insert(adjustedIndex, movedSavedId);
-                          subtasksOfSubtasksCount.insert(
-                            adjustedIndex,
-                            movedSavedSubtaskCount,
-                          );
-                        });
-                      }
-                    },
+                            subtasks.insert(adjustedIndex, movedController);
+                            isExistingSubtask.insert(
+                              adjustedIndex,
+                              movedExisting,
+                            );
+                            subtaskKeys.insert(adjustedIndex, movedKey);
+                            subtaskFocusNodes.insert(
+                              adjustedIndex,
+                              movedFocusNode,
+                            );
+                            savedIds.insert(adjustedIndex, movedSavedId);
+                            subtasksOfSubtasksCount.insert(
+                              adjustedIndex,
+                              movedSavedSubtaskCount,
+                            );
+                          });
+                        }
+                      },
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
