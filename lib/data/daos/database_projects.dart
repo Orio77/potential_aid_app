@@ -2,15 +2,16 @@ import 'package:drift/drift.dart';
 import 'package:potential_aid_app/data/database.dart';
 
 extension AppDatabaseProjects on AppDatabase {
-  Future<int> addProject(
-    String name,
-    DateTime startDate,
-    DateTime deadline,
+  Future<int> addProject({
+    required String name,
+    required DateTime startDate,
+    required DateTime deadline,
     int? startPoint,
     int? current,
     int? goal,
     String? unit,
-  ) async {
+    int? category,
+  }) async {
     final projectComp = ProjectCompanion(
       name: Value(name),
       startDate: Value(startDate),
@@ -19,6 +20,7 @@ extension AppDatabaseProjects on AppDatabase {
       current: Value(current ?? 0),
       goal: Value(goal ?? 1),
       unit: Value(unit ?? ""),
+      category: Value(category),
     );
 
     return await into(project).insert(projectComp);

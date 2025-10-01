@@ -119,13 +119,13 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
       final newProjectId = await ref
           .read(projectsNotifierProvider.notifier)
           .addProject(
-            _projectNameController.text.trim(),
-            now,
-            now.add(Duration(days: 7)),
-            0,
-            0,
-            1,
-            "completed",
+            name: _projectNameController.text.trim(),
+            startDate: now,
+            deadline: now.add(Duration(days: 7)),
+            startPoint: 0,
+            current: 0,
+            goal: 1,
+            unit: "completed",
           );
 
       // Get the newly created project

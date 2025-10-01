@@ -1,12 +1,13 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/utils/time_utils.dart';
 import 'package:potential_aid_app/widgets/goal_progress_input.dart';
 
 class AddProjectDialog extends ConsumerStatefulWidget {
-  const AddProjectDialog({super.key});
+  final int? categoryId;
+  const AddProjectDialog({super.key, this.categoryId});
 
   @override
   ConsumerState<AddProjectDialog> createState() => _AddProjectDialogState();
@@ -161,6 +162,7 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
                   int.tryParse(_currentController.text)!,
                   int.tryParse(_endGoalController.text)!,
                   _unitController.text,
+                  widget.categoryId,
                 ),
           child: _isLoading
               ? const SizedBox(
@@ -193,6 +195,7 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
     int current,
     int goal,
     String unit,
+    int? category,
   ) async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -209,13 +212,14 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
       await ref
           .read(projectsNotifierProvider.notifier)
           .addProject(
-            projectName,
-            startDate,
-            deadline,
-            initial,
-            current,
-            goal,
-            unit,
+            name: projectName,
+            startDate: startDate,
+            deadline: deadline,
+            startPoint: initial,
+            current: current,
+            goal: goal,
+            unit: unit,
+            category: category,
           );
 
       if (mounted) {
@@ -252,9 +256,9 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
   }
 }
 
-Future<void> showAddProjectDialog(BuildContext context) async {
+Future<void> showAddProjectDialog(BuildContext context, int? categoryId) async {
   await showDialog(
     context: context,
-    builder: (context) => const AddProjectDialog(),
+    builder: (context) => AddProjectDialog(categoryId: categoryId),
   );
 }

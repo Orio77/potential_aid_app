@@ -45,7 +45,7 @@ class _ProjectListScreenState extends ConsumerState<ProjectListScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          showAddProjectDialog(context);
+          showAddProjectDialog(context, widget.categoryId);
         },
         icon: const Icon(Icons.add),
         label: const Text('Project'),
