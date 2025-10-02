@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/data/models/project_interval.dart';
+import 'package:time_machine/time_machine.dart' hide Offset;
 
 class ProjectIntervals extends ConsumerWidget {
-  // final List<ProjectData> projectsData;
   final List<ProjectInterval> projects;
-  final double dayCardHeight;
   final double dayCardWidth;
+  final LocalDate timelineStart;
+
   const ProjectIntervals({
     super.key,
     required this.projects,
-    // required this.projectsData,
-    required this.dayCardHeight,
     required this.dayCardWidth,
+    required this.timelineStart,
   });
 
   @override
@@ -25,8 +24,6 @@ class ProjectIntervals extends ConsumerWidget {
     const projectBarHeight = 40.0;
     const spaceBetweenProjectIntervals = 8.0;
 
-    // final projects = _createProjectIntervals(projectsData);
-
     projects.sort((a, b) => b.endDay.compareTo(a.endDay));
 
     return Column(
@@ -35,8 +32,14 @@ class ProjectIntervals extends ConsumerWidget {
       children: [
         const SizedBox(height: 16),
         ...projects.map((project) {
-          final startX = (project.startDay - 1) * dayCardWidth;
-          final endX = project.endDay * dayCardWidth;
+          final startPosition = _getDatePosition(
+            project.startDay,
+            timelineStart,
+          );
+          final endPosition = _getDatePosition(project.endDay, timelineStart);
+
+          final startX = startPosition * dayCardWidth;
+          final endX = (endPosition + 1) * dayCardWidth;
           final projectsWidth = endX - startX;
 
           return Padding(
@@ -51,6 +54,9 @@ class ProjectIntervals extends ConsumerWidget {
                   height: projectBarHeight,
                   decoration: BoxDecoration(
                     color: project.color,
+                    border: project.progress != null
+                        ? Border.all(color: Colors.white, width: 2)
+                        : null,
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
@@ -60,30 +66,43 @@ class ProjectIntervals extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            project.name,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                  child: Stack(
+                    children: [
+                      if (project.progress != null)
+                        Container(
+                          width: projectsWidth * project.progress!,
+                          height: projectBarHeight,
+                          decoration: BoxDecoration(
+                            color: project.color.withValues(alpha: 0.7),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                project.name,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                            Text(
+                              "${project.startDay.monthOfYear}/${project.startDay.dayOfMonth}-${project.endDay.monthOfYear}/${project.endDay.dayOfMonth}",
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          "Day ${project.startDay}-${project.endDay}",
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -95,19 +114,8 @@ class ProjectIntervals extends ConsumerWidget {
     );
   }
 
-  // ignore: unused_element
-  List<ProjectInterval> _createProjectIntervals(
-    List<ProjectData> projectsData,
-  ) {
-    return projectsData
-        .map(
-          (projectData) => ProjectInterval(
-            name: projectData.name,
-            startDay: projectData.startDate.day,
-            endDay: projectData.deadline.day,
-            color: Colors.lime,
-          ),
-        )
-        .toList();
+  int _getDatePosition(LocalDate date, LocalDate timelineStart) {
+    if (date < timelineStart) return 0;
+    return date.periodSince(timelineStart).days;
   }
 }

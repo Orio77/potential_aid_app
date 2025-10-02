@@ -1,8 +1,11 @@
 import 'package:drift/drift.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/daos/database_projects.dart';
 import 'package:potential_aid_app/data/database.dart';
+import 'package:potential_aid_app/data/models/project_interval.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
+import 'package:time_machine/time_machine.dart';
 
 class ProjectsNotifier extends StateNotifier<List<ProjectData>> {
   List<Expression<bool> Function($ProjectTable)>? predicates;
@@ -59,7 +62,7 @@ class ProjectsNotifier extends StateNotifier<List<ProjectData>> {
   }
 
   Future<ProjectData?> getProjectData(String name) async {
-    return await _database.projectDao.getByName(name);
+    return await _database.projectDao.getProjectByName(name);
   }
 
   Future<void> moveProject(int projectId, int newParentId) async {
@@ -93,7 +96,7 @@ final projectProvider = FutureProvider.family<ProjectData?, int>((
   projectId,
 ) async {
   final database = ref.watch(databaseProvider);
-  return await database.projectDao.getById(projectId);
+  return await database.projectDao.getProjectById(projectId);
 });
 
 final projectByBlockProvider = FutureProvider.family<ProjectData?, int>((
@@ -101,7 +104,7 @@ final projectByBlockProvider = FutureProvider.family<ProjectData?, int>((
   blockId,
 ) async {
   final database = ref.watch(databaseProvider);
-  return await database.projectDao.getByBlockId(blockId);
+  return await database.projectDao.getProjectByBlockId(blockId);
 });
 
 final descendantProjectProvider = FutureProvider.family<List<ProjectData>, int>(
@@ -110,3 +113,36 @@ final descendantProjectProvider = FutureProvider.family<List<ProjectData>, int>(
     return await database.projectDao.getAllDescendants(projectId);
   },
 );
+
+final projectTimeLineProvider =
+    FutureProvider.family<List<ProjectInterval>, LocalDate>((
+      ref,
+      monthDate,
+    ) async {
+      final database = ref.watch(databaseProvider);
+
+      final monthStart = LocalDate(
+        monthDate.yearOfEra,
+        monthDate.monthOfYear,
+        monthDate.dayOfMonth,
+      );
+      final monthEnd = monthStart.addMonths(1).subtractDays(1);
+
+      final projects = await database.projectDao.getProjectsInDateRange(
+        monthStart.toDateTimeUnspecified(),
+        monthEnd.toDateTimeUnspecified(),
+      );
+
+      return projects
+          .map(
+            (project) => ProjectInterval(
+              projectId: project.id,
+              name: project.name,
+              startDay: LocalDate.dateTime(project.startDate),
+              endDay: LocalDate.dateTime(project.deadline),
+              color: Colors.lime,
+              progress: (project.current / project.goal).toDouble(),
+            ),
+          )
+          .toList();
+    });

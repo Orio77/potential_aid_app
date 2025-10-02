@@ -10,19 +10,19 @@ part 'project_dao.g.dart';
 class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
   ProjectDao(super.attachedDatabase);
 
-  Future<ProjectData?> getByName(String name) async {
+  Future<ProjectData?> getProjectByName(String name) async {
     final query = select(project)..where((p) => p.name.equals(name));
 
     return await query.getSingleOrNull();
   }
 
-  Future<ProjectData?> getById(int projectId) async {
+  Future<ProjectData?> getProjectById(int projectId) async {
     final query = select(project)..where((p) => p.id.equals(projectId));
 
     return await query.getSingleOrNull();
   }
 
-  Future<ProjectData?> getByBlockId(int blockId) async {
+  Future<ProjectData?> getProjectByBlockId(int blockId) async {
     return await transaction(() async {
       final blockData = await (select(
         block,
@@ -34,6 +34,18 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
 
       return projectData;
     });
+  }
+
+  Future<List<ProjectData>> getProjectsInDateRange(
+    DateTime start,
+    DateTime end,
+  ) async {
+    return await (select(project)..where(
+          (p) =>
+              p.startDate.isSmallerOrEqualValue(end) &
+              p.deadline.isBiggerOrEqualValue(start),
+        ))
+        .get();
   }
 
   Future<void> deleteProject(int projectId) async {
@@ -105,12 +117,12 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
 
   Future<List<ProjectData>> getProjectHierarchy(int projectId) async {
     final hierarchy = <ProjectData>[];
-    ProjectData? current = await getById(projectId);
+    ProjectData? current = await getProjectById(projectId);
 
     while (current != null) {
       hierarchy.insert(0, current);
       if (current.parentProjectId == null) break;
-      current = await getById(current.parentProjectId!);
+      current = await getProjectById(current.parentProjectId!);
     }
 
     return hierarchy;
