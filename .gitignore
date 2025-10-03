@@ -92,3 +92,6 @@ ehthumbs.db
 # Local storage
 /data/
 /storage/
+
+# Github Copilot
+.github
