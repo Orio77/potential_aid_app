@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/models/project_interval.dart';
-import 'package:potential_aid_app/widgets/timeline/resizable_project_interval.dart';
+import 'package:potential_aid_app/widgets/timeline/isolated_project_interval.dart';
 import 'package:time_machine/time_machine.dart' hide Offset;
 
 class ProjectIntervals extends ConsumerWidget {
@@ -18,43 +18,42 @@ class ProjectIntervals extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return _buildProjectIntervals(context);
+    return _buildProjectIntervals(context, ref, projects);
   }
 
-  Widget _buildProjectIntervals(BuildContext context) {
+  Widget _buildProjectIntervals(
+    BuildContext context,
+    WidgetRef ref,
+    List<ProjectInterval> projectList,
+  ) {
     const projectBarHeight = 40.0;
     const spaceBetweenProjectIntervals = 8.0;
 
-    projects.sort((a, b) => b.endDay.compareTo(a.endDay));
+    projectList.sort((a, b) => b.endDay.compareTo(a.endDay));
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 16),
-        ...projects.asMap().entries.map((entry) {
-          final index = entry.key;
-          final project = entry.value;
+        ...projectList.map((project) {
+          if (project.projectId == null) return const SizedBox.shrink();
 
           return Padding(
             padding: const EdgeInsets.only(
               bottom: spaceBetweenProjectIntervals,
             ),
-            child: ResizableProjectInterval(
-              project: project,
+            child: IsolatedProjectInterval(
+              projectId: project.projectId!,
               dayCardWidth: dayCardWidth,
               projectBarHeight: projectBarHeight,
               handleWidth: 12.0,
               timelineStart: timelineStart,
-              onProjectUpdated: (updatedProject) =>
-                  print({"$index : $updatedProject"}),
             ),
           );
         }),
-        const SizedBox(height: 16), // Bottom padding
+        const SizedBox(height: 16),
       ],
     );
   }
-
-  Future<void> _updateProject(ProjectInterval updatedProject) async {}
 }

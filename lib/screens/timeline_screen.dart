@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/models/project_interval.dart';
-import 'package:potential_aid_app/providers/projects_notifier.dart';
+import 'package:potential_aid_app/providers/project_intervals_notifier.dart';
 import 'package:potential_aid_app/providers/timeline_date_notifier.dart';
 import 'package:potential_aid_app/widgets/timeline/date_card_list.dart';
 import 'package:potential_aid_app/widgets/timeline/project_intervals.dart';
@@ -26,7 +26,24 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
   @override
   Widget build(BuildContext context) {
     final currentMonth = ref.watch(timelineDateNotifierProvider);
-    final projectsAsync = ref.watch(projectTimeLineProvider(currentMonth));
+    final projectsMap = ref.watch(projectIntervalsNotifierProvider);
+    final projects = projectsMap.values.toList();
+
+    ref.listen(timelineDateNotifierProvider, (previous, next) {
+      if (previous != next) {
+        ref
+            .read(projectIntervalsNotifierProvider.notifier)
+            .loadProjectsForMonth(next);
+      }
+    });
+
+    if (projects.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref
+            .read(projectIntervalsNotifierProvider.notifier)
+            .loadProjectsForMonth(currentMonth);
+      });
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -55,11 +72,9 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
           ),
         ],
       ),
-      body: projectsAsync.when(
-        data: (projects) => _buildTimeline(context, projects),
-        error: (error, stackTrace) => Text('Error: $error'),
-        loading: () => CircularProgressIndicator(),
-      ),
+      body: projects.isEmpty
+          ? const CircularProgressIndicator()
+          : _buildTimeline(context, projects),
       backgroundColor: Colors.white,
     );
   }

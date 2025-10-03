@@ -256,5 +256,41 @@ class _ResizableProjectIntervalState
     });
   }
 
-  void _handleEndDateChange() {}
+  Future<void> _handleEndDateChange() async {
+    final daysDelta = (_dragOffset / widget.dayCardWidth).round();
+
+    if (daysDelta == 0) {
+      setState(() {
+        _isDraggingEnd = false;
+        _dragOffset = 0;
+      });
+      return;
+    }
+
+    final newEndDay = widget.project.endDay.addDays(daysDelta);
+
+    if (newEndDay.compareTo(widget.project.startDay) <= 0) {
+      setState(() {
+        _isDraggingEnd = false;
+        _dragOffset = 0;
+      });
+      return;
+    }
+
+    final updatedProject = ProjectInterval(
+      projectId: widget.project.projectId,
+      name: widget.project.name,
+      startDay: widget.project.startDay,
+      endDay: newEndDay,
+      color: widget.project.color,
+      progress: widget.project.progress,
+    );
+
+    await widget.onProjectUpdated(updatedProject);
+
+    setState(() {
+      _isDraggingEnd = false;
+      _dragOffset = 0;
+    });
+  }
 }
