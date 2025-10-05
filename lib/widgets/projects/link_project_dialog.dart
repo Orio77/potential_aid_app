@@ -79,7 +79,10 @@ class _LinkProjectDialogState extends ConsumerState<LinkProjectDialog> {
     try {
       final projectsNotifier = ref.read(projectsNotifierProvider.notifier);
 
-      await projectsNotifier.moveProject(selectedProjectId!, widget.projectId);
+      await projectsNotifier.moveProject(
+        projectId: selectedProjectId!,
+        newParentId: widget.projectId,
+      );
 
       ref.invalidate(descendantProjectProvider(widget.projectId));
 

@@ -65,7 +65,14 @@ class ProjectsNotifier extends StateNotifier<List<ProjectData>> {
     return await _database.projectDao.getProjectByName(name);
   }
 
-  Future<void> moveProject(int projectId, int newParentId) async {
+  Future<ProjectData?> getProjectById(int projectId) async {
+    return await _database.projectDao.getProjectById(projectId);
+  }
+
+  Future<void> moveProject({
+    required int projectId,
+    required int newParentId,
+  }) async {
     if (await _wouldCreateCircle(projectId, newParentId)) {
       throw Exception('Cannot move project: would create circular reference');
     }

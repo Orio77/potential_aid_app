@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
+import 'package:potential_aid_app/screens/project_screen.dart';
 import 'package:potential_aid_app/widgets/projects/project_progress_info.dart';
 
 class RelatedProjectsList extends ConsumerWidget {
@@ -47,11 +48,21 @@ class RelatedProjectsList extends ConsumerWidget {
                 ),
                 itemCount: projects.length,
                 itemBuilder: (context, index) {
-                  return Card(
-                    elevation: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: ProjectProgressInfo(project: projects[index]),
+                  return InkWell(
+                    onTap: () {
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              ProjectScreen(data: projects[index]),
+                        ),
+                      );
+                    },
+                    child: Card(
+                      elevation: 2,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: ProjectProgressInfo(project: projects[index]),
+                      ),
                     ),
                   );
                 },

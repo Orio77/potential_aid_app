@@ -4,6 +4,7 @@ import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/widgets/add_task_dialog.dart';
 import 'package:potential_aid_app/widgets/projects/categories/add_to_category_button.dart';
 import 'package:potential_aid_app/widgets/projects/delete_project.dart';
+import 'package:potential_aid_app/widgets/projects/go_to_parent_button.dart';
 import 'package:potential_aid_app/widgets/projects/link_project_dialog.dart';
 import 'package:potential_aid_app/widgets/projects/project_info.dart';
 import 'package:potential_aid_app/widgets/projects/project_task_list.dart';
@@ -22,9 +23,18 @@ class ProjectScreen extends ConsumerWidget {
       appBar: AppBar(
         title: ProjectTitle(title: data.name),
         centerTitle: true,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: Icon(Icons.arrow_back_rounded),
+        automaticallyImplyLeading: false,
+        leadingWidth: 120,
+        leading: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            IconButton(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: Icon(Icons.arrow_back_rounded),
+            ),
+            if (data.parentProjectId != null)
+              GoToParentButton(parentId: data.parentProjectId!),
+          ],
         ),
         actions: [
           AddToCategory(projectId: data.id, categoryId: data.category),
