@@ -256,7 +256,10 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
   }
 }
 
-Future<void> showAddProjectDialog(BuildContext context, int? categoryId) async {
+Future<void> showAddProjectDialog({
+  required BuildContext context,
+  int? categoryId,
+}) async {
   await showDialog(
     context: context,
     builder: (context) => AddProjectDialog(categoryId: categoryId),

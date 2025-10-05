@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:potential_aid_app/widgets/projects/add_project_dialog.dart';
 import 'package:potential_aid_app/widgets/projects/categories/add_category_dialog.dart';
 import 'package:potential_aid_app/widgets/projects/categories/category_list.dart';
 import 'package:potential_aid_app/widgets/projects/project_list.dart';
+import 'package:potential_aid_app/widgets/projects/search_bar.dart';
 
 class ProjectCategoryListScreen extends ConsumerStatefulWidget {
   const ProjectCategoryListScreen({super.key});
@@ -15,6 +17,7 @@ class ProjectCategoryListScreen extends ConsumerStatefulWidget {
 class _ProjectCategoryListScreenState
     extends ConsumerState<ProjectCategoryListScreen> {
   late bool showCategories;
+  String query = "";
 
   @override
   void initState() {
@@ -25,18 +28,23 @@ class _ProjectCategoryListScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Project Categories',
-          style: TextStyle(fontWeight: FontWeight.w400, fontSize: 35),
-        ),
-        centerTitle: true,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(Icons.arrow_back),
-        ),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
+      appBar: showCategories
+          ? AppBar(
+              title: Text(
+                'Project Categories',
+                style: TextStyle(fontWeight: FontWeight.w400, fontSize: 35),
+              ),
+              centerTitle: true,
+              leading: IconButton(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.arrow_back),
+              ),
+              backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+            )
+          : SearchAppBar(
+              normalTitle: "Projects",
+              onSearchChanged: _onSearchChanged,
+            ),
 
       body: SafeArea(
         child: Padding(
@@ -52,13 +60,18 @@ class _ProjectCategoryListScreenState
                     onChanged: (value) {
                       setState(() {
                         showCategories = !showCategories;
+                        query = "";
                       });
                     },
                   ),
                   Icon(Icons.category_rounded),
                 ],
               ),
-              Expanded(child: showCategories ? CategoryList() : ProjectList()),
+              Expanded(
+                child: showCategories
+                    ? CategoryList()
+                    : ProjectList(searchQuery: query),
+              ),
             ],
           ),
         ),
@@ -66,25 +79,29 @@ class _ProjectCategoryListScreenState
       floatingActionButton: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          FloatingActionButton.extended(
-            onPressed: () {
-              showAddCategoryDialog(context);
-            },
-            icon: const Icon(Icons.add),
-            label: const Icon(Icons.category),
-          ),
-          // FloatingActionButton.extended(
-          //   onPressed: () async {
-          //     final notifier = ref.read(projectCategoriesNotifier.notifier);
-          //     var categories = await notifier.getAllProjectCategories();
-          //     for (var category in categories) {
-          //       await notifier.deleteProjectCategoryById(category.id);
-          //     }
-          //   },
-          //   label: Text("delete"),
-          // ),
+          showCategories
+              ? FloatingActionButton.extended(
+                  onPressed: () {
+                    showAddCategoryDialog(context);
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Icon(Icons.category),
+                )
+              : FloatingActionButton.extended(
+                  onPressed: () {
+                    showAddProjectDialog(context: context);
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Project'),
+                ),
         ],
       ),
     );
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() {
+      query = value.toLowerCase();
+    });
   }
 }
