@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/models/project_interval.dart';
+import 'package:potential_aid_app/widgets/timeline/auto_scroll_drag_handler.dart';
 import 'package:time_machine/time_machine.dart' hide Offset;
 
 class ResizableProjectInterval extends ConsumerStatefulWidget {
@@ -9,6 +10,7 @@ class ResizableProjectInterval extends ConsumerStatefulWidget {
   final double projectBarHeight;
   final double handleWidth;
   final LocalDate timelineStart;
+  final ScrollController? scrollController;
   final Function(ProjectInterval updatedProject) onProjectUpdated;
 
   const ResizableProjectInterval({
@@ -18,6 +20,7 @@ class ResizableProjectInterval extends ConsumerStatefulWidget {
     required this.handleWidth,
     required this.timelineStart,
     required this.onProjectUpdated,
+    this.scrollController,
     super.key,
   });
 
@@ -27,10 +30,29 @@ class ResizableProjectInterval extends ConsumerStatefulWidget {
 }
 
 class _ResizableProjectIntervalState
-    extends ConsumerState<ResizableProjectInterval> {
+    extends ConsumerState<ResizableProjectInterval>
+    with AutoScrollMixin {
   bool _isDraggingStart = false;
   bool _isDraggingEnd = false;
   double _dragOffset = 0;
+  double _cumulativeScrollOffset = 0;
+
+  @override
+  ScrollController? get scrollController => widget.scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    setScrollOffsetChangeCallback(_onScrollOffsetChanged);
+  }
+
+  void _onScrollOffsetChanged(double scrollDelta) {
+    if (_isDraggingStart || _isDraggingEnd) {
+      setState(() {
+        _cumulativeScrollOffset += scrollDelta; // Track cumulative scroll
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,9 +68,16 @@ class _ResizableProjectIntervalState
     final startX = startPosition * widget.dayCardWidth;
     final endX = (endPosition + 1) * widget.dayCardWidth;
 
-    final dragDisplayStartX = _isDraggingStart ? startX + _dragOffset : startX;
-    final dragDisplayEndX = _isDraggingEnd ? endX + _dragOffset : endX;
-    final dragDisplayWidth = dragDisplayEndX - dragDisplayStartX;
+    final dragDisplayStartX = _isDraggingStart
+        ? startX + _dragOffset + _cumulativeScrollOffset
+        : startX;
+    final dragDisplayEndX = _isDraggingEnd
+        ? endX + _dragOffset + _cumulativeScrollOffset
+        : endX;
+    final dragDisplayWidth = (dragDisplayEndX - dragDisplayStartX).clamp(
+      40.0,
+      double.infinity,
+    ); // Minimum width of 40px
 
     return Row(
       children: [
@@ -99,13 +128,15 @@ class _ResizableProjectIntervalState
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        Text(
-                          "${widget.project.startDay.monthOfYear}/${widget.project.startDay.dayOfMonth}-${widget.project.endDay.monthOfYear}/${widget.project.endDay.dayOfMonth}",
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 11,
+                        if (dragDisplayWidth >
+                            120) // Only show date if there's enough space
+                          Text(
+                            "${widget.project.startDay.monthOfYear}/${widget.project.startDay.dayOfMonth}-${widget.project.endDay.monthOfYear}/${widget.project.endDay.dayOfMonth}",
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
@@ -122,14 +153,19 @@ class _ResizableProjectIntervalState
                   setState(() {
                     _isDraggingStart = true;
                     _dragOffset = 0;
+                    _cumulativeScrollOffset = 0; // Reset scroll tracking
                   });
+                  checkAutoScroll(details.globalPosition);
                 },
                 onHorizontalDragUpdate: (details) {
                   setState(() {
                     _dragOffset += details.delta.dx;
                   });
+                  // Use actual global position for auto-scroll detection
+                  checkAutoScroll(details.globalPosition);
                 },
                 onHorizontalDragEnd: (details) async {
+                  stopAutoScroll();
                   await _handleStartDateChange();
                 },
                 child: MouseRegion(
@@ -170,14 +206,19 @@ class _ResizableProjectIntervalState
                   setState(() {
                     _isDraggingEnd = true;
                     _dragOffset = 0;
+                    _cumulativeScrollOffset = 0; // Reset scroll tracking
                   });
+                  checkAutoScroll(details.globalPosition);
                 },
                 onHorizontalDragUpdate: (details) {
                   setState(() {
                     _dragOffset += details.delta.dx;
                   });
+                  // Use actual global position for auto-scroll detection
+                  checkAutoScroll(details.globalPosition);
                 },
                 onHorizontalDragEnd: (details) {
+                  stopAutoScroll();
                   _handleEndDateChange();
                 },
                 child: MouseRegion(
@@ -219,22 +260,26 @@ class _ResizableProjectIntervalState
   }
 
   Future<void> _handleStartDateChange() async {
-    final daysDelta = (_dragOffset / widget.dayCardWidth).round();
+    final totalOffset = _dragOffset + _cumulativeScrollOffset;
+    final daysDelta = (totalOffset / widget.dayCardWidth).round();
 
     if (daysDelta == 0) {
       setState(() {
         _isDraggingStart = false;
         _dragOffset = 0;
+        _cumulativeScrollOffset = 0;
       });
       return;
     }
 
     final newStartDay = widget.project.startDay.addDays(daysDelta);
 
+    // Ensure minimum 1-day duration
     if (newStartDay.compareTo(widget.project.endDay) >= 0) {
       setState(() {
         _isDraggingStart = false;
         _dragOffset = 0;
+        _cumulativeScrollOffset = 0;
       });
       return;
     }
@@ -253,26 +298,32 @@ class _ResizableProjectIntervalState
     setState(() {
       _isDraggingStart = false;
       _dragOffset = 0;
+      _cumulativeScrollOffset = 0;
     });
   }
 
   Future<void> _handleEndDateChange() async {
-    final daysDelta = (_dragOffset / widget.dayCardWidth).round();
+    // Include both drag offset and cumulative scroll offset for accurate position
+    final totalOffset = _dragOffset + _cumulativeScrollOffset;
+    final daysDelta = (totalOffset / widget.dayCardWidth).round();
 
     if (daysDelta == 0) {
       setState(() {
         _isDraggingEnd = false;
         _dragOffset = 0;
+        _cumulativeScrollOffset = 0;
       });
       return;
     }
 
     final newEndDay = widget.project.endDay.addDays(daysDelta);
 
+    // Ensure minimum 1-day duration
     if (newEndDay.compareTo(widget.project.startDay) <= 0) {
       setState(() {
         _isDraggingEnd = false;
         _dragOffset = 0;
+        _cumulativeScrollOffset = 0;
       });
       return;
     }
@@ -291,6 +342,7 @@ class _ResizableProjectIntervalState
     setState(() {
       _isDraggingEnd = false;
       _dragOffset = 0;
+      _cumulativeScrollOffset = 0;
     });
   }
 }

@@ -19,11 +19,19 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
   static const double dayCardWidth = 250;
   static const double timelineOuterSpacing = 2;
   late bool showProjects;
+  late ScrollController _horizontalScrollController;
 
   @override
   void initState() {
     super.initState();
     showProjects = true;
+    _horizontalScrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _horizontalScrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -106,6 +114,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
     return Padding(
       padding: const EdgeInsets.all(timelineOuterSpacing),
       child: SingleChildScrollView(
+        controller: _horizontalScrollController,
         scrollDirection: Axis.horizontal,
         physics: BouncingScrollPhysics(),
         child: SizedBox(
@@ -124,10 +133,12 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                           projects: projects,
                           dayCardWidth: dayCardWidth,
                           timelineStart: datesInMonth.first,
+                          scrollController: _horizontalScrollController,
                         )
                       : TaskCards(
                           timelineStart: datesInMonth.first,
                           dayCardWidth: dayCardWidth,
+                          scrollController: _horizontalScrollController,
                         ),
                 ),
               ),
