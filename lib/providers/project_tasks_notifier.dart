@@ -74,6 +74,10 @@ class ProjectTasksNotifier extends StateNotifier<AsyncValue<List<TaskData>>> {
   Future<List<TaskData>> getSubtasks(int taskId) async {
     return await _database.taskDao.getSubtasks(taskId);
   }
+
+  Future<List<TaskData>> getAllDescendants(int taskId) async {
+    return await _database.taskDao.getAllDescendantsRecursive(taskId);
+  }
 }
 
 final projectTasksNotifier =

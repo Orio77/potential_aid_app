@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart' hide SearchBar;
 import 'package:flutter/services.dart';
+import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/widgets/projects/project_task_list_data.dart';
 import 'package:potential_aid_app/widgets/projects/search_bar.dart';
 
 class ProjectTaskList extends StatefulWidget {
   final int projectId;
-  const ProjectTaskList({super.key, required this.projectId});
+  final void Function(bool) onEditModeChanged;
+  final void Function(List<TaskData>) onSelectionChanged;
+
+  const ProjectTaskList({
+    super.key,
+    required this.projectId,
+    required this.onEditModeChanged,
+    required this.onSelectionChanged,
+  });
 
   @override
   State<ProjectTaskList> createState() => _ProjectTaskListState();
@@ -13,13 +22,16 @@ class ProjectTaskList extends StatefulWidget {
 
 class _ProjectTaskListState extends State<ProjectTaskList> {
   late bool unwinded;
+  late bool editMode;
   String? curQuery;
   int? curDepth;
   late TextEditingController _controller;
+  List<TaskData> selectedTasks = [];
 
   @override
   void initState() {
     super.initState();
+    editMode = false;
     unwinded = false;
     _controller = TextEditingController();
   }
@@ -32,13 +44,25 @@ class _ProjectTaskListState extends State<ProjectTaskList> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(children: [
-      Container(
-        padding: EdgeInsets.all(8.0),
-        child: unwinded ? _buildUnwindedView() : _buildWindedView(),
-      ),
-      ProjectTaskListData(projectId: widget.projectId, query: curQuery, depthLevel: curDepth,),
-    ],);
+    return Column(
+      children: [
+        Container(
+          padding: EdgeInsets.all(8.0),
+          child: unwinded ? _buildUnwindedView() : _buildWindedView(),
+        ),
+        ProjectTaskListData(
+          projectId: widget.projectId,
+          selectedTasks: selectedTasks,
+          query: curQuery,
+          depthLevel: curDepth,
+          editMode: editMode,
+          onSelectionChanged: (tasks) => setState(() {
+            selectedTasks = tasks;
+            widget.onSelectionChanged(selectedTasks);
+          }),
+        ),
+      ],
+    );
   }
 
   Widget _buildUnwindedView() {
@@ -49,14 +73,17 @@ class _ProjectTaskListState extends State<ProjectTaskList> {
         Flexible(
           child: SizedBox(
             width: 300,
-            child: SearchBar(normalTitle: "Search tasks", onSearchChanged: (query) {
-              setState(() {
-                curQuery = query;
-              });
-            }),
+            child: SearchBar(
+              normalTitle: "Search tasks",
+              onSearchChanged: (query) {
+                setState(() {
+                  curQuery = query;
+                });
+              },
+            ),
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 8),
         SizedBox(
           width: 100,
           child: TextField(
@@ -74,20 +101,50 @@ class _ProjectTaskListState extends State<ProjectTaskList> {
             },
           ),
         ),
-        IconButton(onPressed: () {
-          setState(() {
-            _controller.clear();
-            curDepth = null;
-            curQuery = null;
-            unwinded = !unwinded;
-          });
-        }, icon: Icon(Icons.expand_less_rounded))
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            IconButton(
+              padding: EdgeInsets.zero,
+              onPressed: () {
+                setState(() {
+                  editMode = !editMode;
+                  widget.onEditModeChanged(editMode);
+                });
+              },
+              icon: Icon(
+                editMode ? Icons.done_rounded : Icons.edit_note_rounded,
+              ),
+            ),
+            if (editMode)
+              IconButton(
+                onPressed: () => setState(() {
+                  selectedTasks.clear();
+                  widget.onSelectionChanged(selectedTasks);
+                }),
+                icon: Icon(Icons.clear),
+              ),
+            IconButton(
+              padding: EdgeInsets.zero,
+              onPressed: () {
+                setState(() {
+                  _controller.clear();
+                  curDepth = null;
+                  curQuery = null;
+                  unwinded = !unwinded;
+                });
+              },
+              icon: Icon(Icons.expand_less_rounded),
+            ),
+          ],
+        ),
       ],
     );
   }
 
   Widget _buildWindedView() {
-    return GestureDetector(
+    return InkWell(
       onTap: () {
         setState(() {
           unwinded = true;

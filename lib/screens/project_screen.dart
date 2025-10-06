@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/widgets/add_task_dialog.dart';
+import 'package:potential_aid_app/widgets/projects/assign_tasks_dialog.dart';
 import 'package:potential_aid_app/widgets/projects/categories/add_to_category_button.dart';
 import 'package:potential_aid_app/widgets/projects/delete_project.dart';
 import 'package:potential_aid_app/widgets/projects/go_to_parent_button.dart';
@@ -12,13 +13,29 @@ import 'package:potential_aid_app/widgets/projects/project_title.dart';
 import 'package:potential_aid_app/widgets/projects/related_projects_list.dart';
 import 'package:potential_aid_app/widgets/stats/heatmap.dart';
 
-class ProjectScreen extends ConsumerWidget {
+class ProjectScreen extends ConsumerStatefulWidget {
   final ProjectData data;
 
   const ProjectScreen({super.key, required this.data});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ConsumerStatefulWidget> createState() => _ProjectScreenState();
+}
+
+class _ProjectScreenState extends ConsumerState<ProjectScreen> {
+  List<TaskData> selectedTasks = [];
+  late bool taskListEditMode;
+
+  @override
+  void initState() {
+    super.initState();
+    taskListEditMode = false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final data = widget.data;
+
     return Scaffold(
       appBar: AppBar(
         title: ProjectTitle(title: data.name),
@@ -47,22 +64,51 @@ class ProjectScreen extends ConsumerWidget {
             ProjectInfo(project: data),
             Heatmap(projectId: data.id),
             RelatedProjectsList(projectId: data.id),
-            ProjectTaskList(projectId: data.id),
+            ProjectTaskList(
+              projectId: data.id,
+              onEditModeChanged: (editMode) => setState(() {
+                taskListEditMode = editMode;
+              }),
+              onSelectionChanged: (tasks) => setState(() {
+                selectedTasks = tasks;
+              }),
+            ),
           ],
         ),
       ),
       floatingActionButton: Row(
         mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          ElevatedButton(
-            onPressed: () => showLinkProjectDialog(context, data.id),
-            child: Icon(Icons.link_rounded),
-          ),
-          ElevatedButton(
-            onPressed: () => showAddTaskDialog(context, data.id),
-            child: Icon(Icons.add_task),
-          ),
-        ],
+        children: taskListEditMode
+            ? [
+                ElevatedButton.icon(
+                  onPressed: () => showAssignTasksToProjectDialog(
+                    context,
+                    selectedTasks,
+                    data.id,
+                  ),
+                  icon: Icon(Icons.person),
+                  label: Icon(Icons.folder_open),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () => showAssignTasksToTaskDialog(
+                    context,
+                    selectedTasks,
+                    data.id,
+                  ),
+                  icon: Icon(Icons.person),
+                  label: Icon(Icons.add_task_rounded),
+                ),
+              ]
+            : [
+                ElevatedButton(
+                  onPressed: () => showLinkProjectDialog(context, data.id),
+                  child: Icon(Icons.link_rounded),
+                ),
+                ElevatedButton(
+                  onPressed: () => showAddTaskDialog(context, data.id),
+                  child: Icon(Icons.add_task),
+                ),
+              ],
       ),
     );
   }

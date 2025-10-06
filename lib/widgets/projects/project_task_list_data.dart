@@ -5,33 +5,48 @@ import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
 import 'package:potential_aid_app/widgets/projects/complete_task_dialog.dart';
 import 'package:potential_aid_app/widgets/projects/task_list_item.dart';
 
-class ProjectTaskListData extends ConsumerWidget {
+class ProjectTaskListData extends ConsumerStatefulWidget {
   final int projectId;
+  final List<TaskData> selectedTasks;
   final List<bool Function(TaskData)>? predicates;
   final String? query;
   final int? depthLevel;
+  final bool editMode;
+  final void Function(List<TaskData>) onSelectionChanged;
 
   const ProjectTaskListData({
     super.key,
     required this.projectId,
+    required this.selectedTasks,
     this.predicates,
     this.query,
     this.depthLevel,
+    required this.editMode,
+    required this.onSelectionChanged,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final tasksAsync = ref.watch(projectTasksNotifier(projectId));
+  ConsumerState<ConsumerStatefulWidget> createState() =>
+      _ProjectTaskListDataState();
+}
+
+class _ProjectTaskListDataState extends ConsumerState<ProjectTaskListData> {
+  @override
+  Widget build(BuildContext context) {
+    final tasksAsync = ref.watch(projectTasksNotifier(widget.projectId));
 
     return tasksAsync.when(
       data: (tasks) {
-        if (query != null) {
+        if (widget.query != null) {
           tasks = tasks
-              .where((t) => t.name.toLowerCase().contains(query!.toLowerCase()))
+              .where(
+                (t) =>
+                    t.name.toLowerCase().contains(widget.query!.toLowerCase()),
+              )
               .toList();
         }
-        if (depthLevel != null) {
-          tasks = tasks.where((t) => t.depth == depthLevel).toList();
+        if (widget.depthLevel != null) {
+          tasks = tasks.where((t) => t.depth == widget.depthLevel).toList();
         } else {
           tasks = tasks.where((t) => t.depth == 0).toList();
         }
@@ -56,6 +71,17 @@ class ProjectTaskListData extends ConsumerWidget {
           onComplete: () async =>
               await showCompleteTaskDialog(context, taskList[index]),
           onDelete: () async => await _deleteTask(ref, taskList[index]),
+          onSelect: () {
+            final newSelectedTasks = List<TaskData>.from(widget.selectedTasks);
+            if (newSelectedTasks.contains(taskList[index])) {
+              newSelectedTasks.remove(taskList[index]);
+            } else {
+              newSelectedTasks.add(taskList[index]);
+            }
+            widget.onSelectionChanged(newSelectedTasks);
+          },
+          editMode: widget.editMode,
+          isSelected: widget.selectedTasks.contains(taskList[index]),
         ),
         separatorBuilder: (context, index) => SizedBox(height: 8),
         itemCount: taskList.length,

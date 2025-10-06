@@ -136,4 +136,49 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
       task,
     )..where((t) => t.parentTaskId.equals(taskId))).get();
   }
+
+  Future<List<TaskData>> getAllDescendantsRecursive(int taskId) async {
+    final query = '''
+      WITH RECURSIVE task_descendants AS (
+        -- Base case: direct children of the given task
+        SELECT * FROM task WHERE parent_task_id = ?
+        
+        UNION ALL
+        
+        -- Recursive case: children of children
+        SELECT t.* FROM task t
+        INNER JOIN task_descendants td ON t.parent_task_id = td.id
+      )
+      SELECT * FROM task_descendants
+      ORDER BY depth, order_index
+    ''';
+
+    final result = await customSelect(
+      query,
+      variables: [Variable.withInt(taskId)],
+      readsFrom: {task},
+    ).get();
+
+    return result
+        .map(
+          (row) => TaskData.fromJson({
+            'id': row.data['id'],
+            'name': row.data['name'],
+            'projectId': row.data['project_id'],
+            'deadline': row.data['deadline'],
+            'unit': row.data['unit'],
+            'startPoint': row.data['start_point'],
+            'current': row.data['current'],
+            'endGoal': row.data['end_goal'],
+            'parentTaskId': row.data['parent_task_id'],
+            'depth': row.data['depth'],
+            'orderIndex': row.data['order_index'],
+            'isCompleted':
+                (row.data['is_completed'] as int) ==
+                1, // Convert SQLite int to bool
+            'completedAt': row.data['completed_at'],
+          }),
+        )
+        .toList();
+  }
 }
