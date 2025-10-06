@@ -5,6 +5,7 @@ import 'package:potential_aid_app/providers/project_intervals_notifier.dart';
 import 'package:potential_aid_app/providers/timeline_date_notifier.dart';
 import 'package:potential_aid_app/widgets/timeline/date_card_list.dart';
 import 'package:potential_aid_app/widgets/timeline/project_intervals.dart';
+import 'package:potential_aid_app/widgets/timeline/task_cards.dart';
 import 'package:time_machine/time_machine.dart';
 
 class TimelineScreen extends ConsumerStatefulWidget {
@@ -17,10 +18,20 @@ class TimelineScreen extends ConsumerStatefulWidget {
 class _TimelineScreenState extends ConsumerState<TimelineScreen> {
   static const double dayCardWidth = 250;
   static const double timelineOuterSpacing = 2;
+  late bool showProjects;
+  late ScrollController _horizontalScrollController;
 
   @override
   void initState() {
     super.initState();
+    showProjects = true;
+    _horizontalScrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _horizontalScrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -54,6 +65,17 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
           icon: const Icon(Icons.arrow_back_rounded),
         ),
         actions: [
+          Transform.scale(
+            scale: 0.6,
+            child: Switch(
+              value: showProjects,
+              onChanged: (value) {
+                setState(() {
+                  showProjects = value;
+                });
+              },
+            ),
+          ),
           IconButton(
             onPressed: () => ref
                 .read(timelineDateNotifierProvider.notifier)
@@ -92,6 +114,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
     return Padding(
       padding: const EdgeInsets.all(timelineOuterSpacing),
       child: SingleChildScrollView(
+        controller: _horizontalScrollController,
         scrollDirection: Axis.horizontal,
         physics: BouncingScrollPhysics(),
         child: SizedBox(
@@ -105,11 +128,18 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                   scrollDirection: Axis.vertical,
                   physics: BouncingScrollPhysics(),
                   reverse: true,
-                  child: ProjectIntervals(
-                    projects: projects,
-                    dayCardWidth: dayCardWidth,
-                    timelineStart: datesInMonth.first,
-                  ),
+                  child: showProjects
+                      ? ProjectIntervals(
+                          projects: projects,
+                          dayCardWidth: dayCardWidth,
+                          timelineStart: datesInMonth.first,
+                          scrollController: _horizontalScrollController,
+                        )
+                      : TaskCards(
+                          timelineStart: datesInMonth.first,
+                          dayCardWidth: dayCardWidth,
+                          scrollController: _horizontalScrollController,
+                        ),
                 ),
               ),
               DateCardList(dayCardWidth: dayCardWidth, dates: datesInMonth),

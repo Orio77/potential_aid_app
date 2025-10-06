@@ -10,6 +10,7 @@ class IsolatedProjectInterval extends ConsumerWidget {
   final double projectBarHeight;
   final double handleWidth;
   final LocalDate timelineStart;
+  final ScrollController? scrollController;
 
   const IsolatedProjectInterval({
     super.key,
@@ -18,6 +19,7 @@ class IsolatedProjectInterval extends ConsumerWidget {
     required this.projectBarHeight,
     required this.handleWidth,
     required this.timelineStart,
+    this.scrollController,
   });
 
   @override
@@ -32,6 +34,7 @@ class IsolatedProjectInterval extends ConsumerWidget {
       projectBarHeight: projectBarHeight,
       handleWidth: handleWidth,
       timelineStart: timelineStart,
+      scrollController: scrollController,
       onProjectUpdated: (updatedProject) async {
         await ref
             .read(projectIntervalsNotifierProvider.notifier)

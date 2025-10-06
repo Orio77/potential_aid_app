@@ -8,12 +8,14 @@ class ProjectIntervals extends ConsumerWidget {
   final List<ProjectInterval> projects;
   final double dayCardWidth;
   final LocalDate timelineStart;
+  final ScrollController? scrollController;
 
   const ProjectIntervals({
     super.key,
     required this.projects,
     required this.dayCardWidth,
     required this.timelineStart,
+    this.scrollController,
   });
 
   @override
@@ -49,6 +51,7 @@ class ProjectIntervals extends ConsumerWidget {
               projectBarHeight: projectBarHeight,
               handleWidth: 12.0,
               timelineStart: timelineStart,
+              scrollController: scrollController,
             ),
           );
         }),

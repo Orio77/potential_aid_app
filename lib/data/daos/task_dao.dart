@@ -9,13 +9,27 @@ part 'task_dao.g.dart';
 class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
   TaskDao(super.db);
 
-  Future<TaskData> getTask(int taskId) async {
+  Future<TaskData> getTaskById(int taskId) async {
     return await (select(task)..where((t) => t.id.equals(taskId))).getSingle();
   }
 
   Future<TaskData?> getParentTask(int taskId) async {
-    final task = await getTask(taskId);
-    return task.parentTaskId != null ? getTask(task.parentTaskId!) : null;
+    final task = await getTaskById(taskId);
+    return task.parentTaskId != null ? getTaskById(task.parentTaskId!) : null;
+  }
+
+  Future<List<TaskData>> getAllTasks([
+    List<Expression<bool> Function($TaskTable)>? predicates,
+  ]) {
+    final query = select(task);
+
+    if (predicates != null && predicates.isNotEmpty) {
+      for (final pred in predicates) {
+        query.where(pred);
+      }
+    }
+
+    return query.get();
   }
 
   Future<List<TaskData>> searchTasks({
