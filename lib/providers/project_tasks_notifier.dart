@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
@@ -71,8 +72,11 @@ class ProjectTasksNotifier extends StateNotifier<AsyncValue<List<TaskData>>> {
     await _database.taskDao.deleteTask(taskId);
   }
 
-  Future<List<TaskData>> getSubtasks(int taskId) async {
-    return await _database.taskDao.getSubtasks(taskId);
+  Future<List<TaskData>> getSubtasks(
+    int taskId, [
+    List<Expression<bool> Function($TaskTable)>? predicates,
+  ]) async {
+    return await _database.taskDao.getSubtasks(taskId, predicates);
   }
 
   Future<List<TaskData>> getAllDescendants(int taskId) async {

@@ -145,10 +145,18 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
         .get();
   }
 
-  Future<List<TaskData>> getSubtasks(int taskId) async {
-    return await (select(
-      task,
-    )..where((t) => t.parentTaskId.equals(taskId))).get();
+  Future<List<TaskData>> getSubtasks(
+    int taskId,
+    List<Expression<bool> Function($TaskTable)>? predicates,
+  ) async {
+    final query = select(task)..where((t) => t.parentTaskId.equals(taskId));
+
+    if (predicates != null && predicates.isNotEmpty) {
+      for (final pred in predicates) {
+        query.where(pred);
+      }
+    }
+    return await query.get();
   }
 
   Future<List<TaskData>> getAllDescendantsRecursive(int taskId) async {

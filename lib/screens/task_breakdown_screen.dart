@@ -1,15 +1,16 @@
-import 'dart:math';
-
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
+import 'package:potential_aid_app/models/subtask_item.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/task_cards_notifier.dart';
 import 'package:potential_aid_app/providers/task_search_notifier.dart';
 import 'package:potential_aid_app/widgets/util/arrow_painter.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
+import 'package:potential_aid_app/managers/subtask_state_manager.dart';
+import 'package:potential_aid_app/constants/task_breakdown_constants.dart';
 
 class TaskBreakdownScreen extends ConsumerStatefulWidget {
   final TaskData task;
@@ -22,212 +23,135 @@ class TaskBreakdownScreen extends ConsumerStatefulWidget {
 }
 
 class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
-  List<TextEditingController> subtasks = [];
-  List<bool> isExistingSubtask = [];
-  List<GlobalKey> subtaskKeys = [];
-  List<FocusNode> subtaskFocusNodes = [];
-  List<int> subtasksOfSubtasksCount = [];
-  List<int> savedIds = [];
-  List<bool> isSearchMode = [];
-  List<TextEditingController> searchControllers = [];
-  List<FocusNode> searchFocusNodes = [];
+  late final SubtaskStateManager _stateManager;
+  late bool showCompleted;
   final GlobalKey mainTaskKey = GlobalKey();
   bool isLoading = true;
-
-  static const double mainTaskWidth = 160.0;
-  static const double subtasksWidth = 260.0;
-  static const double spacing = 8.0;
-  static const double padding = 8.0;
-
-  double _dynamicTotalWidth = mainTaskWidth + subtasksWidth + spacing + padding;
-  double _dynamicSubtasksWidth = subtasksWidth;
+  double _dynamicTotalWidth =
+      TaskBreakdownConstants.mainTaskWidth +
+      TaskBreakdownConstants.subtasksWidth +
+      TaskBreakdownConstants.spacing +
+      TaskBreakdownConstants.padding;
+  double _dynamicSubtasksWidth = TaskBreakdownConstants.subtasksWidth;
 
   @override
   void initState() {
     super.initState();
+    showCompleted = false;
+    _stateManager = SubtaskStateManager();
     _initializeSubtasks();
   }
 
   @override
   void dispose() {
-    // Dispose all focus nodes and controllers
-    for (var controller in searchControllers) {
-      controller.dispose();
-    }
-    for (var focusNode in subtaskFocusNodes) {
-      focusNode.dispose();
-    }
-    for (var focusNode in searchFocusNodes) {
-      focusNode.dispose();
-    }
+    _stateManager.dispose();
     super.dispose();
   }
 
   void _initializeSubtasks() async {
+    final notCompletedFilter = <Expression<bool> Function($TaskTable)>[
+      (table) => table.isCompleted.equals(false),
+    ];
     final subtasksData = await ref
         .read(projectTasksNotifier(widget.task.projectId).notifier)
-        .getSubtasks(widget.task.id);
-    for (final subtask in subtasksData) {
-      final subtasksOfSubtaskData = await ref
-          .read(projectTasksNotifier(subtask.projectId).notifier)
-          .getSubtasks(subtask.id);
-      subtasksOfSubtasksCount.add(subtasksOfSubtaskData.length);
-    }
-    setState(() {
-      if (subtasksData.isEmpty) {
-        subtasks = [TextEditingController()];
-        isExistingSubtask = [false];
-        subtaskKeys = [GlobalKey()];
-        subtaskFocusNodes = [FocusNode()];
-        savedIds = [-1]; // Initialize with -1 for new subtask
-        subtasksOfSubtasksCount = [0];
-        // Initialize search-related lists for empty state
-        isSearchMode = [false];
-        searchControllers = [TextEditingController()];
-        searchFocusNodes = [FocusNode()];
-      } else {
-        subtasks = subtasksData
-            .map((subt) => TextEditingController(text: subt.name))
-            .toList();
-        isExistingSubtask = List.generate(subtasksData.length, (index) => true);
-        subtaskKeys = List.generate(
-          subtasksData.length,
-          (index) => GlobalKey(),
-        );
-        subtaskFocusNodes = List.generate(
-          subtasksData.length,
-          (index) => FocusNode(),
-        );
-        savedIds = subtasksData.map((subt) => subt.id).toList();
-        isSearchMode = List.generate(subtasksData.length, (index) => false);
-        searchControllers = List.generate(
-          subtasksData.length,
-          (index) => TextEditingController(),
-        );
-        searchFocusNodes = List.generate(
-          subtasksData.length,
-          (index) => FocusNode(),
-        );
+        .getSubtasks(widget.task.id, showCompleted ? [] : notCompletedFilter);
+
+    if (subtasksData.isEmpty) {
+      _stateManager.initializeEmpty();
+    } else {
+      // Prepare data with subtask counts
+      final subtasksWithCounts = <({TaskData taskData, int subtaskCount})>[];
+
+      for (final subtask in subtasksData) {
+        final subtasksOfSubtaskData = await ref
+            .read(projectTasksNotifier(subtask.projectId).notifier)
+            .getSubtasks(subtask.id, showCompleted ? [] : notCompletedFilter);
+        subtasksWithCounts.add((
+          taskData: subtask,
+          subtaskCount: subtasksOfSubtaskData.length,
+        ));
       }
-      _dynamicTotalWidth = _calculateDynamicWidth();
+
+      _stateManager.initializeFromData(subtasksWithCounts);
+    }
+
+    setState(() {
+      _dynamicTotalWidth = _stateManager.calculateDynamicWidth(
+        widget.task.name,
+      );
+      _dynamicSubtasksWidth = _stateManager.calculateDynamicSubtasksWidth();
       isLoading = false;
     });
   }
 
   void _addSubtask() {
+    final newSubtask = _stateManager.addSubtask();
     setState(() {
-      subtasks.add(TextEditingController());
-      isExistingSubtask.add(false);
-      subtaskKeys.add(GlobalKey());
-      subtaskFocusNodes.add(FocusNode());
-      savedIds.add(-1);
-      subtasksOfSubtasksCount.add(0);
-      isSearchMode.add(false);
-      searchControllers.add(TextEditingController());
-      searchFocusNodes.add(FocusNode());
+      _dynamicTotalWidth = _stateManager.calculateDynamicWidth(
+        widget.task.name,
+      );
+      _dynamicSubtasksWidth = _stateManager.calculateDynamicSubtasksWidth();
     });
 
     // Focus on the newly added subtask after the widget is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final newIndex = subtasks.length - 1;
-      if (newIndex >= 0 && newIndex < subtaskFocusNodes.length) {
-        subtaskFocusNodes[newIndex].requestFocus();
-      }
+      newSubtask.focusNode.requestFocus();
     });
   }
 
   void _toggleSearchMode(int index) {
+    final subtask = _stateManager.getSubtask(index);
+    if (subtask == null) return;
+
+    final updatedSubtask = subtask.copyWith(
+      isSearchMode: !subtask.isSearchMode,
+    );
+
     setState(() {
-      isSearchMode[index] = !isSearchMode[index];
-      if (isSearchMode[index]) {
-        searchControllers[index].clear();
+      _stateManager.updateSubtask(index, updatedSubtask);
+      if (updatedSubtask.isSearchMode) {
+        updatedSubtask.searchController.clear();
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          searchFocusNodes[index].requestFocus();
+          updatedSubtask.searchFocusNode.requestFocus();
         });
       } else {
-        searchControllers[index].clear();
+        updatedSubtask.searchController.clear();
       }
     });
   }
 
   void _selectExistingTask(int index, TaskData selectedTask) {
-    setState(() {
-      subtasks[index].text = selectedTask.name;
+    final subtask = _stateManager.getSubtask(index);
+    if (subtask == null) return;
 
-      isExistingSubtask[index] = true;
-      savedIds[index] = selectedTask.id;
+    setState(() {
+      subtask.controller.text = selectedTask.name;
+
+      final updatedSubtask = subtask.copyWith(
+        isExisting: true,
+        savedId: selectedTask.id,
+        isSearchMode: false,
+      );
+
+      _stateManager.updateSubtask(index, updatedSubtask);
+      updatedSubtask.searchController.clear();
 
       _updateSubtaskCount(index, selectedTask.id);
-
-      isSearchMode[index] = false;
-      searchControllers[index].clear();
-
-      _dynamicTotalWidth = _calculateDynamicWidth();
+      _dynamicTotalWidth = _stateManager.calculateDynamicWidth(
+        widget.task.name,
+      );
+      _dynamicSubtasksWidth = _stateManager.calculateDynamicSubtasksWidth();
     });
   }
 
   void _correctIndexes(int index) {
-    if (index >= subtasks.length ||
-        index >= subtaskFocusNodes.length ||
-        index >= isExistingSubtask.length ||
-        index >= subtaskKeys.length ||
-        index >= savedIds.length ||
-        index >= searchControllers.length ||
-        index >= searchFocusNodes.length ||
-        index >= isSearchMode.length) {
-      return;
-    }
-
+    _stateManager.removeSubtask(index);
     setState(() {
-      subtaskFocusNodes[index].dispose();
-      searchControllers[index].dispose();
-      searchFocusNodes[index].dispose();
-
-      subtasks.removeAt(index);
-      isExistingSubtask.removeAt(index);
-      subtaskKeys.removeAt(index);
-      subtaskFocusNodes.removeAt(index);
-      savedIds.removeAt(index);
-      subtasksOfSubtasksCount.removeAt(index);
-      isSearchMode.removeAt(index);
-      searchControllers.removeAt(index);
-      searchFocusNodes.removeAt(index);
+      _dynamicTotalWidth = _stateManager.calculateDynamicWidth(
+        widget.task.name,
+      );
+      _dynamicSubtasksWidth = _stateManager.calculateDynamicSubtasksWidth();
     });
-  }
-
-  double _calculateDynamicWidth() {
-    double maxSubtaskWidth = subtasksWidth;
-
-    for (final controller in subtasks) {
-      if (controller.text.isNotEmpty) {
-        final textPainter = TextPainter(
-          text: TextSpan(
-            text: controller.text,
-            style: const TextStyle(fontSize: 17),
-          ),
-          textDirection: TextDirection.ltr,
-        );
-        textPainter.layout();
-        final neededWidth = textPainter.width + 155;
-        maxSubtaskWidth = max(maxSubtaskWidth, neededWidth);
-      }
-    }
-
-    _dynamicSubtasksWidth = maxSubtaskWidth;
-
-    double dynamicMainTaskWidth = mainTaskWidth;
-    final taskTextPainter = TextPainter(
-      text: TextSpan(
-        text: widget.task.name,
-        style: const TextStyle(fontSize: 20),
-      ),
-      textDirection: TextDirection.ltr,
-    );
-    taskTextPainter.layout();
-    final neededMainWidth = taskTextPainter.width + 60;
-    dynamicMainTaskWidth = max(dynamicMainTaskWidth, neededMainWidth);
-
-    return dynamicMainTaskWidth + maxSubtaskWidth + spacing + padding;
   }
 
   Future<void> _saveSubtasks() async {
@@ -236,36 +160,30 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     );
     final date = ref.read(dateNotifierProvider).toDateTimeUnspecified();
 
+    final subtasks = _stateManager.subtasks;
     for (int i = 0; i < subtasks.length; i++) {
-      if (i >= isExistingSubtask.length || i >= savedIds.length) {
-        break;
-      }
-
+      final subtask = subtasks[i];
       final taskDepth = widget.task.depth + 1;
 
-      if (!isExistingSubtask[i] && savedIds[i] == -1) {
-        final subtask = subtasks[i];
-        if (subtask.text.trim().isNotEmpty) {
-          final taskId = await notifier.addTask(
-            subtask.text.trim(),
-            widget.task.projectId,
-            date,
-            parentTaskId: widget.task.id,
-            depth: taskDepth,
-            orderIndex: i,
-          );
-          setState(() {
-            // Check bounds again before setting
-            if (i < savedIds.length && i < isExistingSubtask.length) {
-              savedIds[i] = taskId;
-              isExistingSubtask[i] = true;
-            }
-          });
-        }
-      } else if (isExistingSubtask[i]) {
-        final taskId = savedIds[i];
+      if (subtask.isNew && subtask.hasValidContent) {
+        final taskId = await notifier.addTask(
+          subtask.controller.text.trim(),
+          widget.task.projectId,
+          date,
+          parentTaskId: widget.task.id,
+          depth: taskDepth,
+          orderIndex: i,
+        );
+
+        // Update the subtask with the new saved ID
+        final updatedSubtask = subtask.copyWith(
+          savedId: taskId,
+          isExisting: true,
+        );
+        _stateManager.updateSubtask(i, updatedSubtask);
+      } else if (subtask.isExisting) {
         await notifier.updateTask(
-          taskId,
+          subtask.savedId,
           TaskCompanion(parentTaskId: Value(widget.task.id)),
         );
       }
@@ -278,18 +196,323 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     final subtasksOfTask = await ref
         .read(projectTasksNotifier(widget.task.projectId).notifier)
         .getSubtasks(taskId);
-    setState(() {
-      if (index < subtasksOfSubtasksCount.length) {
-        subtasksOfSubtasksCount[index] = subtasksOfTask.length;
-      }
-    });
+
+    final subtask = _stateManager.getSubtask(index);
+    if (subtask != null) {
+      final updatedSubtask = subtask.copyWith(
+        subtaskCount: subtasksOfTask.length,
+      );
+      setState(() {
+        _stateManager.updateSubtask(index, updatedSubtask);
+      });
+    }
   }
 
   Future<void> _deleteParentTaskFromSubtasks(int index) async {
-    final taskId = savedIds[index];
-    await ref
-        .read(projectTasksNotifier(widget.task.projectId).notifier)
-        .updateTask(taskId, TaskCompanion(parentTaskId: Value(null)));
+    final subtask = _stateManager.getSubtask(index);
+    if (subtask != null && subtask.savedId != -1) {
+      await ref
+          .read(projectTasksNotifier(widget.task.projectId).notifier)
+          .updateTask(
+            subtask.savedId,
+            TaskCompanion(parentTaskId: Value(null)),
+          );
+    }
+  }
+
+  Widget _buildArrows() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return CustomPaint(
+          painter: ArrowPainter(
+            mainTaskKey: mainTaskKey,
+            subtaskKeys: _stateManager.subtasks.map((s) => s.key).toList(),
+            stackContext: context,
+          ),
+          size: Size(_dynamicTotalWidth, double.infinity),
+        );
+      },
+    );
+  }
+
+  Widget _buildBreakdownSubtaskButton(int index) {
+    final navigator = Navigator.of(context);
+    final subtask = _stateManager.getSubtask(index);
+
+    return IconButton(
+      onPressed: () async {
+        if (subtask == null) return;
+
+        if (subtask.savedId != TaskBreakdownConstants.newSubtaskId) {
+          final task = await ref
+              .read(projectTasksNotifier(widget.task.projectId).notifier)
+              .getTask(subtask.savedId);
+          navigator.pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => TaskBreakdownScreen(task: task),
+            ),
+          );
+        } else {
+          await _saveSubtasks();
+          final updatedSubtask = _stateManager.getSubtask(index);
+          if (updatedSubtask != null &&
+              updatedSubtask.savedId != TaskBreakdownConstants.newSubtaskId) {
+            final task = await ref
+                .read(projectTasksNotifier(widget.task.projectId).notifier)
+                .getTask(updatedSubtask.savedId);
+            navigator.pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => TaskBreakdownScreen(task: task),
+              ),
+            );
+          }
+        }
+      },
+      icon: Icon(Icons.account_tree_rounded),
+    );
+  }
+
+  Widget _buildGoToParentTaskButton() {
+    final navigator = Navigator.of(context);
+
+    return IconButton(
+      onPressed: () async {
+        final parentTask = await ref
+            .read(projectTasksNotifier(widget.task.projectId).notifier)
+            .getTask(widget.task.parentTaskId!);
+        navigator.pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => TaskBreakdownScreen(task: parentTask),
+          ),
+        );
+      },
+      icon: Icon(Icons.arrow_circle_left_outlined),
+    );
+  }
+
+  Widget _buildRemoveSubtaskButton(int index) {
+    return IconButton(
+      onPressed: () async {
+        final subtask = _stateManager.getSubtask(index);
+        if (subtask != null && subtask.isExisting) {
+          await _deleteParentTaskFromSubtasks(index);
+        }
+        _correctIndexes(index);
+      },
+      icon: Icon(Icons.delete),
+    );
+  }
+
+  Widget _buildSubtaskCountInfo(int index) {
+    final subtask = _stateManager.getSubtask(index);
+    final count = subtask?.subtaskCount ?? 0;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(3, 0, 0, 0),
+      child: Container(
+        width: TaskBreakdownConstants.subtaskCountCircleSize,
+        height: TaskBreakdownConstants.subtaskCountCircleSize,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        child: Center(
+          child: Text(
+            count.toString(),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onPrimary,
+              fontSize: TaskBreakdownConstants.subtaskCountFontSize,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchField(int index) {
+    final subtask = _stateManager.getSubtask(index);
+    if (subtask == null) return SizedBox.shrink();
+
+    return SearchTextField<TaskData, TaskSearchNotifier>(
+      controller: subtask.searchController,
+      focusNode: subtask.searchFocusNode,
+      labelText: 'Search existing tasks',
+      searchProvider: taskSearchProvider,
+      getDisplayText: (task) => task.name,
+      onItemSelected: (task) => _selectExistingTask(index, task),
+      leadingIcon: (task) =>
+          const Icon(Icons.task_alt, size: 16, color: Colors.blue),
+      trailingIcon: const Icon(
+        Icons.arrow_forward_ios,
+        size: 12,
+        color: Colors.grey,
+      ),
+      predicates: [
+        (task) => task.projectId == widget.task.projectId, // Same project
+        (task) => !task.isCompleted, // Not completed
+        (task) => task.id != widget.task.id, // Not the current task
+        (task) => !_stateManager.subtasks.any(
+          (s) => s.savedId == task.id,
+        ), // Not already added
+      ],
+      maxResults: TaskBreakdownConstants.maxSearchResults,
+    );
+  }
+
+  Widget _buildSubtaskCard(SubtaskItem? subtask, int index) {
+    if (subtask == null) {
+      return SizedBox.shrink(key: ValueKey('empty_${subtask!.id}'));
+    }
+
+    final isSubtaskCompleted =
+        subtask.taskData != null && subtask.taskData!.isCompleted;
+
+    return InkWell(
+      key: subtask.key,
+      onLongPress: () => subtask.isExisting ? null : _toggleSearchMode(index),
+      child: Card(
+        color: isSubtaskCompleted ? Colors.greenAccent[100] : null,
+        margin: const EdgeInsets.symmetric(vertical: 4.0),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: subtask.isSearchMode
+                    ? _buildSearchField(index)
+                    : TextField(
+                        controller: subtask.controller,
+                        focusNode: subtask.focusNode,
+                        readOnly: subtask.isExisting,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(),
+                          hintText: 'Subtask ${index + 1}',
+                          fillColor: subtask.isExisting
+                              ? (isSubtaskCompleted
+                                    ? Colors.green[300]
+                                    : Colors.grey[400])
+                              : null,
+                          filled: subtask.isExisting,
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            _dynamicTotalWidth = _stateManager
+                                .calculateDynamicWidth(widget.task.name);
+                            _dynamicSubtasksWidth = _stateManager
+                                .calculateDynamicSubtasksWidth();
+                          });
+                        },
+                      ),
+              ),
+
+              _buildSubtaskCountInfo(index),
+              _buildBreakdownSubtaskButton(index),
+              _buildRemoveSubtaskButton(index),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTaskBreakdownScreen(TaskData task) {
+    return SizedBox(
+      width: _dynamicTotalWidth,
+      child: Padding(
+        padding: EdgeInsets.all(TaskBreakdownConstants.padding / 2),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: TaskBreakdownConstants.mainTaskWidth,
+              child: Center(
+                child: Card(
+                  key: mainTaskKey,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxHeight: TaskBreakdownConstants.maxTaskHeight,
+                        minHeight: TaskBreakdownConstants.minTaskHeight,
+                      ),
+                      child: IntrinsicWidth(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (widget.task.parentTaskId != null)
+                              _buildGoToParentTaskButton(),
+                            Flexible(
+                              child: SingleChildScrollView(
+                                child: Text(
+                                  task.name,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.headlineSmall,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(width: TaskBreakdownConstants.spacing),
+            SizedBox(
+              width: _dynamicSubtasksWidth,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: ReorderableListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _stateManager.subtasks.length,
+                      itemBuilder: (context, index) {
+                        final subtask = _stateManager.getSubtask(index);
+                        return _buildSubtaskCard(subtask, index);
+                      },
+                      onReorder: (oldIndex, newIndex) {
+                        if (!_stateManager.canReorder(oldIndex, newIndex)) {
+                          return; // Don't allow reordering existing subtasks
+                        }
+
+                        setState(() {
+                          _stateManager.reorderSubtasks(oldIndex, newIndex);
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShowCompletedSwitch() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.circle_outlined),
+        Switch(
+          value: showCompleted,
+          onChanged: (value) {
+            setState(() {
+              showCompleted = !showCompleted;
+              isLoading = true;
+            });
+            _initializeSubtasks();
+          },
+        ),
+        const Icon(Icons.task_alt_rounded),
+      ],
+    );
   }
 
   @override
@@ -299,6 +522,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text('Depth: ${widget.task.depth}'),
         centerTitle: true,
+        actions: [_buildShowCompletedSwitch()],
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -332,316 +556,6 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
                 ),
               ],
             ),
-    );
-  }
-
-  Widget _buildArrows() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return CustomPaint(
-          painter: ArrowPainter(
-            mainTaskKey: mainTaskKey,
-            subtaskKeys: subtaskKeys,
-            stackContext: context,
-          ),
-          size: Size(_dynamicTotalWidth, double.infinity),
-        );
-      },
-    );
-  }
-
-  Widget _buildBreakdownSubtaskButton(int index) {
-    final navigator = Navigator.of(context);
-
-    return IconButton(
-      onPressed: () async {
-        if (index >= savedIds.length) return;
-
-        if (savedIds[index] != -1) {
-          final subtask = await ref
-              .read(projectTasksNotifier(widget.task.projectId).notifier)
-              .getTask(savedIds[index]);
-          navigator.pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => TaskBreakdownScreen(task: subtask),
-            ),
-          );
-        } else {
-          await _saveSubtasks();
-          if (index < savedIds.length && savedIds[index] != -1) {
-            final subtask = await ref
-                .read(projectTasksNotifier(widget.task.projectId).notifier)
-                .getTask(savedIds[index]);
-            navigator.pushReplacement(
-              MaterialPageRoute(
-                builder: (context) => TaskBreakdownScreen(task: subtask),
-              ),
-            );
-          }
-        }
-      },
-      icon: Icon(Icons.account_tree_rounded),
-    );
-  }
-
-  Widget _buildGoToParentTaskButton() {
-    final navigator = Navigator.of(context);
-
-    return IconButton(
-      onPressed: () async {
-        final parentTask = await ref
-            .read(projectTasksNotifier(widget.task.projectId).notifier)
-            .getTask(widget.task.parentTaskId!);
-        navigator.pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => TaskBreakdownScreen(task: parentTask),
-          ),
-        );
-      },
-      icon: Icon(Icons.arrow_circle_left_outlined),
-    );
-  }
-
-  Widget _buildRemoveSubtaskButton(int index) {
-    return IconButton(
-      onPressed: () async {
-        if (isExistingSubtask[index]) {
-          await _deleteParentTaskFromSubtasks(index);
-        }
-        _correctIndexes(index);
-      },
-      icon: Icon(Icons.delete),
-    );
-  }
-
-  Widget _buildSubtaskCountInfo(int index) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(3, 0, 0, 0),
-      child: Container(
-        width: 24,
-        height: 24,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Theme.of(context).colorScheme.primary,
-        ),
-        child: Center(
-          child: Text(
-            subtasksOfSubtasksCount.length > index
-                ? subtasksOfSubtasksCount[index].toString()
-                : "0",
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onPrimary,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSearchField(int index) {
-    return SearchTextField<TaskData, TaskSearchNotifier>(
-      controller: searchControllers[index],
-      focusNode: searchFocusNodes[index],
-      labelText: 'Search existing tasks',
-      searchProvider: taskSearchProvider,
-      getDisplayText: (task) => task.name,
-      onItemSelected: (task) => _selectExistingTask(index, task),
-      leadingIcon: (task) =>
-          const Icon(Icons.task_alt, size: 16, color: Colors.blue),
-      trailingIcon: const Icon(
-        Icons.arrow_forward_ios,
-        size: 12,
-        color: Colors.grey,
-      ),
-      predicates: [
-        (task) => task.projectId == widget.task.projectId, // Same project
-        (task) => !task.isCompleted, // Not completed
-        (task) => task.id != widget.task.id, // Not the current task
-        (task) => !savedIds.contains(task.id), // Not already added
-      ],
-      maxResults: 5,
-    );
-  }
-
-  Widget _buildTaskBreakdownScreen(TaskData task) {
-    return SizedBox(
-      width: _dynamicTotalWidth,
-      child: Padding(
-        padding: EdgeInsets.all(padding / 2),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: mainTaskWidth,
-              child: Center(
-                child: Card(
-                  key: mainTaskKey,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxHeight: 200.0,
-                        minHeight: 60.0,
-                      ),
-                      child: IntrinsicWidth(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (widget.task.parentTaskId != null)
-                              _buildGoToParentTaskButton(),
-                            Flexible(
-                              child: SingleChildScrollView(
-                                child: Text(
-                                  task.name,
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.headlineSmall,
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(width: spacing),
-            SizedBox(
-              width: _dynamicSubtasksWidth,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Flexible(
-                    child: ReorderableListView.builder(
-                      shrinkWrap: true,
-                      itemCount: subtasks.length,
-                      itemBuilder: (context, index) {
-                        // Comprehensive bounds checking to prevent RangeError
-                        if (index >= subtasks.length ||
-                            index >= subtaskKeys.length ||
-                            index >= subtaskFocusNodes.length ||
-                            index >= isExistingSubtask.length ||
-                            index >= isSearchMode.length ||
-                            index >= searchControllers.length ||
-                            index >= searchFocusNodes.length) {
-                          return const SizedBox.shrink();
-                        }
-
-                        return InkWell(
-                          key: subtaskKeys[index],
-                          onLongPress: () => isExistingSubtask[index]
-                              ? null
-                              : _toggleSearchMode(index),
-                          child: Card(
-                            margin: const EdgeInsets.symmetric(vertical: 4.0),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: isSearchMode[index]
-                                        ? _buildSearchField(index)
-                                        : TextField(
-                                            controller: subtasks[index],
-                                            focusNode: subtaskFocusNodes[index],
-                                            readOnly: isExistingSubtask[index],
-                                            decoration: InputDecoration(
-                                              border: OutlineInputBorder(),
-                                              hintText: 'Subtask ${index + 1}',
-                                              fillColor:
-                                                  isExistingSubtask[index]
-                                                  ? Colors.grey
-                                                  : null,
-                                              filled: isExistingSubtask[index],
-                                            ),
-                                            onChanged: (value) {
-                                              setState(() {
-                                                _dynamicTotalWidth =
-                                                    _calculateDynamicWidth();
-                                              });
-                                            },
-                                          ),
-                                  ),
-
-                                  _buildSubtaskCountInfo(index),
-                                  _buildBreakdownSubtaskButton(index),
-                                  _buildRemoveSubtaskButton(index),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                      onReorder: (oldIndex, newIndex) {
-                        if (isExistingSubtask.length >= oldIndex &&
-                                isExistingSubtask[oldIndex] ||
-                            isExistingSubtask.length >= newIndex &&
-                                isExistingSubtask[newIndex]) {
-                          null;
-                        } else {
-                          setState(() {
-                            final adjustedIndex = newIndex > oldIndex
-                                ? newIndex - 1
-                                : newIndex;
-
-                            final TextEditingController movedController =
-                                subtasks.removeAt(oldIndex);
-                            final bool movedExisting = isExistingSubtask
-                                .removeAt(oldIndex);
-                            final GlobalKey movedKey = subtaskKeys.removeAt(
-                              oldIndex,
-                            );
-                            final FocusNode movedFocusNode = subtaskFocusNodes
-                                .removeAt(oldIndex);
-                            final int movedSavedId = savedIds.removeAt(
-                              oldIndex,
-                            );
-                            final int movedSavedSubtaskCount =
-                                subtasksOfSubtasksCount.removeAt(oldIndex);
-
-                            subtasks.insert(adjustedIndex, movedController);
-                            isExistingSubtask.insert(
-                              adjustedIndex,
-                              movedExisting,
-                            );
-                            subtaskKeys.insert(adjustedIndex, movedKey);
-                            subtaskFocusNodes.insert(
-                              adjustedIndex,
-                              movedFocusNode,
-                            );
-                            savedIds.insert(adjustedIndex, movedSavedId);
-                            subtasksOfSubtasksCount.insert(
-                              adjustedIndex,
-                              movedSavedSubtaskCount,
-                            );
-                            isSearchMode.insert(
-                              adjustedIndex,
-                              isSearchMode.removeAt(oldIndex),
-                            );
-                            searchControllers.insert(
-                              adjustedIndex,
-                              searchControllers.removeAt(oldIndex),
-                            );
-                            searchFocusNodes.insert(
-                              adjustedIndex,
-                              searchFocusNodes.removeAt(oldIndex),
-                            );
-                          });
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
