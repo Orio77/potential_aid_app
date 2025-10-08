@@ -7,7 +7,7 @@ class ProjectInterval {
   final LocalDate startDay; // 1-based day number
   final LocalDate endDay; // 1-based day number
   final double? progress;
-  final Color color;
+  final Color? color;
 
   ProjectInterval({
     this.projectId,

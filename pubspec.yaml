@@ -49,6 +49,7 @@ dependencies:
   flutter_iconpicker: ^4.0.1
   super_drag_and_drop: ^0.9.1
   uuid: ^4.5.1
+  flutter_colorpicker: ^1.1.0
 
 dev_dependencies:
   flutter_test:

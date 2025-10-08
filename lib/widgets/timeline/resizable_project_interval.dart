@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/models/project_interval.dart';
 import 'package:potential_aid_app/widgets/timeline/auto_scroll_drag_handler.dart';
 import 'package:time_machine/time_machine.dart' hide Offset;
+import 'package:potential_aid_app/utils/color_utils.dart';
 
 class ResizableProjectInterval extends ConsumerStatefulWidget {
   final ProjectInterval project;
@@ -89,7 +90,12 @@ class _ResizableProjectIntervalState
               width: dragDisplayWidth,
               height: widget.projectBarHeight,
               decoration: BoxDecoration(
-                color: widget.project.color,
+                gradient: widget.project.color == null
+                    ? null
+                    : ColorUtils.createNorthernLightsGradient(
+                        baseColor: widget.project.color!,
+                        stopAt: 0.7,
+                      ),
                 border: widget.project.progress != null
                     ? Border.all(color: Colors.white, width: 2)
                     : null,
@@ -109,7 +115,11 @@ class _ResizableProjectIntervalState
                       width: dragDisplayWidth * widget.project.progress!,
                       height: widget.projectBarHeight,
                       decoration: BoxDecoration(
-                        color: widget.project.color.withValues(alpha: 0.7),
+                        gradient: widget.project.color == null
+                            ? null
+                            : ColorUtils.createNorthernLightsGradient(
+                                baseColor: widget.project.color!,
+                              ),
                         borderRadius: BorderRadius.circular(6),
                       ),
                     ),
@@ -121,7 +131,7 @@ class _ResizableProjectIntervalState
                           child: Text(
                             widget.project.name,
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: Colors.black,
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
                             ),

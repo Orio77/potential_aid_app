@@ -32,7 +32,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 23;
+  int get schemaVersion => 25;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -40,6 +40,52 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
     },
     onUpgrade: (Migrator m, int from, int to) async {
+      if (from < 25) {
+        // Create new table without unique constraint - include ALL columns
+        await customStatement('''
+          CREATE TABLE task_new (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            project_id INTEGER NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+            unit TEXT,
+            start_point INTEGER DEFAULT 0,
+            current INTEGER NOT NULL DEFAULT 0,
+            end_goal INTEGER NOT NULL DEFAULT 1,
+            deadline INTEGER,
+            is_completed INTEGER NOT NULL DEFAULT 0,
+            completed_at INTEGER,
+            parent_task_id INTEGER REFERENCES task_new(id) ON DELETE CASCADE,
+            order_index INTEGER NOT NULL DEFAULT 0,
+            depth INTEGER NOT NULL DEFAULT 0
+          )
+        ''');
+
+        // Copy data from old table to new table
+        await customStatement('''
+          INSERT INTO task_new (
+            id, name, project_id, unit, start_point, current, end_goal, 
+            deadline, is_completed, completed_at, parent_task_id, order_index, depth
+          )
+          SELECT 
+            id, name, project_id, unit, start_point, current, end_goal, 
+            deadline, is_completed, completed_at, parent_task_id, order_index, depth
+          FROM task
+        ''');
+
+        // Drop the old table
+        await m.deleteTable('task');
+
+        // Rename new table to original name
+        await customStatement('ALTER TABLE task_new RENAME TO task');
+
+        // Recreate the index
+        await customStatement(
+          'CREATE INDEX idx_task_project_id ON task(project_id)',
+        );
+      }
+      if (from < 24) {
+        await m.addColumn(project, project.color);
+      }
       if (from < 23) {
         // Create the project category table (includes orderIndex in the table definition)
         await m.createTable(projectCategory);

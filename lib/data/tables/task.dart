@@ -4,7 +4,7 @@ import 'package:potential_aid_app/data/tables/project.dart';
 @TableIndex(name: 'idx_task_project_id', columns: {#projectId})
 class Task extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get name => text().unique()();
+  TextColumn get name => text()();
   IntColumn get projectId =>
       integer().references(Project, #id, onDelete: KeyAction.cascade)();
   TextColumn get unit => text().nullable()();

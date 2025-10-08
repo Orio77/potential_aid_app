@@ -20,4 +20,5 @@ class Project extends Table {
     #id,
     onDelete: KeyAction.setNull,
   )();
+  IntColumn get color => integer().nullable()();
 }
