@@ -532,20 +532,21 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
                           return const SizedBox.shrink();
                         }
 
-                        return Card(
+                        return InkWell(
                           key: subtaskKeys[index],
-                          margin: const EdgeInsets.symmetric(vertical: 4.0),
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: isSearchMode[index]
-                                      ? _buildSearchField(index)
-                                      : GestureDetector(
-                                          onLongPress: () =>
-                                              _toggleSearchMode(index),
-                                          child: TextField(
+                          onLongPress: () => isExistingSubtask[index]
+                              ? null
+                              : _toggleSearchMode(index),
+                          child: Card(
+                            margin: const EdgeInsets.symmetric(vertical: 4.0),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: isSearchMode[index]
+                                        ? _buildSearchField(index)
+                                        : TextField(
                                             controller: subtasks[index],
                                             focusNode: subtaskFocusNodes[index],
                                             readOnly: isExistingSubtask[index],
@@ -565,12 +566,13 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
                                               });
                                             },
                                           ),
-                                        ),
-                                ),
-                                _buildSubtaskCountInfo(index),
-                                _buildBreakdownSubtaskButton(index),
-                                _buildRemoveSubtaskButton(index),
-                              ],
+                                  ),
+
+                                  _buildSubtaskCountInfo(index),
+                                  _buildBreakdownSubtaskButton(index),
+                                  _buildRemoveSubtaskButton(index),
+                                ],
+                              ),
                             ),
                           ),
                         );
