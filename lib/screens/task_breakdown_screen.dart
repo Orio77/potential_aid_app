@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
+import 'package:potential_aid_app/providers/task_cards_notifier.dart';
 import 'package:potential_aid_app/providers/task_search_notifier.dart';
 import 'package:potential_aid_app/widgets/util/arrow_painter.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
@@ -240,6 +241,8 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
         break;
       }
 
+      final taskDepth = widget.task.depth + 1;
+
       if (!isExistingSubtask[i] && savedIds[i] == -1) {
         final subtask = subtasks[i];
         if (subtask.text.trim().isNotEmpty) {
@@ -248,7 +251,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
             widget.task.projectId,
             date,
             parentTaskId: widget.task.id,
-            depth: widget.task.depth + 1,
+            depth: taskDepth,
             orderIndex: i,
           );
           setState(() {
@@ -266,6 +269,8 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
           TaskCompanion(parentTaskId: Value(widget.task.id)),
         );
       }
+
+      ref.invalidate(taskCardsNotifierProvider(taskDepth));
     }
   }
 

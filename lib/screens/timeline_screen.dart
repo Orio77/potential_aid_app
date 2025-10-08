@@ -6,6 +6,7 @@ import 'package:potential_aid_app/providers/timeline_date_notifier.dart';
 import 'package:potential_aid_app/widgets/timeline/date_card_list.dart';
 import 'package:potential_aid_app/widgets/timeline/project_intervals.dart';
 import 'package:potential_aid_app/widgets/timeline/task_cards.dart';
+import 'package:potential_aid_app/widgets/timeline/task_depth_navigator.dart';
 import 'package:time_machine/time_machine.dart';
 
 class TimelineScreen extends ConsumerStatefulWidget {
@@ -19,12 +20,14 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
   static const double dayCardWidth = 250;
   static const double timelineOuterSpacing = 2;
   late bool showProjects;
+  late int depth;
   late ScrollController _horizontalScrollController;
 
   @override
   void initState() {
     super.initState();
     showProjects = true;
+    depth = 0;
     _horizontalScrollController = ScrollController();
   }
 
@@ -60,22 +63,29 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
       appBar: AppBar(
         title: Text(_formatMonthYear(currentMonth)),
         centerTitle: true,
-        leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(Icons.arrow_back_rounded),
+        leadingWidth: 100,
+        leading: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.arrow_back_rounded),
+              padding: EdgeInsets.zero,
+            ),
+            Transform.scale(
+              scale: 0.6,
+              child: Switch(
+                value: showProjects,
+                onChanged: (value) {
+                  setState(() {
+                    showProjects = value;
+                  });
+                },
+              ),
+            ),
+          ],
         ),
         actions: [
-          Transform.scale(
-            scale: 0.6,
-            child: Switch(
-              value: showProjects,
-              onChanged: (value) {
-                setState(() {
-                  showProjects = value;
-                });
-              },
-            ),
-          ),
           IconButton(
             onPressed: () => ref
                 .read(timelineDateNotifierProvider.notifier)
@@ -94,6 +104,18 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
           ),
         ],
       ),
+      bottomNavigationBar: showProjects
+          ? null
+          : BottomAppBar(
+              height: 40,
+              padding: EdgeInsets.zero,
+              child: TaskDepthNavigator(
+                initialDepth: depth,
+                onDepthChanged: (value) => setState(() {
+                  depth = value;
+                }),
+              ),
+            ),
       body: projects.isEmpty
           ? const CircularProgressIndicator()
           : _buildTimeline(context, projects),
@@ -135,7 +157,9 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                           timelineStart: datesInMonth.first,
                           scrollController: _horizontalScrollController,
                         )
-                      : EnhancedTaskCards(
+                      : TaskCards(
+                          key: ValueKey('tasks_depth_$depth'),
+                          depth: depth,
                           timelineStart: datesInMonth.first,
                           dayCardWidth: dayCardWidth,
                           scrollController: _horizontalScrollController,

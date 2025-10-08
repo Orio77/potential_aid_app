@@ -6,10 +6,11 @@ import 'package:time_machine/time_machine.dart';
 
 class TaskCardsNotifier extends StateNotifier<Map<LocalDate, List<TaskData>>> {
   final AppDatabase _database;
+  final int depth;
 
-  TaskCardsNotifier(this._database) : super({});
+  TaskCardsNotifier(this._database, this.depth) : super({});
 
-  Future<void> loadTasksForMonth(LocalDate monthDate, {int depth = 0}) async {
+  Future<void> loadTasksForMonth(LocalDate monthDate, int depth) async {
     final monthStart = LocalDate(monthDate.yearOfEra, monthDate.monthOfYear, 1);
     final monthEnd = monthStart.addMonths(1).subtractDays(1);
 
@@ -35,9 +36,11 @@ class TaskCardsNotifier extends StateNotifier<Map<LocalDate, List<TaskData>>> {
 }
 
 final taskCardsNotifierProvider =
-    StateNotifierProvider<TaskCardsNotifier, Map<LocalDate, List<TaskData>>>((
-      ref,
-    ) {
+    StateNotifierProvider.family<
+      TaskCardsNotifier,
+      Map<LocalDate, List<TaskData>>,
+      int
+    >((ref, depth) {
       final database = ref.watch(databaseProvider);
-      return TaskCardsNotifier(database);
+      return TaskCardsNotifier(database, depth);
     });

@@ -6,17 +6,18 @@ import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/task_cards_notifier.dart';
 import 'package:potential_aid_app/providers/tasks_notifier.dart';
 import 'package:potential_aid_app/providers/timeline_date_notifier.dart';
+import 'package:potential_aid_app/screens/task_breakdown_screen.dart';
 import 'package:potential_aid_app/widgets/timeline/task_card.dart';
 import 'package:potential_aid_app/widgets/timeline/auto_scroll_drag_handler.dart';
 import 'package:time_machine/time_machine.dart' hide Offset;
 
-class EnhancedTaskCards extends ConsumerStatefulWidget {
+class TaskCards extends ConsumerStatefulWidget {
   final int? depth;
   final double dayCardWidth;
   final LocalDate timelineStart;
   final ScrollController? scrollController;
 
-  const EnhancedTaskCards({
+  const TaskCards({
     super.key,
     required this.timelineStart,
     required this.dayCardWidth,
@@ -25,11 +26,10 @@ class EnhancedTaskCards extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<EnhancedTaskCards> createState() => _EnhancedTaskCardsState();
+  ConsumerState<TaskCards> createState() => _TaskCardsState();
 }
 
-class _EnhancedTaskCardsState extends ConsumerState<EnhancedTaskCards>
-    with AutoScrollMixin {
+class _TaskCardsState extends ConsumerState<TaskCards> with AutoScrollMixin {
   late int depth;
 
   OverlayEntry? _dragOverlay;
@@ -49,6 +49,21 @@ class _EnhancedTaskCardsState extends ConsumerState<EnhancedTaskCards>
     depth = widget.depth ?? 0;
     // Set up scroll offset change callback to update drag overlay position
     setScrollOffsetChangeCallback(_onScrollOffsetChanged);
+  }
+
+  @override
+  void didUpdateWidget(TaskCards oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.depth != widget.depth) {
+      setState(() {
+        depth = widget.depth ?? 0;
+      });
+      // Reload tasks with new depth
+      final currentMonth = ref.read(timelineDateNotifierProvider);
+      ref
+          .read(taskCardsNotifierProvider(depth).notifier)
+          .loadTasksForMonth(currentMonth, depth);
+    }
   }
 
   void _onScrollOffsetChanged(double scrollDelta) {
@@ -76,21 +91,21 @@ class _EnhancedTaskCardsState extends ConsumerState<EnhancedTaskCards>
   @override
   Widget build(BuildContext context) {
     final currentMonth = ref.watch(timelineDateNotifierProvider);
-    final tasksByDate = ref.watch(taskCardsNotifierProvider);
+    final tasksByDate = ref.watch(taskCardsNotifierProvider(depth));
 
     ref.listen(timelineDateNotifierProvider, (previous, next) {
       if (previous != next) {
         ref
-            .read(taskCardsNotifierProvider.notifier)
-            .loadTasksForMonth(next, depth: depth);
+            .read(taskCardsNotifierProvider(depth).notifier)
+            .loadTasksForMonth(next, depth);
       }
     });
 
     if (tasksByDate.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref
-            .read(taskCardsNotifierProvider.notifier)
-            .loadTasksForMonth(currentMonth, depth: depth);
+            .read(taskCardsNotifierProvider(depth).notifier)
+            .loadTasksForMonth(currentMonth, depth);
       });
     }
 
@@ -130,6 +145,15 @@ class _EnhancedTaskCardsState extends ConsumerState<EnhancedTaskCards>
                 _draggingTask != null && _draggingTask!.id == task.id;
 
             return GestureDetector(
+              onDoubleTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) {
+                      return TaskBreakdownScreen(task: task);
+                    },
+                  ),
+                );
+              },
               // Requirement 2: Shorter long press duration
               onLongPressStart: (details) =>
                   _onLongPressStart(details, task, date),
@@ -140,10 +164,6 @@ class _EnhancedTaskCardsState extends ConsumerState<EnhancedTaskCards>
                   _currentDragY = details.globalPosition.dy;
                   _updateDragOverlay(_currentDragX, _currentDragY);
 
-                  // Debug: Print position for troubleshooting
-                  print(
-                    'Drag position: ${details.globalPosition.dx}, Screen width: ${MediaQuery.of(context).size.width}',
-                  );
                   checkAutoScroll(details.globalPosition);
 
                   // Update hovered date for visual feedback
@@ -251,18 +271,29 @@ class _EnhancedTaskCardsState extends ConsumerState<EnhancedTaskCards>
 
       final currentMonth = ref.read(timelineDateNotifierProvider);
       await ref
-          .read(taskCardsNotifierProvider.notifier)
-          .loadTasksForMonth(currentMonth, depth: depth);
+          .read(taskCardsNotifierProvider(depth).notifier)
+          .loadTasksForMonth(currentMonth, depth);
 
       // Success feedback
       if (mounted) {
-        HapticFeedback.mediumImpact();
+        // Strong haptic feedback for success
+        HapticFeedback.heavyImpact();
+
+        // Brief visual feedback (optional)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Task moved to ${_formatDate(newDate)}'),
-            duration: const Duration(seconds: 2),
+            content: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 8),
+                Text('Moved to ${_formatDate(newDate)}'),
+              ],
+            ),
+            duration: const Duration(milliseconds: 800), // Shorter duration
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.only(bottom: 10, left: 20, right: 20),
           ),
         );
       }
@@ -363,11 +394,6 @@ class _EnhancedTaskCardsState extends ConsumerState<EnhancedTaskCards>
       _currentDragX = details.globalPosition.dx;
       _currentDragY = details.globalPosition.dy;
       _updateDragOverlay(_currentDragX, _currentDragY);
-
-      // Debug: Print position for troubleshooting
-      print(
-        'Pan position: ${details.globalPosition.dx}, Screen width: ${MediaQuery.of(context).size.width}',
-      );
 
       // Requirement 6: Auto-scroll near edges with speed correlation
       checkAutoScroll(details.globalPosition);
