@@ -135,7 +135,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                           timelineStart: datesInMonth.first,
                           scrollController: _horizontalScrollController,
                         )
-                      : TaskCards(
+                      : EnhancedTaskCards(
                           timelineStart: datesInMonth.first,
                           dayCardWidth: dayCardWidth,
                           scrollController: _horizontalScrollController,

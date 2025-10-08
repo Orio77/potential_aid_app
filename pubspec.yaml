@@ -47,6 +47,7 @@ dependencies:
   path: ^1.8.0
   drift_flutter: ^0.2.5
   flutter_iconpicker: ^4.0.1
+  super_drag_and_drop: ^0.9.1
 
 dev_dependencies:
   flutter_test:

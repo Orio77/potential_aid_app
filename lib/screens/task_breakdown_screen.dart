@@ -461,7 +461,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
   }
 
   Widget _buildTaskBreakdownScreen(TaskData task) {
-    return Container(
+    return SizedBox(
       width: _dynamicTotalWidth,
       child: Padding(
         padding: EdgeInsets.all(padding / 2),
