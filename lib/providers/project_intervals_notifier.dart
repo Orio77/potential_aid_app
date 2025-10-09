@@ -20,11 +20,13 @@ class ProjectIntervalsNotifier
       monthDate.monthOfYear,
       monthDate.dayOfMonth,
     );
-    // final monthEnd = monthStart.addMonths(1).subtractDays(1);
+    final monthEnd = monthStart.addMonths(1).subtractDays(1);
 
-    final projects = await _database.projectDao.getProjectsInProgress(
-      monthStart.toDateTimeUnspecified(),
-    );
+    final projects = await _database.projectDao
+        .getProjectsInProgressInDateRange(
+          monthStart.toDateTimeUnspecified(),
+          monthEnd.toDateTimeUnspecified(),
+        );
 
     final projectIntervals = projects
         .map(
@@ -66,11 +68,7 @@ class ProjectIntervalsNotifier
       ),
     );
 
-    // Update local state for the updated project
     updateProject(project.projectId!, project);
-
-    // Reload all projects to ensure consistency across all cached data
-    await reloadAllProjects();
   }
 
   Future<void> reloadAllProjects() async {

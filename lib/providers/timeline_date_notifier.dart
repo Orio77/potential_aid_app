@@ -2,7 +2,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:time_machine/time_machine.dart';
 
 class TimelineDateNotifier extends StateNotifier<LocalDate> {
-  TimelineDateNotifier() : super(LocalDate.today());
+  TimelineDateNotifier()
+    : super(
+        LocalDate(
+          LocalDate.today().yearOfEra,
+          LocalDate.today().monthOfYear,
+          1,
+        ),
+      );
 
   void goToMonth(int year, int month) {
     state = LocalDate(year, month, 1);

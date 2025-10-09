@@ -25,6 +25,7 @@ class IsolatedProjectInterval extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final project = ref.watch(individualProjectProvider(projectId));
+    // print(project!.startDay);
 
     if (project == null) return const SizedBox.shrink();
 
