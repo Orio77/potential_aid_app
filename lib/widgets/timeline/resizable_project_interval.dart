@@ -82,6 +82,15 @@ class _ResizableProjectIntervalState
       double.infinity,
     ); // Minimum width of 40px
 
+    final monthEnd = LocalDate(
+      widget.timelineStart.yearOfEra,
+      widget.timelineStart.monthOfYear,
+      1,
+    ).addMonths(1).subtractDays(1);
+
+    final extendsToNextMonth = widget.project.endDay > monthEnd;
+    final startsBeforeMonth = widget.project.startDay < widget.timelineStart;
+
     return Row(
       children: [
         SizedBox(width: dragDisplayStartX),
@@ -169,110 +178,136 @@ class _ResizableProjectIntervalState
               ),
             ),
 
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              child: GestureDetector(
-                onHorizontalDragStart: (details) {
-                  setState(() {
-                    _isDraggingStart = true;
-                    _dragOffset = 0;
-                    _cumulativeScrollOffset = 0; // Reset scroll tracking
-                  });
-                  checkAutoScroll(details.globalPosition);
-                },
-                onHorizontalDragUpdate: (details) {
-                  setState(() {
-                    _dragOffset += details.delta.dx;
-                  });
-                  // Use actual global position for auto-scroll detection
-                  checkAutoScroll(details.globalPosition);
-                },
-                onHorizontalDragEnd: (details) async {
-                  stopAutoScroll();
-                  await _handleStartDateChange();
-                },
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.resizeColumn,
-                  child: Container(
-                    width: widget.handleWidth,
-                    decoration: BoxDecoration(
-                      color: _isDraggingStart
-                          ? Colors.white.withValues(alpha: 0.3)
-                          : Colors.transparent,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(8),
-                        bottomLeft: Radius.circular(8),
+            // Left (start) handle
+            if (!startsBeforeMonth)
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: GestureDetector(
+                  onHorizontalDragStart: (details) {
+                    setState(() {
+                      _isDraggingStart = true;
+                      _dragOffset = 0;
+                      _cumulativeScrollOffset = 0; // Reset scroll tracking
+                    });
+                    checkAutoScroll(details.globalPosition);
+                  },
+                  onHorizontalDragUpdate: (details) {
+                    setState(() {
+                      _dragOffset += details.delta.dx;
+                    });
+                    // Use actual global position for auto-scroll detection
+                    checkAutoScroll(details.globalPosition);
+                  },
+                  onHorizontalDragEnd: (details) async {
+                    stopAutoScroll();
+                    await _handleStartDateChange();
+                  },
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.resizeColumn,
+                    child: Container(
+                      width: widget.handleWidth,
+                      decoration: BoxDecoration(
+                        color: _isDraggingStart
+                            ? Colors.white.withValues(alpha: 0.3)
+                            : Colors.transparent,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(8),
+                          bottomLeft: Radius.circular(8),
+                        ),
                       ),
-                    ),
-                    child: Center(
-                      child: Container(
-                        width: 3,
-                        height: widget.projectBarHeight * 0.5,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.7),
-                          borderRadius: BorderRadius.circular(2),
+                      child: Center(
+                        child: Container(
+                          width: 3,
+                          height: widget.projectBarHeight * 0.5,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.7),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
 
             // Right (end) handle
-            Positioned(
-              right: 0,
-              top: 0,
-              bottom: 0,
-              child: GestureDetector(
-                onHorizontalDragStart: (details) {
-                  setState(() {
-                    _isDraggingEnd = true;
-                    _dragOffset = 0;
-                    _cumulativeScrollOffset = 0; // Reset scroll tracking
-                  });
-                  checkAutoScroll(details.globalPosition);
-                },
-                onHorizontalDragUpdate: (details) {
-                  setState(() {
-                    _dragOffset += details.delta.dx;
-                  });
-                  // Use actual global position for auto-scroll detection
-                  checkAutoScroll(details.globalPosition);
-                },
-                onHorizontalDragEnd: (details) {
-                  stopAutoScroll();
-                  _handleEndDateChange();
-                },
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.resizeColumn,
-                  child: Container(
-                    width: widget.handleWidth,
-                    decoration: BoxDecoration(
-                      color: _isDraggingEnd
-                          ? Colors.white.withValues(alpha: 0.3)
-                          : Colors.transparent,
-                      borderRadius: const BorderRadius.only(
-                        topRight: Radius.circular(8),
-                        bottomRight: Radius.circular(8),
+            if (!extendsToNextMonth)
+              Positioned(
+                right: 0,
+                top: 0,
+                bottom: 0,
+                child: GestureDetector(
+                  onHorizontalDragStart: (details) {
+                    setState(() {
+                      _isDraggingEnd = true;
+                      _dragOffset = 0;
+                      _cumulativeScrollOffset = 0; // Reset scroll tracking
+                    });
+                    checkAutoScroll(details.globalPosition);
+                  },
+                  onHorizontalDragUpdate: (details) {
+                    setState(() {
+                      _dragOffset += details.delta.dx;
+                    });
+                    // Use actual global position for auto-scroll detection
+                    checkAutoScroll(details.globalPosition);
+                  },
+                  onHorizontalDragEnd: (details) {
+                    stopAutoScroll();
+                    _handleEndDateChange();
+                  },
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.resizeColumn,
+                    child: Container(
+                      width: widget.handleWidth,
+                      decoration: BoxDecoration(
+                        color: _isDraggingEnd
+                            ? Colors.white.withValues(alpha: 0.3)
+                            : Colors.transparent,
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(8),
+                          bottomRight: Radius.circular(8),
+                        ),
                       ),
-                    ),
-                    child: Center(
-                      child: Container(
-                        width: 3,
-                        height: widget.projectBarHeight * 0.5,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.7),
-                          borderRadius: BorderRadius.circular(2),
+                      child: Center(
+                        child: Container(
+                          width: 3,
+                          height: widget.projectBarHeight * 0.5,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.7),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
+            if (extendsToNextMonth)
+              Positioned(
+                right: 4, // Small margin from the edge
+                top:
+                    (widget.projectBarHeight -
+                        widget.projectBarHeight / 2 +
+                        widget.projectBarHeight / 3) /
+                    2, // Center vertically
+                child: Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.white, width: 1),
+                  ),
+                  child: Icon(
+                    Icons.chevron_right,
+                    size: 12,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
           ],
         ),
       ],
@@ -281,7 +316,16 @@ class _ResizableProjectIntervalState
 
   int _getDatePosition(LocalDate date, LocalDate timelineStart) {
     if (date < timelineStart) return 0;
-    return date.periodSince(timelineStart).days;
+
+    final monthEnd = LocalDate(
+      timelineStart.yearOfEra,
+      timelineStart.monthOfYear,
+      timelineStart.dayOfMonth,
+    ).addMonths(1).subtractDays(1);
+
+    // Clamp the date to the current month
+    final clampedDate = date <= monthEnd ? date : monthEnd;
+    return clampedDate.periodSince(timelineStart).days;
   }
 
   Future<void> _handleStartDateChange() async {

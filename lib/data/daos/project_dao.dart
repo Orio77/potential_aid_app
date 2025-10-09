@@ -48,6 +48,24 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
         .get();
   }
 
+  Future<List<ProjectData>> getProjectsWithDeadlineInRange(
+    DateTime start,
+    DateTime end,
+  ) async {
+    return await (select(project)..where(
+          (p) =>
+              p.deadline.isSmallerOrEqualValue(end) &
+              p.deadline.isBiggerOrEqualValue(start),
+        ))
+        .get();
+  }
+
+  Future<List<ProjectData>> getProjectsInProgress(DateTime curDate) async {
+    return await (select(
+      project,
+    )..where((p) => p.deadline.isBiggerOrEqualValue(curDate))).get();
+  }
+
   Future<void> deleteProject(int projectId) async {
     await (delete(project)..where((p) => p.id.equals(projectId))).go();
   }
