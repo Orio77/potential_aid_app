@@ -6,6 +6,7 @@ import 'package:potential_aid_app/providers/project_search_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/providers/settings_notifier.dart';
+import 'package:potential_aid_app/screens/project_screen.dart';
 import 'package:potential_aid_app/utils/time_utils.dart';
 import 'package:potential_aid_app/widgets/add_task_dialog.dart';
 import 'package:potential_aid_app/widgets/duration_picker_dialog.dart';
@@ -177,24 +178,36 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SearchTextField<ProjectData, ProjectSearchNotifier>(
-                controller: _projectNameController,
-                focusNode: _focusNode,
-                labelText: 'Project name',
-                validator: _validateProjectName,
-                searchProvider: projectSearchProvider,
-                getDisplayText: (block) => block.name,
-                onItemSelected: (projectData) {
-                  setState(() {
-                    _selectedProject = projectData;
-                  });
-                },
-                leadingIcon: (project) =>
-                    const Icon(Icons.task_alt, size: 16, color: Colors.blue),
-                trailingIcon: const Icon(
-                  Icons.arrow_forward_ios,
-                  size: 12,
-                  color: Colors.grey,
+              InkWell(
+                onLongPress: _selectedProject == null
+                    ? null
+                    : () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                ProjectScreen(data: _selectedProject!),
+                          ),
+                        );
+                      },
+                child: SearchTextField<ProjectData, ProjectSearchNotifier>(
+                  controller: _projectNameController,
+                  focusNode: _focusNode,
+                  labelText: 'Project name',
+                  validator: _validateProjectName,
+                  searchProvider: projectSearchProvider,
+                  getDisplayText: (block) => block.name,
+                  onItemSelected: (projectData) {
+                    setState(() {
+                      _selectedProject = projectData;
+                    });
+                  },
+                  leadingIcon: (project) =>
+                      const Icon(Icons.task_alt, size: 16, color: Colors.blue),
+                  trailingIcon: const Icon(
+                    Icons.arrow_forward_ios,
+                    size: 12,
+                    color: Colors.grey,
+                  ),
                 ),
               ),
 

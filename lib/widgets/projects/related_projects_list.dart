@@ -26,7 +26,7 @@ class RelatedProjectsList extends ConsumerWidget {
 
   Widget _buildDescendantProjectList(List<ProjectData> projects) {
     return Container(
-      height: ((projects.length / 3).ceil() * 240.0) + 50.0,
+      height: ((projects.length / 2).ceil() * 160.0) + 50.0,
       padding: const EdgeInsets.all(8.0),
       child: Card(
         child: Column(
@@ -41,7 +41,7 @@ class RelatedProjectsList extends ConsumerWidget {
             Expanded(
               child: GridView.builder(
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
+                  crossAxisCount: 2,
                   crossAxisSpacing: 8.0,
                   mainAxisSpacing: 8.0,
                   childAspectRatio: 2.0,
