@@ -10,6 +10,7 @@ import 'package:potential_aid_app/utils/time_utils.dart';
 import 'package:potential_aid_app/widgets/add_task_dialog.dart';
 import 'package:potential_aid_app/widgets/duration_picker_dialog.dart';
 import 'package:potential_aid_app/widgets/schedule/block_add_task_list.dart';
+import 'package:potential_aid_app/widgets/tasks_for_deadline_dialog.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
 
 class AddBlockDialog extends ConsumerStatefulWidget {
@@ -165,6 +166,8 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final deadlineDate = ref.watch(dateNotifierProvider);
+
     return AlertDialog(
       title: const Center(child: Text('Add New Block')),
       content: SizedBox(
@@ -209,6 +212,7 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
                 Expanded(
                   child: BlockAddTaskList(
                     project: _selectedProject,
+                    initialTasks: _selectedTasks,
                     onTasksChanged: _onTasksChanged,
                   ),
                 ),
@@ -241,12 +245,32 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
           ),
         ),
       ),
+      actionsAlignment: MainAxisAlignment.spaceBetween,
       actions: [
         TextButton(
           onPressed: () {
             Navigator.of(context).pop();
           },
           child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            final List<TaskData>? selectedTasks =
+                await showTasksForDeadlineDialog(context, deadlineDate);
+
+            if (selectedTasks != null && selectedTasks.isNotEmpty) {
+              final projectId = selectedTasks.first.projectId;
+              final projectData = await ref
+                  .read(projectsNotifierProvider.notifier)
+                  .getProjectById(projectId);
+              _projectNameController.text = projectData!.name;
+              setState(() {
+                _selectedTasks = selectedTasks;
+                _selectedProject = projectData;
+              });
+            }
+          },
+          child: Icon(Icons.list),
         ),
         ElevatedButton(
           onPressed: (_projectNameController.text.isEmpty)

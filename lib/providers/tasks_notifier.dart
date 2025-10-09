@@ -6,7 +6,9 @@ import 'package:potential_aid_app/providers/database_provider.dart';
 class TasksNotifierProvider extends StateNotifier<List<TaskData>> {
   final AppDatabase _database;
   List<Expression<bool> Function($TaskTable)>? predicates;
-  TasksNotifierProvider(this._database, this.predicates) : super([]);
+  TasksNotifierProvider(this._database, this.predicates) : super([]) {
+    loadTasks();
+  }
 
   Future<void> loadTasks() async {
     state = await _database.taskDao.getAllTasks(predicates);

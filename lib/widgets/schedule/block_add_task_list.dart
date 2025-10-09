@@ -45,6 +45,16 @@ class _TaskListState extends ConsumerState<BlockAddTaskList> {
       });
       _updatePredicates();
     }
+
+    // Handle changes to initialTasks
+    if (widget.initialTasks != oldWidget.initialTasks) {
+      setState(() {
+        _tasks = List.from(widget.initialTasks ?? <TaskData>[]);
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        widget.onTasksChanged(_tasks);
+      });
+    }
   }
 
   void _updatePredicates() {
