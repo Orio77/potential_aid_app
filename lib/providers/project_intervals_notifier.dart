@@ -35,6 +35,7 @@ class ProjectIntervalsNotifier
             startDay: LocalDate.dateTime(project.startDate),
             endDay: LocalDate.dateTime(project.deadline),
             color: project.color != null ? Color(project.color!) : null,
+            categoryId: project.category,
             progress: (project.current / project.goal).toDouble(),
           ),
         )

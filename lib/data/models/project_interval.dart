@@ -7,6 +7,7 @@ class ProjectInterval {
   final LocalDate startDay; // 1-based day number
   final LocalDate endDay; // 1-based day number
   final double? progress;
+  final int? categoryId;
   final Color? color;
 
   ProjectInterval({
@@ -16,5 +17,6 @@ class ProjectInterval {
     required this.endDay,
     required this.color,
     this.progress,
+    this.categoryId,
   });
 }

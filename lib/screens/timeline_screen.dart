@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/data/models/project_interval.dart';
 import 'package:potential_aid_app/providers/project_intervals_notifier.dart';
 import 'package:potential_aid_app/providers/timeline_date_notifier.dart';
 import 'package:potential_aid_app/widgets/timeline/date_card_list.dart';
+import 'package:potential_aid_app/widgets/timeline/my_categories_picker_dialog.dart';
 import 'package:potential_aid_app/widgets/timeline/project_intervals.dart';
 import 'package:potential_aid_app/widgets/timeline/task_cards.dart';
 import 'package:potential_aid_app/widgets/timeline/task_depth_navigator.dart';
@@ -22,6 +24,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
   late bool showProjects;
   late int depth;
   late ScrollController _horizontalScrollController;
+  ProjectCategoryData? selectedCategory;
 
   @override
   void initState() {
@@ -42,6 +45,14 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
     final currentMonth = ref.watch(timelineDateNotifierProvider);
     final projectsMap = ref.watch(projectIntervalsNotifierProvider);
     final projects = projectsMap.values.toList();
+
+    List<ProjectInterval> filteredProjects = projects
+        .where(
+          (p) => (selectedCategory == null
+              ? true
+              : p.categoryId == selectedCategory!.id),
+        )
+        .toList();
 
     ref.listen(timelineDateNotifierProvider, (previous, next) {
       if (previous != next) {
@@ -104,21 +115,36 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: showProjects
-          ? null
-          : BottomAppBar(
-              height: 40,
-              padding: EdgeInsets.zero,
-              child: TaskDepthNavigator(
+      bottomNavigationBar: BottomAppBar(
+        height: 40,
+        padding: EdgeInsets.zero,
+        child: showProjects
+            ? IconButton(
+                onPressed: () async {
+                  final category = await showMyCategoriesPickerDialog(context);
+                  setState(() {
+                    selectedCategory = category;
+                  });
+                },
+                icon: Icon(
+                  selectedCategory == null
+                      ? Icons.category
+                      : IconData(
+                          selectedCategory!.iconCodePoint ?? 0,
+                          fontFamily: 'MaterialIcons',
+                        ),
+                ),
+              )
+            : TaskDepthNavigator(
                 initialDepth: depth,
                 onDepthChanged: (value) => setState(() {
                   depth = value;
                 }),
               ),
-            ),
+      ),
       body: projects.isEmpty
           ? const CircularProgressIndicator()
-          : _buildTimeline(context, projects),
+          : _buildTimeline(context, filteredProjects),
       backgroundColor: Colors.white,
     );
   }

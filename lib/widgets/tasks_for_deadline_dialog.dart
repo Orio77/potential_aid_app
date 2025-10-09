@@ -121,10 +121,8 @@ Future<List<TaskData>?> showTasksForDeadlineDialog(
   BuildContext context,
   LocalDate deadlineDate,
 ) async {
-  final tasks = await showDialog(
+  return await showDialog(
     context: context,
     builder: (context) => TasksForDeadlineDialog(deadlineDate: deadlineDate),
   );
-  print(tasks);
-  return tasks;
 }
