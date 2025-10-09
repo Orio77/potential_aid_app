@@ -121,14 +121,14 @@ class _ProjectListState extends ConsumerState<ProjectList> {
 
     if (showCompleted) {
       notifier.setPredicates([
-        (table) => (table.current.isBiggerThan(table.goal)),
+        (table) => (table.current.isBiggerOrEqual(table.goal)),
       ]);
     } else {
       notifier.setPredicates([
         (table) =>
             table.current.isNull() |
             table.goal.isNull() |
-            (table.current.isSmallerOrEqual(table.goal)),
+            (table.current.isSmallerThan(table.goal)),
       ]);
     }
   }
