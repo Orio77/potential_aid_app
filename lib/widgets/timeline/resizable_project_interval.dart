@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/models/project_interval.dart';
+import 'package:potential_aid_app/providers/projects_notifier.dart';
+import 'package:potential_aid_app/screens/project_screen.dart';
 import 'package:potential_aid_app/widgets/timeline/auto_scroll_drag_handler.dart';
 import 'package:time_machine/time_machine.dart' hide Offset;
 import 'package:potential_aid_app/utils/color_utils.dart';
@@ -108,49 +110,62 @@ class _ResizableProjectIntervalState
                   ),
                 ],
               ),
-              child: Stack(
-                children: [
-                  if (widget.project.progress != null)
-                    Container(
-                      width: dragDisplayWidth * widget.project.progress!,
-                      height: widget.projectBarHeight,
-                      decoration: BoxDecoration(
-                        gradient: widget.project.color == null
-                            ? null
-                            : ColorUtils.createNorthernLightsGradient(
-                                baseColor: widget.project.color!,
+              child: InkWell(
+                onDoubleTap: () async {
+                  final projectData = await ref
+                      .read(projectsNotifierProvider.notifier)
+                      .getProjectById(widget.project.projectId!);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => ProjectScreen(data: projectData!),
+                    ),
+                  );
+                },
+                child: Stack(
+                  children: [
+                    if (widget.project.progress != null)
+                      Container(
+                        width: dragDisplayWidth * widget.project.progress!,
+                        height: widget.projectBarHeight,
+                        decoration: BoxDecoration(
+                          gradient: widget.project.color == null
+                              ? null
+                              : ColorUtils.createNorthernLightsGradient(
+                                  baseColor: widget.project.color!,
+                                ),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              widget.project.name,
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
                               ),
-                        borderRadius: BorderRadius.circular(6),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (dragDisplayWidth >
+                              120) // Only show date if there's enough space
+                            Text(
+                              "${widget.project.startDay.monthOfYear}/${widget.project.startDay.dayOfMonth}-${widget.project.endDay.monthOfYear}/${widget.project.endDay.dayOfMonth}",
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 11,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            widget.project.name,
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (dragDisplayWidth >
-                            120) // Only show date if there's enough space
-                          Text(
-                            "${widget.project.startDay.monthOfYear}/${widget.project.startDay.dayOfMonth}-${widget.project.endDay.monthOfYear}/${widget.project.endDay.dayOfMonth}",
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 11,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
 

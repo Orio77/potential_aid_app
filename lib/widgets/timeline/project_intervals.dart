@@ -30,6 +30,7 @@ class ProjectIntervals extends ConsumerWidget {
   ) {
     const projectBarHeight = 40.0;
     const spaceBetweenProjectIntervals = 8.0;
+    const handleWidth = 20.0;
 
     projectList.sort((a, b) => b.endDay.compareTo(a.endDay));
 
@@ -49,7 +50,7 @@ class ProjectIntervals extends ConsumerWidget {
               projectId: project.projectId!,
               dayCardWidth: dayCardWidth,
               projectBarHeight: projectBarHeight,
-              handleWidth: 12.0,
+              handleWidth: handleWidth,
               timelineStart: timelineStart,
               scrollController: scrollController,
             ),
