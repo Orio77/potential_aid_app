@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
-import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
-import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
 
 class TaskCompletionElement extends ConsumerStatefulWidget {
@@ -30,6 +28,7 @@ class TaskCompletionElementState extends ConsumerState<TaskCompletionElement> {
   @override
   void initState() {
     super.initState();
+    _completionController.text = widget.task.current.toString();
     taskLength = widget.task.endGoal;
   }
 
@@ -68,20 +67,6 @@ class TaskCompletionElementState extends ConsumerState<TaskCompletionElement> {
           },
           child: Text('>>'),
         ),
-        // Column(
-        //   children: [
-        //     Transform.scale(
-        //       scale: 0.8,
-        //       child: Switch(
-        //         value: saveAllSubtasks,
-        //         onChanged: (value) {
-        //           saveAllSubtasks = !saveAllSubtasks;
-        //         },
-        //       ),
-        //     ),
-        //     Text('Save Subtasks'),
-        //   ],
-        // ),
       ],
     );
   }
@@ -101,25 +86,18 @@ class TaskCompletionElementState extends ConsumerState<TaskCompletionElement> {
       return null;
     }
 
+    int realCompletion = completionCount - widget.task.current;
+
+    if (realCompletion <= widget.task.current) {
+      return null;
+    }
+
     try {
       final res = await ref
           .read(scheduleNotifierProvider.notifier)
-          .addTaskCompletion(widget.task.id, completionCount);
+          .addTaskCompletion(widget.task.id, realCompletion);
 
       widget.onTaskCompletion?.call(widget.task.id, completionCount);
-
-      final projectDataAsync = await ref.read(
-        projectProvider(widget.task.projectId).future,
-      );
-
-      if (projectDataAsync != null &&
-          widget.task.unit == projectDataAsync.unit) {
-        await ref
-            .read(scheduleNotifierProvider.notifier)
-            .addProjectCompletion(widget.task.projectId, completionCount);
-      }
-
-      ref.invalidate(projectTasksNotifier(widget.task.projectId));
 
       return res;
     } catch (e) {

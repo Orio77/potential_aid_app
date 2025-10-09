@@ -7,6 +7,7 @@ import 'package:potential_aid_app/providers/block_with_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/completion_notifier.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
+import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/providers/stats_provider.dart';
 import 'package:time_machine/time_machine.dart';
@@ -249,6 +250,20 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
         ),
       ),
     );
+
+    final projectData = await _database.projectDao.getProjectById(
+      task.projectId,
+    );
+
+    if (projectData != null && task.unit == projectData.unit) {
+      await _database.projectDao.addProjectCompletion(
+        task.projectId,
+        completedCount,
+      );
+      _ref.invalidate(projectProvider(task.projectId));
+    }
+
+    _ref.invalidate(projectTasksNotifier(task.projectId));
 
     return result;
   }

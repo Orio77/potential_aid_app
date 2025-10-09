@@ -111,6 +111,10 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
 
       bool completed = taskData.current + count >= taskData.endGoal;
 
+      if (completed) {
+        await _completeAllSubtasks(taskId, completedAt);
+      }
+
       final completionId = await into(db.taskCompletion).insert(
         TaskCompletionCompanion.insert(
           taskId: taskId,
@@ -128,6 +132,41 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
       );
 
       return completionId;
+    });
+  }
+
+  Future<void> _completeAllSubtasks(int taskId, DateTime completedAt) async {
+    final incompleteSubtasks = await getAllDescendantsRecursive(
+      taskId,
+    ).then((subtasks) => subtasks.where((s) => !s.isCompleted).toList());
+
+    if (incompleteSubtasks.isEmpty) return;
+
+    await batch((batch) {
+      for (final subtask in incompleteSubtasks) {
+        batch.insert(
+          db.taskCompletion,
+          TaskCompletionCompanion.insert(
+            taskId: subtask.id,
+            count: subtask.endGoal - subtask.current,
+            completedAt: completedAt,
+          ),
+        );
+      }
+    });
+
+    await batch((batch) {
+      for (final subtask in incompleteSubtasks) {
+        batch.update(
+          task,
+          TaskCompanion(
+            isCompleted: Value(true),
+            current: Value(subtask.endGoal),
+            completedAt: Value(completedAt),
+          ),
+          where: (t) => t.id.equals(subtask.id),
+        );
+      }
     });
   }
 
