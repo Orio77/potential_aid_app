@@ -551,7 +551,10 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
                 const SizedBox(width: 16),
                 FloatingActionButton(
                   heroTag: "save_subtasks",
-                  onPressed: () async => await _saveSubtasks(),
+                  onPressed: () async {
+                    await _saveSubtasks();
+                    setState(() {}); // update state
+                  },
                   child: const Icon(Icons.save),
                 ),
               ],
