@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
+import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/stats_provider.dart';
 import 'package:time_machine/time_machine.dart';
 
 class Heatmap extends ConsumerWidget {
   final int projectId;
   final String? title;
-  static LocalDate fromDate = LocalDate(2025, 09, 01);
-  static LocalDate toDate = LocalDate(2025, 09, 30);
 
   const Heatmap({super.key, this.title, required this.projectId});
 
@@ -23,8 +22,13 @@ class Heatmap extends ConsumerWidget {
       ),
     );
 
+    final today = ref.watch(dateNotifierProvider);
+    final startOfMonth = LocalDate(today.yearOfEra, today.monthOfYear, 1);
+    final endOfMonth = startOfMonth.addMonths(1).subtractDays(1);
+
     return completions.when(
-      data: (data) => _buildHeatMapLayout(context, data),
+      data: (data) =>
+          _buildHeatMapLayout(context, data, startOfMonth, endOfMonth),
       loading: () => const CircularProgressIndicator(),
       error: (error, stackTrace) => Text("Error: $error"),
     );
@@ -33,6 +37,8 @@ class Heatmap extends ConsumerWidget {
   Widget _buildHeatMapLayout(
     BuildContext context,
     List<TaskCompletionData> completions,
+    LocalDate startOfMonth,
+    LocalDate endOfMonth,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -42,15 +48,19 @@ class Heatmap extends ConsumerWidget {
             padding: const EdgeInsets.only(bottom: 16.0),
             child: Text(title!, style: Theme.of(context).textTheme.titleMedium),
           ),
-        _buildHeatMap(completions),
+        _buildHeatMap(completions, startOfMonth, endOfMonth),
         const SizedBox(height: 8),
       ],
     );
   }
 
-  Widget _buildHeatMap(List<TaskCompletionData> completions) {
-    final weeks = _getWeeksInRange();
-    final completionMap = _buildCompletionMap(completions);
+  Widget _buildHeatMap(
+    List<TaskCompletionData> completions,
+    LocalDate fromDate,
+    LocalDate toDate,
+  ) {
+    final weeks = _getWeeksInRange(fromDate, toDate);
+    final completionMap = _buildCompletionMap(completions, fromDate, toDate);
 
     return Card(
       child: Container(
@@ -122,7 +132,10 @@ class Heatmap extends ConsumerWidget {
     }
   }
 
-  List<List<LocalDate?>> _getWeeksInRange() {
+  List<List<LocalDate?>> _getWeeksInRange(
+    LocalDate fromDate,
+    LocalDate toDate,
+  ) {
     final weeks = <List<LocalDate?>>[];
     var currentDate = fromDate;
 
@@ -152,6 +165,8 @@ class Heatmap extends ConsumerWidget {
 
   Map<LocalDate, int> _buildCompletionMap(
     List<TaskCompletionData> completions,
+    LocalDate fromDate,
+    LocalDate toDate,
   ) {
     final Map<LocalDate, int> completionMap = {};
 

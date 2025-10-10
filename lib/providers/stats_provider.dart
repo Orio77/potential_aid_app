@@ -124,14 +124,17 @@ Future<List<TaskCompletionData>> getTaskCompletions(
 
     query.where(database.task.projectId.equals(projectId));
 
+    final startOfMonth = LocalDate(
+      monthYearDate.yearOfEra,
+      monthYearDate.monthOfYear,
+      1,
+    );
+    final endOfMonth = startOfMonth.addMonths(1).subtractDays(1);
+
     query.where(
       database.taskCompletion.completedAt.isBetweenValues(
-        DateTime(monthYearDate.yearOfEra, monthYearDate.monthOfYear, 1),
-        DateTime(
-          monthYearDate.yearOfEra,
-          monthYearDate.monthOfYear + 1,
-          1,
-        ).subtract(Duration(days: 1)),
+        startOfMonth.toDateTimeUnspecified(),
+        endOfMonth.toDateTimeUnspecified(),
       ),
     );
 
