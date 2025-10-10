@@ -158,4 +158,37 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
 
     return await query.get();
   }
+
+  Future<BlockCompletionData?> getCompletionForBlock(int blockId) async {
+    return await (select(
+      blockCompletion,
+    )..where((bc) => bc.blockId.equals(blockId))).getSingleOrNull();
+  }
+
+  Future<double?> getBlockCompletionPercentage(int blockId) async {
+    // check if all tasks completed
+    final blockTask = await getBlockWithTasks(blockId);
+    final blockCompletion = await getCompletionForBlock(blockId);
+
+    if (blockCompletion == null) {
+      return null;
+    }
+
+    bool allTasksCompleted = true;
+    if (blockTask.tasks != null && blockTask.tasks!.isNotEmpty) {
+      for (final task in blockTask.tasks!) {
+        bool taskCompleted = task.current >= task.endGoal;
+        allTasksCompleted = allTasksCompleted && taskCompleted;
+      }
+    }
+
+    if (allTasksCompleted) {
+      return 100.0;
+    } else {
+      final percentage =
+          (blockCompletion.count / blockTask.block.lengthMinutes * 100)
+              .toDouble();
+      return percentage;
+    }
+  }
 }

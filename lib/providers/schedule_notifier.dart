@@ -1,6 +1,5 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:potential_aid_app/data/daos/database_completions.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/data/tables/block.dart';
 import 'package:potential_aid_app/providers/block_with_tasks_notifier.dart';
@@ -161,10 +160,10 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
 
     // Check if any of the blocks are completed - prevent reordering if so
     final first = blocks[oldIndex];
-    final firstCompletionPercentage = await _database
+    final firstCompletionPercentage = await _database.blockDao
         .getBlockCompletionPercentage(first.block.id);
     final second = blocks[newIndex];
-    final secondCompletionPercentage = await _database
+    final secondCompletionPercentage = await _database.blockDao
         .getBlockCompletionPercentage(second.block.id);
 
     if (firstCompletionPercentage != null ||

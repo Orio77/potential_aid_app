@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:potential_aid_app/data/daos/database_completions.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/data/tables/block.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
@@ -11,7 +10,9 @@ final blockCompletionPercentageProvider = FutureProvider.family<double?, int>((
   final database = ref.read(databaseProvider);
 
   try {
-    final percentage = await database.getBlockCompletionPercentage(blockId);
+    final percentage = await database.blockDao.getBlockCompletionPercentage(
+      blockId,
+    );
     return percentage;
   } catch (e) {
     rethrow;

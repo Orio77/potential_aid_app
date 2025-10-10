@@ -134,5 +134,7 @@ class _CompleteBlockDialogState extends ConsumerState<CompleteBlockDialog> {
         errors.add("Block: $e");
       }
     }
+
+    ref.invalidate(blockTasksNotifier(widget.blockId));
   }
 }
