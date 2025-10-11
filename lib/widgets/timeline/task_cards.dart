@@ -13,6 +13,7 @@ import 'package:time_machine/time_machine.dart' hide Offset;
 
 class TaskCards extends ConsumerStatefulWidget {
   final int? depth;
+  final int? categoryId;
   final double dayCardWidth;
   final LocalDate timelineStart;
   final ScrollController? scrollController;
@@ -22,6 +23,7 @@ class TaskCards extends ConsumerStatefulWidget {
     required this.timelineStart,
     required this.dayCardWidth,
     this.depth,
+    this.categoryId,
     this.scrollController,
   });
 
@@ -62,7 +64,11 @@ class _TaskCardsState extends ConsumerState<TaskCards> with AutoScrollMixin {
       final currentMonth = ref.read(timelineDateNotifierProvider);
       ref
           .read(taskCardsNotifierProvider(depth).notifier)
-          .loadTasksForMonth(currentMonth, depth);
+          .loadTasksForMonth(
+            monthDate: currentMonth,
+            depth: depth,
+            categoryId: widget.categoryId,
+          );
     }
   }
 
@@ -97,7 +103,11 @@ class _TaskCardsState extends ConsumerState<TaskCards> with AutoScrollMixin {
       if (previous != next) {
         ref
             .read(taskCardsNotifierProvider(depth).notifier)
-            .loadTasksForMonth(next, depth);
+            .loadTasksForMonth(
+              monthDate: next,
+              depth: depth,
+              categoryId: widget.categoryId,
+            );
       }
     });
 
@@ -105,7 +115,11 @@ class _TaskCardsState extends ConsumerState<TaskCards> with AutoScrollMixin {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref
             .read(taskCardsNotifierProvider(depth).notifier)
-            .loadTasksForMonth(currentMonth, depth);
+            .loadTasksForMonth(
+              monthDate: currentMonth,
+              depth: depth,
+              categoryId: widget.categoryId,
+            );
       });
     }
 
@@ -272,7 +286,11 @@ class _TaskCardsState extends ConsumerState<TaskCards> with AutoScrollMixin {
       final currentMonth = ref.read(timelineDateNotifierProvider);
       await ref
           .read(taskCardsNotifierProvider(depth).notifier)
-          .loadTasksForMonth(currentMonth, depth);
+          .loadTasksForMonth(
+            monthDate: currentMonth,
+            depth: depth,
+            categoryId: widget.categoryId,
+          );
 
       // Success feedback
       if (mounted) {

@@ -77,9 +77,6 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
                   p.startDate.isSmallerOrEqualValue(end),
             ))
             .get();
-    print(start);
-    print(end);
-    print(selected);
 
     return selected;
   }
@@ -216,5 +213,11 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
     await (delete(
       projectCategory,
     )..where((pc) => pc.id.equals(projectCategoryId))).go();
+  }
+
+  Future<List<ProjectData>> getProjectsByCategory(int categoryId) async {
+    return await (select(
+      project,
+    )..where((p) => p.category.equals(categoryId))).get();
   }
 }

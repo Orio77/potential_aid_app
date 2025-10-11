@@ -10,7 +10,11 @@ class TaskCardsNotifier extends StateNotifier<Map<LocalDate, List<TaskData>>> {
 
   TaskCardsNotifier(this._database, this.depth) : super({});
 
-  Future<void> loadTasksForMonth(LocalDate monthDate, int depth) async {
+  Future<void> loadTasksForMonth({
+    required LocalDate monthDate,
+    required int depth,
+    int? categoryId,
+  }) async {
     final monthStart = LocalDate(monthDate.yearOfEra, monthDate.monthOfYear, 1);
     final monthEnd = monthStart.addMonths(1).subtractDays(1);
 
@@ -23,6 +27,14 @@ class TaskCardsNotifier extends StateNotifier<Map<LocalDate, List<TaskData>>> {
       ),
       (task) => task.isCompleted.equals(false),
     ]);
+
+    if (categoryId != null) {
+      final projects = await _database.projectDao.getProjectsByCategory(
+        categoryId,
+      );
+      final projectIds = projects.map((p) => p.id).toSet();
+      tasks.retainWhere((task) => projectIds.contains(task.projectId));
+    }
 
     final tasksByDate = <LocalDate, List<TaskData>>{};
     for (final task in tasks) {

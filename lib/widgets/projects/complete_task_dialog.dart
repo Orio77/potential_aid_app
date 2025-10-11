@@ -66,28 +66,32 @@ class _CompleteTaskDialogState extends ConsumerState<CompleteTaskDialog> {
           ),
         ],
       ),
-      title: Text("Complete '${widget.task.name}' Task"),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text("cancel"),
-        ),
-        TextButton(
-          onPressed:
-              (_controller.text.isEmpty ||
-                  int.tryParse(_controller.text)! <= widget.task.current)
-              ? null
-              : () async {
-                  await _completeTask(
-                    widget.task,
-                    int.tryParse(_controller.text)!,
-                  );
-                  navigator.pop();
-                },
-          child: Text("save"),
-        ),
-      ],
+      title: _title(),
+      actions: [_cancelButton(context), _saveButton(navigator)],
       actionsAlignment: MainAxisAlignment.spaceBetween,
+    );
+  }
+
+  Text _title() => Text("Complete '${widget.task.name}' Task");
+
+  TextButton _cancelButton(BuildContext context) {
+    return TextButton(
+      onPressed: () => Navigator.of(context).pop(),
+      child: Text("cancel"),
+    );
+  }
+
+  TextButton _saveButton(NavigatorState navigator) {
+    return TextButton(
+      onPressed:
+          (_controller.text.isEmpty ||
+              int.tryParse(_controller.text)! <= widget.task.current)
+          ? null
+          : () async {
+              await _completeTask(widget.task, int.tryParse(_controller.text)!);
+              navigator.pop();
+            },
+      child: Text("save"),
     );
   }
 

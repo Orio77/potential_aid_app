@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/data/models/project_interval.dart';
 import 'package:potential_aid_app/providers/project_intervals_notifier.dart';
+import 'package:potential_aid_app/providers/task_cards_notifier.dart';
 import 'package:potential_aid_app/providers/timeline_date_notifier.dart';
 import 'package:potential_aid_app/widgets/timeline/date_card_list.dart';
 import 'package:potential_aid_app/widgets/timeline/my_categories_picker_dialog.dart';
@@ -59,6 +60,17 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
         ref
             .read(projectIntervalsNotifierProvider.notifier)
             .loadProjectsForMonth(next);
+
+        // Also reload tasks for the new month if we're showing tasks
+        if (!showProjects) {
+          ref
+              .read(taskCardsNotifierProvider(depth).notifier)
+              .loadTasksForMonth(
+                monthDate: next,
+                depth: depth,
+                categoryId: selectedCategory?.id,
+              );
+        }
       }
     });
 
@@ -91,6 +103,18 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                   setState(() {
                     showProjects = value;
                   });
+
+                  // Reload tasks when switching to task view with category filter
+                  if (!value && selectedCategory != null) {
+                    final currentMonth = ref.read(timelineDateNotifierProvider);
+                    ref
+                        .read(taskCardsNotifierProvider(depth).notifier)
+                        .loadTasksForMonth(
+                          monthDate: currentMonth,
+                          depth: depth,
+                          categoryId: selectedCategory?.id,
+                        );
+                  }
                 },
               ),
             ),
@@ -118,29 +142,48 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
       bottomNavigationBar: BottomAppBar(
         height: 40,
         padding: EdgeInsets.zero,
-        child: showProjects
-            ? IconButton(
-                onPressed: () async {
-                  final category = await showMyCategoriesPickerDialog(context);
-                  setState(() {
-                    selectedCategory = category;
-                  });
-                },
-                icon: Icon(
-                  selectedCategory == null
-                      ? Icons.category
-                      : IconData(
-                          selectedCategory!.iconCodePoint ?? 0,
-                          fontFamily: 'MaterialIcons',
-                        ),
-                ),
-              )
-            : TaskDepthNavigator(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            IconButton(
+              onPressed: () async {
+                final category = await showMyCategoriesPickerDialog(context);
+                final previousCategory = selectedCategory;
+                setState(() {
+                  selectedCategory = category;
+                });
+
+                // Reload tasks if we're showing tasks and category changed
+                if (!showProjects && category?.id != previousCategory?.id) {
+                  final currentMonth = ref.read(timelineDateNotifierProvider);
+                  ref
+                      .read(taskCardsNotifierProvider(depth).notifier)
+                      .loadTasksForMonth(
+                        monthDate: currentMonth,
+                        depth: depth,
+                        categoryId: category?.id,
+                      );
+                }
+              },
+              icon: Icon(
+                selectedCategory == null
+                    ? Icons.category
+                    : IconData(
+                        selectedCategory!.iconCodePoint ?? 0,
+                        fontFamily: 'MaterialIcons',
+                      ),
+              ),
+            ),
+            if (!showProjects) ...[
+              TaskDepthNavigator(
                 initialDepth: depth,
                 onDepthChanged: (value) => setState(() {
                   depth = value;
                 }),
               ),
+            ],
+          ],
+        ),
       ),
       body: projects.isEmpty
           ? const CircularProgressIndicator()
@@ -186,6 +229,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                       : TaskCards(
                           key: ValueKey('tasks_depth_$depth'),
                           depth: depth,
+                          categoryId: selectedCategory?.id,
                           timelineStart: datesInMonth.first,
                           dayCardWidth: dayCardWidth,
                           scrollController: _horizontalScrollController,
