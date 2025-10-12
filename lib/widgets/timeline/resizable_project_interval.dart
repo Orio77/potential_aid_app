@@ -360,6 +360,7 @@ class _ResizableProjectIntervalState
       endDay: widget.project.endDay,
       color: widget.project.color,
       progress: widget.project.progress,
+      categoryId: widget.project.categoryId,
     );
 
     await widget.onProjectUpdated(updatedProject);
