@@ -6,11 +6,13 @@ import 'package:potential_aid_app/widgets/projects/search_bar.dart';
 
 class ProjectTaskList extends StatefulWidget {
   final int projectId;
+  final bool isEditMode;
   final void Function(bool) onEditModeChanged;
   final void Function(List<TaskData>) onSelectionChanged;
 
   const ProjectTaskList({
     super.key,
+    required this.isEditMode,
     required this.projectId,
     required this.onEditModeChanged,
     required this.onSelectionChanged,
@@ -31,9 +33,19 @@ class _ProjectTaskListState extends State<ProjectTaskList> {
   @override
   void initState() {
     super.initState();
-    editMode = false;
+    editMode = widget.isEditMode;
     unwinded = false;
     _controller = TextEditingController();
+  }
+
+  @override
+  void didUpdateWidget(ProjectTaskList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isEditMode != oldWidget.isEditMode) {
+      setState(() {
+        editMode = widget.isEditMode;
+      });
+    }
   }
 
   @override

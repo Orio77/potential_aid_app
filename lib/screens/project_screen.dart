@@ -25,11 +25,19 @@ class ProjectScreen extends ConsumerStatefulWidget {
 class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   List<TaskData> selectedTasks = [];
   late bool taskListEditMode;
+  late ScrollController _scrollController;
 
   @override
   void initState() {
     super.initState();
     taskListEditMode = false;
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -59,6 +67,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
         ],
       ),
       body: SingleChildScrollView(
+        controller: _scrollController,
         child: Column(
           children: [
             ProjectInfo(project: data),
@@ -66,6 +75,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
             RelatedProjectsList(projectId: data.id),
             ProjectTaskList(
               projectId: data.id,
+              isEditMode: taskListEditMode,
               onEditModeChanged: (editMode) => setState(() {
                 taskListEditMode = editMode;
               }),
@@ -81,20 +91,38 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
         children: taskListEditMode
             ? [
                 ElevatedButton.icon(
-                  onPressed: () => showAssignTasksToProjectDialog(
-                    context,
-                    selectedTasks,
-                    data.id,
-                  ),
+                  onPressed: () async {
+                    final res = await showAssignTasksToProjectDialog(
+                      context,
+                      selectedTasks,
+                      data.id,
+                    );
+
+                    if (res != null) {
+                      setState(() {
+                        selectedTasks.clear();
+                        taskListEditMode = false;
+                      });
+                    }
+                  },
                   icon: Icon(Icons.person),
                   label: Icon(Icons.folder_open),
                 ),
                 ElevatedButton.icon(
-                  onPressed: () => showAssignTasksToTaskDialog(
-                    context,
-                    selectedTasks,
-                    data.id,
-                  ),
+                  onPressed: () async {
+                    final res = await showAssignTasksToTaskDialog(
+                      context,
+                      selectedTasks,
+                      data.id,
+                    );
+
+                    if (res != null) {
+                      setState(() {
+                        selectedTasks.clear();
+                        taskListEditMode = false;
+                      });
+                    }
+                  },
                   icon: Icon(Icons.person),
                   label: Icon(Icons.add_task_rounded),
                 ),
