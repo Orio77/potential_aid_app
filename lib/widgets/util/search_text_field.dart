@@ -16,7 +16,7 @@ class SearchTextField<T, N extends StateNotifier<List<T>>>
   final void Function(T)? onItemSelected;
   final Widget Function(T)? leadingIcon;
   final Widget? trailingIcon;
-  final int maxResults;
+  final int? maxResults;
   final bool enabled;
   final void Function(String)? onChanged;
   final List<bool Function(T)>? predicates;
@@ -34,7 +34,7 @@ class SearchTextField<T, N extends StateNotifier<List<T>>>
     this.onItemSelected,
     this.leadingIcon,
     this.trailingIcon,
-    this.maxResults = 3,
+    this.maxResults,
     this.enabled = true,
     this.onChanged,
     this.predicates,
@@ -116,7 +116,9 @@ class _SearchTextFieldState<T, N extends StateNotifier<List<T>>>
   @override
   Widget build(BuildContext context) {
     final searchResults = ref.watch(widget.searchProvider);
-    final limitedResults = searchResults.take(widget.maxResults).toList();
+    final limitedResults = (widget.maxResults != null)
+        ? searchResults.take(widget.maxResults!).toList()
+        : searchResults.toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -156,24 +158,27 @@ class _SearchTextFieldState<T, N extends StateNotifier<List<T>>>
                 borderRadius: BorderRadius.circular(4),
                 color: Theme.of(context).cardColor,
               ),
-              child: ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemBuilder: (context, index) {
-                  final item = limitedResults[index];
-                  return ListTile(
-                    dense: true,
-                    title: Text(
-                      widget.getDisplayText(item),
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                    leading: widget.leadingIcon?.call(item),
-                    trailing: widget.trailingIcon,
-                    onTap: () => _onItemSelected(item),
-                  );
-                },
-                separatorBuilder: (context, index) => const Divider(height: 1),
-                itemCount: limitedResults.length,
+              child: SizedBox(
+                height: 120,
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemBuilder: (context, index) {
+                    final item = limitedResults[index];
+                    return ListTile(
+                      dense: true,
+                      title: Text(
+                        widget.getDisplayText(item),
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      leading: widget.leadingIcon?.call(item),
+                      trailing: widget.trailingIcon,
+                      onTap: () => _onItemSelected(item),
+                    );
+                  },
+                  separatorBuilder: (context, index) =>
+                      const Divider(height: 1),
+                  itemCount: limitedResults.length,
+                ),
               ),
             ),
           ),

@@ -9,13 +9,14 @@ class DateHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentDate = ref.watch(dateNotifierProvider);
+    final today = currentDate;
 
     Future<void> pickDate() async {
       final DateTime? selected = await showDatePicker(
         context: context,
         initialDate: currentDate.toDateTimeUnspecified(),
         firstDate: DateTime(2022),
-        lastDate: currentDate.toDateTimeUnspecified().add(Duration(days: 7)),
+        lastDate: today.add(Period(years: 1)).toDateTimeUnspecified(),
       );
 
       if (selected != null) {

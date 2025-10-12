@@ -52,7 +52,9 @@ class BlockCompletionElementState
             keyboardType: TextInputType.number,
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(blockLength.toString().length),
+              LengthLimitingTextInputFormatter(
+                blockLength.toString().length + 1,
+              ),
             ],
           ),
         ),

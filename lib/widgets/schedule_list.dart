@@ -39,7 +39,8 @@ class ScheduleList extends ConsumerWidget {
 
   Widget _buildScheduleList(List<int> blockIds, WidgetRef ref) {
     return ReorderableListView.builder(
-      buildDefaultDragHandles: true,
+      shrinkWrap: true,
+      physics: ClampingScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: blockIds.length,
       itemBuilder: (context, index) {

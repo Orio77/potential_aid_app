@@ -51,7 +51,9 @@ class TaskCompletionElementState extends ConsumerState<TaskCompletionElement> {
             keyboardType: TextInputType.number,
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(taskLength.toString().length),
+              LengthLimitingTextInputFormatter(
+                taskLength.toString().length + 2,
+              ),
             ],
           ),
         ),
