@@ -56,6 +56,65 @@ class BarMap extends ConsumerWidget {
         final chartData = BarChartData(
           barGroups: barGroupData,
           barTouchData: _getBarTouchData(),
+          titlesData: FlTitlesData(
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                getTitlesWidget: (value, meta) {
+                  final day = value.toInt();
+                  // Show every other day (odd days only)
+                  if (day % 2 == 1) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        day.toString(),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+                reservedSize: 24,
+              ),
+            ),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 25,
+                interval: maxCount > 10 ? (maxCount / 5).ceilToDouble() : null,
+                getTitlesWidget: (value, meta) {
+                  if (value == 0) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Text(
+                      value.toInt().toString(),
+                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                      textAlign: TextAlign.right,
+                    ),
+                  );
+                },
+              ),
+            ),
+            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          ),
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            horizontalInterval: maxCount > 10
+                ? (maxCount / 5).ceilToDouble()
+                : null,
+            getDrawingHorizontalLine: (value) {
+              return FlLine(
+                color: Colors.grey.withValues(alpha: 0.5),
+                strokeWidth: 0.5,
+              );
+            },
+          ),
+          borderData: FlBorderData(show: false),
         );
         return BarChart(chartData);
       },
