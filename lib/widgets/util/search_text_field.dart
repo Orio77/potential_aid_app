@@ -96,10 +96,6 @@ class _SearchTextFieldState<T, N extends StateNotifier<List<T>>>
   }
 
   void _onItemSelected(T item) {
-    setState(() {
-      _showSuggestions = false;
-    });
-
     final text = widget.getDisplayText(item);
 
     _controller
@@ -111,6 +107,9 @@ class _SearchTextFieldState<T, N extends StateNotifier<List<T>>>
     widget.onItemSelected?.call(item);
 
     _onTextChanged(text);
+    setState(() {
+      _showSuggestions = false;
+    });
   }
 
   @override

@@ -19,7 +19,7 @@ class MainScreen extends ConsumerWidget {
           padding: EdgeInsets.all(8),
           child: Text(
             'Daily Schedule',
-            style: TextStyle(fontWeight: FontWeight.w500, fontSize: 30),
+            style: TextStyle(fontWeight: FontWeight.w500, fontSize: 24),
           ),
         ),
         centerTitle: true,

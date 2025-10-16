@@ -60,6 +60,7 @@ Future<double> calculateAverageUnitPerDay(
               ),
             ])
             ..addColumns([database.taskCompletion.count])
+            ..where(database.task.projectId.equals(projectId))
             ..where(
               unit != null ? database.task.unit.equals(unit) : Constant(false),
             )

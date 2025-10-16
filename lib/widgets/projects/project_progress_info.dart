@@ -9,6 +9,7 @@ class ProjectProgressInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final title = project.name;
     final current = project.current;
     final goal = project.goal;
     final unit = project.unit;
@@ -16,6 +17,7 @@ class ProjectProgressInfo extends StatelessWidget {
 
     return _buildProgressSection(
       context,
+      title,
       current,
       goal,
       unit,
@@ -26,6 +28,7 @@ class ProjectProgressInfo extends StatelessWidget {
 
 Widget _buildProgressSection(
   BuildContext context,
+  String title,
   int current,
   int goal,
   String unit,
@@ -58,7 +61,7 @@ Widget _buildProgressSection(
               children: [
                 Flexible(
                   child: Text(
-                    'Progress',
+                    title,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: theme.colorScheme.onSurface,

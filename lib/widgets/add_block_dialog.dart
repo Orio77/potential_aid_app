@@ -8,7 +8,6 @@ import 'package:potential_aid_app/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/providers/settings_notifier.dart';
 import 'package:potential_aid_app/screens/project_screen.dart';
 import 'package:potential_aid_app/utils/time_utils.dart';
-import 'package:potential_aid_app/widgets/add_task_dialog.dart';
 import 'package:potential_aid_app/widgets/duration_picker_dialog.dart';
 import 'package:potential_aid_app/widgets/schedule/block_add_task_list.dart';
 import 'package:potential_aid_app/widgets/tasks_for_deadline_dialog.dart';
@@ -211,18 +210,11 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
                 ),
               ),
 
-              const SizedBox(height: 8),
-
               if (_selectedProject != null) ...[
-                ElevatedButton(
-                  onPressed: () =>
-                      showAddTaskDialog(context, _selectedProject!.id),
-                  child: Icon(Icons.add_task),
-                ),
-
                 const SizedBox(height: 8),
 
-                Expanded(
+                SizedBox(
+                  height: 190,
                   child: BlockAddTaskList(
                     project: _selectedProject,
                     initialTasks: _selectedTasks,
