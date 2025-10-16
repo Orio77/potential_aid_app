@@ -35,26 +35,18 @@ class _TaskListState extends ConsumerState<BlockAddTaskList> {
   @override
   void didUpdateWidget(BlockAddTaskList oldWidget) {
     super.didUpdateWidget(oldWidget);
+
     if (widget.project?.id != oldWidget.project?.id) {
       setState(() {
-        _tasks.clear();
+        // Use the initialTasks from parent (which handles caching)
+        _tasks = List.from(widget.initialTasks ?? []);
         _taskNameController.clear();
       });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        widget.onTasksChanged(_tasks);
-      });
-      _updatePredicates();
-    }
 
-    // Handle changes to initialTasks
-    if (widget.initialTasks != oldWidget.initialTasks) {
-      setState(() {
-        _tasks = List.from(widget.initialTasks ?? <TaskData>[]);
-      });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        widget.onTasksChanged(_tasks);
-      });
-    }
+      // Notify parent of the current task state
+      widget.onTasksChanged(_tasks);
+      _updatePredicates();
+    } else {}
   }
 
   void _updatePredicates() {
@@ -111,7 +103,7 @@ class _TaskListState extends ConsumerState<BlockAddTaskList> {
         _taskNameController.clear();
       });
       widget.onTasksChanged(_tasks);
-    }
+    } else {}
   }
 
   void _removeTaskFromList(int index) {

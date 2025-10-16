@@ -29,6 +29,8 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
   String? _errorMessage;
   ProjectData? _selectedProject;
   List<TaskData> _selectedTasks = [];
+  final Map<int, List<TaskData>> _cachedProjectTasks =
+      {}; // Move caching to parent
 
   @override
   void initState() {
@@ -38,7 +40,14 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
     _projectNameController.addListener(() {
       setState(() {
         if (_projectNameController.text.isEmpty) {
+          // Cache current tasks for the project being cleared
+          if (_selectedProject != null) {
+            _cachedProjectTasks[_selectedProject!.id] = List.from(
+              _selectedTasks,
+            );
+          }
           _selectedProject = null;
+          _selectedTasks.clear(); // Clear tasks when project is cleared
         }
       });
     });
@@ -197,7 +206,23 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
                   getDisplayText: (block) => block.name,
                   onItemSelected: (projectData) {
                     setState(() {
+                      // Cache current tasks for the previous project
+                      if (_selectedProject != null) {
+                        _cachedProjectTasks[_selectedProject!.id] = List.from(
+                          _selectedTasks,
+                        );
+                      }
+
                       _selectedProject = projectData;
+
+                      // Restore cached tasks for the newly selected project
+                      if (_cachedProjectTasks.containsKey(projectData.id)) {
+                        _selectedTasks = List.from(
+                          _cachedProjectTasks[projectData.id]!,
+                        );
+                      } else {
+                        _selectedTasks.clear();
+                      }
                     });
                   },
                   leadingIcon: (project) =>
