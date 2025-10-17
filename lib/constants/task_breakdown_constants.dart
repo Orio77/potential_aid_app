@@ -2,7 +2,7 @@
 class TaskBreakdownConstants {
   static const double mainTaskWidth = 160.0;
   static const double subtasksWidth = 260.0;
-  static const double spacing = 8.0;
+  static const double spacing = 20.0;
   static const double padding = 8.0;
   static const double textFieldPadding = 155.0;
   static const double mainTaskTextPadding = 60.0;

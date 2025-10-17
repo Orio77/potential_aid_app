@@ -6,7 +6,6 @@ import 'package:potential_aid_app/providers/block_with_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/project_search_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
-import 'package:potential_aid_app/widgets/add_task_dialog.dart';
 import 'package:potential_aid_app/widgets/duration_picker_dialog.dart';
 import 'package:potential_aid_app/widgets/schedule/block_add_task_list.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
@@ -177,20 +176,12 @@ class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
                 ),
               ),
 
-              const SizedBox(height: 8),
-
               if (_selectedProject != null) ...[
-                ElevatedButton(
-                  onPressed: () =>
-                      showAddTaskDialog(context, _selectedProject!.id),
-                  child: Icon(Icons.add_task),
-                ),
-
                 const SizedBox(height: 8),
 
-                Expanded(
+                SizedBox(
+                  height: 190,
                   child: BlockAddTaskList(
-                    key: ValueKey(_selectedProject?.id),
                     project: _selectedProject,
                     initialTasks: _selectedTasks,
                     onTasksChanged: (tasks) {
