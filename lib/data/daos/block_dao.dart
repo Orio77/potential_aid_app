@@ -180,6 +180,8 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
         bool taskCompleted = task.current >= task.endGoal;
         allTasksCompleted = allTasksCompleted && taskCompleted;
       }
+    } else {
+      allTasksCompleted = false;
     }
 
     if (allTasksCompleted) {

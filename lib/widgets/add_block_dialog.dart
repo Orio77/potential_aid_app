@@ -184,51 +184,65 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              InkWell(
-                onLongPress: _selectedProject == null
-                    ? null
-                    : () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                ProjectScreen(data: _selectedProject!),
-                          ),
-                        );
+              Row(
+                children: [
+                  Expanded(
+                    flex: 1,
+                    child: SearchTextField<ProjectData, ProjectSearchNotifier>(
+                      controller: _projectNameController,
+                      focusNode: _focusNode,
+                      labelText: 'Project name',
+                      validator: _validateProjectName,
+                      searchProvider: projectSearchProvider,
+                      getDisplayText: (block) => block.name,
+                      onItemSelected: (projectData) {
+                        setState(() {
+                          if (_selectedProject != null) {
+                            _cachedProjectTasks[_selectedProject!.id] =
+                                List.from(_selectedTasks);
+                          }
+
+                          _selectedProject = projectData;
+
+                          if (_cachedProjectTasks.containsKey(projectData.id)) {
+                            _selectedTasks = List.from(
+                              _cachedProjectTasks[projectData.id]!,
+                            );
+                          } else {
+                            _selectedTasks.clear();
+                          }
+                        });
                       },
-                child: SearchTextField<ProjectData, ProjectSearchNotifier>(
-                  controller: _projectNameController,
-                  focusNode: _focusNode,
-                  labelText: 'Project name',
-                  validator: _validateProjectName,
-                  searchProvider: projectSearchProvider,
-                  getDisplayText: (block) => block.name,
-                  onItemSelected: (projectData) {
-                    setState(() {
-                      if (_selectedProject != null) {
-                        _cachedProjectTasks[_selectedProject!.id] = List.from(
-                          _selectedTasks,
-                        );
-                      }
-
-                      _selectedProject = projectData;
-
-                      if (_cachedProjectTasks.containsKey(projectData.id)) {
-                        _selectedTasks = List.from(
-                          _cachedProjectTasks[projectData.id]!,
-                        );
-                      } else {
-                        _selectedTasks.clear();
-                      }
-                    });
-                  },
-                  leadingIcon: (project) =>
-                      const Icon(Icons.task_alt, size: 16, color: Colors.blue),
-                  trailingIcon: const Icon(
-                    Icons.arrow_forward_ios,
-                    size: 12,
-                    color: Colors.grey,
+                      leadingIcon: (project) => const Icon(
+                        Icons.task_alt,
+                        size: 16,
+                        color: Colors.blue,
+                      ),
+                      trailingIcon: const Icon(
+                        Icons.arrow_forward_ios,
+                        size: 12,
+                        color: Colors.grey,
+                      ),
+                    ),
                   ),
-                ),
+
+                  if (_selectedProject != null) ...[
+                    SizedBox(
+                      width: 40,
+                      child: IconButton(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  ProjectScreen(data: _selectedProject!),
+                            ),
+                          );
+                        },
+                        icon: Icon(Icons.arrow_right_alt_rounded),
+                      ),
+                    ),
+                  ],
+                ],
               ),
 
               if (_selectedProject != null) ...[
