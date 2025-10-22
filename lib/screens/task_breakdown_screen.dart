@@ -1,16 +1,17 @@
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:potential_aid_app/constants/task_breakdown_constants.dart';
 import 'package:potential_aid_app/data/database.dart';
+import 'package:potential_aid_app/managers/subtask_state_manager.dart';
 import 'package:potential_aid_app/models/subtask_item.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/task_cards_notifier.dart';
 import 'package:potential_aid_app/providers/task_search_notifier.dart';
+import 'package:potential_aid_app/widgets/projects/complete_task_dialog.dart';
 import 'package:potential_aid_app/widgets/util/arrow_painter.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
-import 'package:potential_aid_app/managers/subtask_state_manager.dart';
-import 'package:potential_aid_app/constants/task_breakdown_constants.dart';
 
 class TaskBreakdownScreen extends ConsumerStatefulWidget {
   final TaskData task;
@@ -184,7 +185,10 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
       } else if (subtask.isExisting) {
         await notifier.updateTask(
           subtask.savedId,
-          TaskCompanion(parentTaskId: Value(widget.task.id)),
+          TaskCompanion(
+            parentTaskId: Value(widget.task.id),
+            orderIndex: Value(i),
+          ),
         );
       }
 
@@ -368,52 +372,111 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     final isSubtaskCompleted =
         subtask.taskData != null && subtask.taskData!.isCompleted;
 
-    return InkWell(
-      key: subtask.key,
-      onLongPress: () => subtask.isExisting ? null : _toggleSearchMode(index),
-      child: Card(
-        color: isSubtaskCompleted ? Colors.greenAccent[100] : null,
-        margin: const EdgeInsets.symmetric(vertical: 4.0),
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Row(
-            children: [
-              Expanded(
-                child: subtask.isSearchMode
-                    ? _buildSearchField(index)
-                    : TextField(
-                        controller: subtask.controller,
-                        focusNode: subtask.focusNode,
-                        readOnly: subtask.isExisting,
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(),
-                          hintText: 'Subtask ${index + 1}',
-                          fillColor: subtask.isExisting
-                              ? (isSubtaskCompleted
-                                    ? Colors.green[300]
-                                    : Colors.grey[400])
-                              : null,
-                          filled: subtask.isExisting,
-                        ),
-                        onChanged: (value) {
-                          setState(() {
-                            _dynamicTotalWidth = _stateManager
-                                .calculateDynamicWidth(widget.task.name);
-                            _dynamicSubtasksWidth = _stateManager
-                                .calculateDynamicSubtasksWidth();
-                          });
-                        },
+    return Card(
+      key: Key(subtask.id),
+      color: isSubtaskCompleted ? Colors.greenAccent[100] : null,
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Row(
+          children: [
+            Expanded(
+              child: subtask.isSearchMode
+                  ? _buildSearchField(index)
+                  : TextField(
+                      controller: subtask.controller,
+                      focusNode: subtask.focusNode,
+                      readOnly: subtask.isExisting,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'Subtask ${index + 1}',
+                        fillColor: subtask.isExisting
+                            ? (isSubtaskCompleted
+                                  ? Colors.green[300]
+                                  : Colors.grey[400])
+                            : null,
+                        filled: subtask.isExisting,
                       ),
-              ),
+                      onChanged: (value) {
+                        setState(() {
+                          _dynamicTotalWidth = _stateManager
+                              .calculateDynamicWidth(widget.task.name);
+                          _dynamicSubtasksWidth = _stateManager
+                              .calculateDynamicSubtasksWidth();
+                        });
+                      },
+                    ),
+            ),
 
-              _buildSubtaskCountInfo(index),
-              _buildBreakdownSubtaskButton(index),
-              _buildRemoveSubtaskButton(index),
-            ],
-          ),
+            _buildSubtaskCountInfo(index),
+            _buildCompleteTaskButton(subtask),
+            _buildChangeDeadlineForTomorrowButton(subtask),
+            _buildToggleSearchButton(index, subtask),
+            _buildBreakdownSubtaskButton(index),
+            _buildRemoveSubtaskButton(index),
+          ],
         ),
       ),
     );
+  }
+
+  Widget _buildToggleSearchButton(int index, SubtaskItem subtask) {
+    return subtask.isExisting
+        ? SizedBox.shrink()
+        : IconButton(
+            onPressed: () => _toggleSearchMode(index),
+            icon: Icon(Icons.search),
+          );
+  }
+
+  Widget _buildChangeDeadlineForTomorrowButton(SubtaskItem subtask) {
+    return subtask.isExisting
+        ? SizedBox.shrink()
+        : IconButton(
+            onPressed: () async {
+              final date = ref.read(dateNotifierProvider);
+              var tomorrow = date.addDays(1).toDateTimeUnspecified();
+              await ref
+                  .read(projectTasksNotifier(widget.task.projectId).notifier)
+                  .updateTask(
+                    subtask.savedId,
+                    TaskCompanion(deadline: Value(tomorrow)),
+                  );
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Center(
+                    child: Text(
+                      "Moved subtask to: ${tomorrow.day}-${tomorrow.month}-${tomorrow.year}",
+                      style: TextStyle(fontSize: 20),
+                    ),
+                  ),
+                  backgroundColor: Colors.green,
+                  duration: Duration(milliseconds: 1000), // 0.5 seconds
+                ),
+              );
+            },
+            icon: Icon(Icons.edit_calendar_rounded),
+          );
+  }
+
+  Widget _buildCompleteTaskButton(SubtaskItem subtask) {
+    return (!subtask.isExisting ||
+            subtask.taskData == null ||
+            subtask.taskData!.isCompleted)
+        ? SizedBox.shrink()
+        : IconButton(
+            onPressed: () async {
+              final task = await ref
+                  .read(projectTasksNotifier(widget.task.projectId).notifier)
+                  .getTask(subtask.savedId);
+              await showCompleteTaskDialog(context, task);
+              setState(() {
+                isLoading = true;
+              });
+              _initializeSubtasks();
+            },
+            icon: Icon(Icons.task_alt_sharp),
+          );
   }
 
   Widget _buildTaskBreakdownScreen(TaskData task) {
@@ -476,10 +539,6 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
                         return _buildSubtaskCard(subtask, index);
                       },
                       onReorder: (oldIndex, newIndex) {
-                        if (!_stateManager.canReorder(oldIndex, newIndex)) {
-                          return; // Don't allow reordering existing subtasks
-                        }
-
                         setState(() {
                           _stateManager.reorderSubtasks(oldIndex, newIndex);
                         });

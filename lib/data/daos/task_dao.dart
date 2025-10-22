@@ -195,6 +195,10 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
         query.where(pred);
       }
     }
+    
+    // Order by order_index to maintain proper subtask ordering
+    query.orderBy([(t) => OrderingTerm.asc(t.orderIndex)]);
+    
     return await query.get();
   }
 

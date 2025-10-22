@@ -84,8 +84,8 @@ class SubtaskStateManager {
 
     if (oldItem == null || newItem == null) return false;
 
-    // Don't allow reordering existing subtasks
-    return !oldItem.isExisting && !newItem.isExisting;
+    // Allow reordering of all subtasks (both new and existing)
+    return true;
   }
 
   /// Get all valid subtasks (with content)
@@ -136,7 +136,13 @@ class SubtaskStateManager {
       }
     }
 
-    return maxSubtaskWidth;
+    // Add space for buttons and subtask count
+    const buttonWidth = 15.0;
+    const subtaskCountWidth = 32.0;
+    const cardPadding = 16.0; // For left and right padding
+    final buttonsSpace = TaskBreakdownConstants.numButtons * buttonWidth;
+
+    return maxSubtaskWidth + buttonsSpace + subtaskCountWidth + cardPadding;
   }
 
   /// Calculate dynamic main task width based on content
