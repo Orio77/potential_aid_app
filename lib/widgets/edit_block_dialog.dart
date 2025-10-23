@@ -6,6 +6,7 @@ import 'package:potential_aid_app/providers/block_with_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/project_search_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
+import 'package:potential_aid_app/screens/project_screen.dart';
 import 'package:potential_aid_app/widgets/duration_picker_dialog.dart';
 import 'package:potential_aid_app/widgets/schedule/block_add_task_list.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
@@ -155,25 +156,49 @@ class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SearchTextField<ProjectData, ProjectSearchNotifier>(
-                controller: _projectNameController,
-                labelText: 'Project name',
-                validator: _validateProjectName,
-                searchProvider: projectSearchProvider,
-                getDisplayText: (block) => block.name,
-                onItemSelected: (projectData) {
-                  setState(() {
-                    _selectedProject = projectData;
-                    _selectedTasks = [];
-                  });
-                },
-                leadingIcon: (project) =>
-                    const Icon(Icons.task_alt, size: 16, color: Colors.blue),
-                trailingIcon: const Icon(
-                  Icons.arrow_forward_ios,
-                  size: 12,
-                  color: Colors.grey,
-                ),
+              Row(
+                children: [
+                  SearchTextField<ProjectData, ProjectSearchNotifier>(
+                    controller: _projectNameController,
+                    labelText: 'Project name',
+                    validator: _validateProjectName,
+                    searchProvider: projectSearchProvider,
+                    getDisplayText: (block) => block.name,
+                    onItemSelected: (projectData) {
+                      setState(() {
+                        _selectedProject = projectData;
+                        _selectedTasks = [];
+                      });
+                    },
+                    leadingIcon: (project) => const Icon(
+                      Icons.task_alt,
+                      size: 16,
+                      color: Colors.blue,
+                    ),
+                    trailingIcon: const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 12,
+                      color: Colors.grey,
+                    ),
+                  ),
+
+                  if (_selectedProject != null) ...[
+                    SizedBox(
+                      width: 40,
+                      child: IconButton(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  ProjectScreen(data: _selectedProject!),
+                            ),
+                          );
+                        },
+                        icon: Icon(Icons.arrow_right_alt_rounded),
+                      ),
+                    ),
+                  ],
+                ],
               ),
 
               if (_selectedProject != null) ...[

@@ -430,7 +430,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
   }
 
   Widget _buildChangeDeadlineForTomorrowButton(SubtaskItem subtask) {
-    return subtask.isExisting
+    return !subtask.isExisting
         ? SizedBox.shrink()
         : IconButton(
             onPressed: () async {
