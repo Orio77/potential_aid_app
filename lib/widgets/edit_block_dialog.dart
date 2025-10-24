@@ -3,13 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/data/tables/block.dart';
 import 'package:potential_aid_app/providers/block_with_tasks_notifier.dart';
+import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/project_search_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/screens/project_screen.dart';
 import 'package:potential_aid_app/widgets/duration_picker_dialog.dart';
 import 'package:potential_aid_app/widgets/schedule/block_add_task_list.dart';
+import 'package:potential_aid_app/widgets/tasks_for_deadline_dialog.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
+import 'package:time_machine/time_machine.dart';
 
 class EditBlockDialog extends ConsumerStatefulWidget {
   final int blockId;
@@ -123,6 +126,7 @@ class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final deadlineDate = ref.watch(dateNotifierProvider);
     final blockAsync = ref.watch(blockTasksNotifier(widget.blockId));
 
     return blockAsync.when(
@@ -131,7 +135,7 @@ class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
         return projectAsync.when(
           data: (project) {
             _initializeFromBlock(data, project!);
-            return _buildEditBlockDialog(data, project);
+            return _buildEditBlockDialog(data, project, deadlineDate);
           },
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, stackTrace) => Center(child: (Text("Error: $error"))),
@@ -142,7 +146,11 @@ class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
     );
   }
 
-  Widget _buildEditBlockDialog(BlockWithTasks block, ProjectData project) {
+  Widget _buildEditBlockDialog(
+    BlockWithTasks block,
+    ProjectData project,
+    LocalDate deadlineDate,
+  ) {
     if (_startTime == null || _duration == null) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -158,27 +166,29 @@ class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
             children: [
               Row(
                 children: [
-                  SearchTextField<ProjectData, ProjectSearchNotifier>(
-                    controller: _projectNameController,
-                    labelText: 'Project name',
-                    validator: _validateProjectName,
-                    searchProvider: projectSearchProvider,
-                    getDisplayText: (block) => block.name,
-                    onItemSelected: (projectData) {
-                      setState(() {
-                        _selectedProject = projectData;
-                        _selectedTasks = [];
-                      });
-                    },
-                    leadingIcon: (project) => const Icon(
-                      Icons.task_alt,
-                      size: 16,
-                      color: Colors.blue,
-                    ),
-                    trailingIcon: const Icon(
-                      Icons.arrow_forward_ios,
-                      size: 12,
-                      color: Colors.grey,
+                  Expanded(
+                    child: SearchTextField<ProjectData, ProjectSearchNotifier>(
+                      controller: _projectNameController,
+                      labelText: 'Project name',
+                      validator: _validateProjectName,
+                      searchProvider: projectSearchProvider,
+                      getDisplayText: (block) => block.name,
+                      onItemSelected: (projectData) {
+                        setState(() {
+                          _selectedProject = projectData;
+                          _selectedTasks = [];
+                        });
+                      },
+                      leadingIcon: (project) => const Icon(
+                        Icons.task_alt,
+                        size: 16,
+                        color: Colors.blue,
+                      ),
+                      trailingIcon: const Icon(
+                        Icons.arrow_forward_ios,
+                        size: 12,
+                        color: Colors.grey,
+                      ),
                     ),
                   ),
 
@@ -245,10 +255,30 @@ class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
           ),
         ),
       ),
+      actionsAlignment: MainAxisAlignment.spaceBetween,
       actions: [
         TextButton(
           onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            final List<TaskData>? selectedTasks =
+                await showTasksForDeadlineDialog(context, deadlineDate);
+
+            if (selectedTasks != null && selectedTasks.isNotEmpty) {
+              final projectId = selectedTasks.first.projectId;
+              final projectData = await ref
+                  .read(projectsNotifierProvider.notifier)
+                  .getProjectById(projectId);
+              _projectNameController.text = projectData!.name;
+              setState(() {
+                _selectedTasks = selectedTasks;
+                _selectedProject = projectData;
+              });
+            }
+          },
+          child: Icon(Icons.list),
         ),
         ElevatedButton(
           onPressed: _isLoading ? null : (() => _saveEditBlock(widget.blockId)),
