@@ -24,6 +24,7 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
   final _formKey = GlobalKey<FormState>();
   final _projectNameController = TextEditingController();
   final _focusNode = FocusNode();
+  bool _hasRequestedInitialFocus = false;
   late TimeOfDay _startTime;
   int _durationMinutes = 60;
   String? _errorMessage;
@@ -58,7 +59,10 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focusNode.requestFocus();
+      if (!_hasRequestedInitialFocus) {
+        _focusNode.requestFocus();
+        _hasRequestedInitialFocus = true;
+      }
       _initializeStartTime();
     });
   }
@@ -187,7 +191,6 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
               Row(
                 children: [
                   Expanded(
-                    flex: 1,
                     child: SearchTextField<ProjectData, ProjectSearchNotifier>(
                       controller: _projectNameController,
                       focusNode: _focusNode,
