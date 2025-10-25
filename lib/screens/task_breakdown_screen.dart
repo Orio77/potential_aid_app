@@ -430,10 +430,14 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
   }
 
   Widget _buildChangeDeadlineForTomorrowButton(SubtaskItem subtask) {
-    return subtask.isExisting
+    return !subtask.isExisting
         ? SizedBox.shrink()
         : IconButton(
             onPressed: () async {
+              final notCompletedFilter =
+                  <Expression<bool> Function($TaskTable)>[
+                    (table) => table.isCompleted.equals(false),
+                  ];
               final date = ref.read(dateNotifierProvider);
               var tomorrow = date.addDays(1).toDateTimeUnspecified();
               await ref
@@ -442,6 +446,11 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
                     subtask.savedId,
                     TaskCompanion(deadline: Value(tomorrow)),
                   );
+              _updateAllNestedSubtasksDeadline(
+                subtask.savedId,
+                tomorrow,
+                notCompletedFilter,
+              );
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Center(
@@ -457,6 +466,27 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
             },
             icon: Icon(Icons.edit_calendar_rounded),
           );
+  }
+
+  Future<void> _updateAllNestedSubtasksDeadline(
+    int parentTaskId,
+    DateTime deadline,
+    List<Expression<bool> Function($TaskTable)> filters,
+  ) async {
+    final notifier = ref.read(
+      projectTasksNotifier(widget.task.projectId).notifier,
+    );
+
+    final subtasks = await notifier.getSubtasks(parentTaskId, filters);
+
+    for (final subtask in subtasks) {
+      await notifier.updateTask(
+        subtask.id,
+        TaskCompanion(deadline: Value(deadline)),
+      );
+
+      await _updateAllNestedSubtasksDeadline(subtask.id, deadline, filters);
+    }
   }
 
   Widget _buildCompleteTaskButton(SubtaskItem subtask) {
