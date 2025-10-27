@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
+import 'package:potential_aid_app/providers/projects_notifier.dart';
+import 'package:potential_aid_app/utils/color_utils.dart';
 
-class TaskCard extends StatelessWidget {
+class TaskCard extends ConsumerWidget {
   final TaskData task;
   final double width;
   final double? height;
@@ -14,13 +17,27 @@ class TaskCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final project = ref.watch(projectProvider(task.projectId));
+
+    return project.when(
+      data: (ProjectData? project) => _buildTaskCard(project!.color),
+      error: (error, stackTrace) => Text("Error: $error"),
+      loading: () => const CircularProgressIndicator(),
+    );
+  }
+
+  Container _buildTaskCard(int? projectColorCode) {
     return Container(
       width: width,
       height: height ?? 60,
       margin: EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.lightBlueAccent,
+        gradient: ColorUtils.createNorthernLightsGradient(
+          baseColor: Color(
+            projectColorCode ?? Colors.lightBlueAccent.toARGB32(),
+          ),
+        ),
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
@@ -41,7 +58,7 @@ class TaskCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: Colors.black,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
