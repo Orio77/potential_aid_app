@@ -1,13 +1,19 @@
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
+import 'package:potential_aid_app/providers/project_intervals_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
+import 'package:potential_aid_app/providers/stats_provider.dart';
 import 'package:potential_aid_app/utils/time_utils.dart';
 import 'package:potential_aid_app/widgets/goal_progress_input.dart';
 
 class AddProjectDialog extends ConsumerStatefulWidget {
   final int? categoryId;
-  const AddProjectDialog({super.key, this.categoryId});
+  final ProjectData? projectData;
+  const AddProjectDialog({super.key, this.categoryId, this.projectData});
 
   @override
   ConsumerState<AddProjectDialog> createState() => _AddProjectDialogState();
@@ -44,6 +50,17 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
     _currentController.addListener(_updateButtonState);
     _endGoalController.addListener(_updateButtonState);
     _unitController.addListener(_updateButtonState);
+
+    final projectData = widget.projectData;
+
+    if (widget.projectData != null) {
+      _projectNameController.text = projectData!.name;
+      _currentController.text = projectData.current.toString();
+      _endGoalController.text = projectData.goal.toString();
+      _unitController.text = projectData.unit;
+      _startDate = projectData.startDate;
+      _deadline = projectData.deadline;
+    }
 
     super.initState();
   }
@@ -93,6 +110,16 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
                 endGoalController: _endGoalController,
                 unitController: _unitController,
               ),
+
+              const SizedBox(height: 16),
+
+              if (widget.projectData != null) ...[
+                IconButton(
+                  onPressed: () async =>
+                      _chooseNewProjectColor(context, ref, widget.projectData!),
+                  icon: Icon(Icons.color_lens_rounded),
+                ),
+              ],
 
               const SizedBox(height: 16),
 
@@ -162,7 +189,9 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
                   int.tryParse(_currentController.text)!,
                   int.tryParse(_endGoalController.text)!,
                   _unitController.text,
-                  widget.categoryId,
+                  widget.projectData == null
+                      ? widget.categoryId
+                      : widget.projectData!.category,
                 ),
           child: _isLoading
               ? const SizedBox(
@@ -188,6 +217,53 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
     setState(() {});
   }
 
+  Future<void> _chooseNewProjectColor(
+    BuildContext context,
+    WidgetRef ref,
+    ProjectData project,
+  ) async {
+    Color selectedColor = project.color != null
+        ? Color(project.color!)
+        : Colors.blue;
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          content: SingleChildScrollView(
+            child: ColorPicker(
+              pickerColor: selectedColor,
+              onColorChanged: (color) {
+                selectedColor = color;
+              },
+              pickerAreaHeightPercent: 0.8,
+            ),
+          ),
+          actionsAlignment: MainAxisAlignment.spaceBetween,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text("cancel"),
+            ),
+            TextButton(
+              onPressed: () async {
+                await ref
+                    .read(projectsNotifierProvider.notifier)
+                    .updateProject(
+                      project.id,
+                      ProjectCompanion(color: Value(selectedColor.toARGB32())),
+                    );
+                ref.invalidate(projectProvider(project.id));
+                ref.invalidate(projectIntervalsNotifierProvider);
+                Navigator.of(context).pop();
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _saveProject(
     DateTime startDate,
     DateTime deadline,
@@ -209,18 +285,38 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
     try {
       final projectName = _projectNameController.text.trim();
 
-      await ref
-          .read(projectsNotifierProvider.notifier)
-          .addProject(
-            name: projectName,
-            startDate: startDate,
-            deadline: deadline,
-            startPoint: initial,
-            current: current,
-            goal: goal,
-            unit: unit,
-            category: category,
-          );
+      if (widget.projectData == null) {
+        await ref
+            .read(projectsNotifierProvider.notifier)
+            .addProject(
+              name: projectName,
+              startDate: startDate,
+              deadline: deadline,
+              startPoint: initial,
+              current: current,
+              goal: goal,
+              unit: unit,
+              category: category,
+            );
+      } else {
+        await ref
+            .read(projectsNotifierProvider.notifier)
+            .updateProject(
+              widget.projectData!.id,
+              ProjectCompanion(
+                name: Value(projectName),
+                startDate: Value(startDate),
+                deadline: Value(deadline),
+                startPoint: Value(initial),
+                current: Value(current),
+                goal: Value(goal),
+                unit: Value(unit),
+                category: Value(category),
+              ),
+            );
+        ref.invalidate(projectStatsNotifier(widget.projectData!.id));
+        ref.invalidate(projectProvider(widget.projectData!.id));
+      }
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -243,7 +339,8 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
   ) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      firstDate: today,
+      firstDate: today.subtract(Duration(days: 1827)),
+      currentDate: today,
       lastDate: today.add(Duration(days: 1827)),
     );
 
@@ -259,9 +356,11 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
 Future<void> showAddProjectDialog({
   required BuildContext context,
   int? categoryId,
+  ProjectData? projectData,
 }) async {
   await showDialog(
     context: context,
-    builder: (context) => AddProjectDialog(categoryId: categoryId),
+    builder: (context) =>
+        AddProjectDialog(categoryId: categoryId, projectData: projectData),
   );
 }

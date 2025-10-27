@@ -1,16 +1,15 @@
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
-import 'package:potential_aid_app/providers/project_intervals_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/providers/stats_provider.dart';
+import 'package:potential_aid_app/utils/color_utils.dart';
 import 'package:potential_aid_app/utils/time_utils.dart';
+import 'package:potential_aid_app/widgets/projects/add_project_dialog.dart';
 import 'package:potential_aid_app/widgets/projects/project_progress_info.dart';
 import 'package:time_machine/time_machine.dart';
-import 'package:potential_aid_app/utils/color_utils.dart';
 
 class ProjectInfo extends ConsumerWidget {
   final ProjectData project;
@@ -89,11 +88,8 @@ class ProjectInfo extends ConsumerWidget {
     final isOverdue = daysUntilDeadline < 0;
 
     return InkWell(
-      onLongPress: () => _chooseNewProjectColor(
-        context,
-        ref,
-        () => Navigator.of(context).pop(),
-      ),
+      onLongPress: () async =>
+          showAddProjectDialog(context: context, projectData: project),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -317,49 +313,6 @@ class ProjectInfo extends ConsumerWidget {
         );
       }
     }
-  }
-
-  Future<void> _chooseNewProjectColor(
-    BuildContext context,
-    WidgetRef ref,
-    VoidCallback onColorSelected,
-  ) async {
-    Color selectedColor = project.color != null
-        ? Color(project.color!)
-        : Colors.blue;
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          content: SingleChildScrollView(
-            child: ColorPicker(
-              pickerColor: selectedColor,
-              onColorChanged: (color) {
-                selectedColor = color;
-              },
-              pickerAreaHeightPercent: 0.8,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                await ref
-                    .read(projectsNotifierProvider.notifier)
-                    .updateProject(
-                      project.id,
-                      ProjectCompanion(color: Value(selectedColor.toARGB32())),
-                    );
-                ref.invalidate(projectProvider(project.id));
-                ref.invalidate(projectIntervalsNotifierProvider);
-                onColorSelected();
-              },
-              child: const Text('Save'),
-            ),
-            TextButton(onPressed: onColorSelected, child: const Text('Cancel')),
-          ],
-        );
-      },
-    );
   }
 
   Future<void> _updateProjectDeadline(
