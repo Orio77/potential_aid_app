@@ -438,8 +438,10 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
                   <Expression<bool> Function($TaskTable)>[
                     (table) => table.isCompleted.equals(false),
                   ];
-              final date = ref.read(dateNotifierProvider);
-              var tomorrow = date.addDays(1).toDateTimeUnspecified();
+              final today = ref
+                  .read(dateNotifierProvider.notifier)
+                  .getTodaysDate();
+              var tomorrow = today.addDays(1).toDateTimeUnspecified();
               await ref
                   .read(projectTasksNotifier(widget.task.projectId).notifier)
                   .updateTask(

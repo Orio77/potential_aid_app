@@ -14,6 +14,7 @@ class TaskCardsNotifier extends StateNotifier<Map<LocalDate, List<TaskData>>> {
     required LocalDate monthDate,
     required int depth,
     int? categoryId,
+    int? projectId,
   }) async {
     final monthStart = LocalDate(monthDate.yearOfEra, monthDate.monthOfYear, 1);
     final monthEnd = monthStart.addMonths(1).subtractDays(1);
@@ -21,6 +22,7 @@ class TaskCardsNotifier extends StateNotifier<Map<LocalDate, List<TaskData>>> {
     final tasks = await _database.taskDao.getAllTasks([
       (task) => task.depth.equals(depth),
       (task) => task.deadline.isNotNull(),
+      if (projectId != null) (task) => task.projectId.equals(projectId),
       (task) => task.deadline.isBetweenValues(
         monthStart.toDateTimeUnspecified(),
         monthEnd.toDateTimeUnspecified().add(Duration(hours: 23, minutes: 59)),

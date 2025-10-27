@@ -5,6 +5,7 @@ import 'package:potential_aid_app/data/models/project_interval.dart';
 import 'package:potential_aid_app/providers/project_intervals_notifier.dart';
 import 'package:potential_aid_app/providers/task_cards_notifier.dart';
 import 'package:potential_aid_app/providers/timeline_date_notifier.dart';
+import 'package:potential_aid_app/screens/select_project_dialog.dart';
 import 'package:potential_aid_app/widgets/timeline/date_card_list.dart';
 import 'package:potential_aid_app/widgets/timeline/my_categories_picker_dialog.dart';
 import 'package:potential_aid_app/widgets/timeline/project_intervals.dart';
@@ -26,6 +27,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
   late int depth;
   late ScrollController _horizontalScrollController;
   ProjectCategoryData? selectedCategory;
+  ProjectData? selectedProject;
 
   @override
   void initState() {
@@ -47,13 +49,23 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
     final projectsMap = ref.watch(projectIntervalsNotifierProvider);
     final projects = projectsMap.values.toList();
 
-    List<ProjectInterval> filteredProjects = projects
-        .where(
-          (p) => (selectedCategory == null
-              ? true
-              : p.categoryId == selectedCategory!.id),
-        )
-        .toList();
+    List<ProjectInterval> filteredProjects;
+
+    if (selectedProject != null) {
+      filteredProjects = ref
+          .read(projectIntervalsNotifierProvider.notifier)
+          .mapProjectsToIntervals([selectedProject!])
+          .toList();
+    } else {
+      // Apply category filter if no specific project is selected
+      filteredProjects = projects
+          .where(
+            (p) => (selectedCategory == null
+                ? true
+                : p.categoryId == selectedCategory!.id),
+          )
+          .toList();
+    }
 
     ref.listen(timelineDateNotifierProvider, (previous, next) {
       if (previous != next) {
@@ -69,6 +81,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                 monthDate: next,
                 depth: depth,
                 categoryId: selectedCategory?.id,
+                projectId: selectedProject?.id,
               );
         }
       }
@@ -113,6 +126,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                           monthDate: currentMonth,
                           depth: depth,
                           categoryId: selectedCategory?.id,
+                          projectId: selectedProject?.id,
                         );
                   }
                 },
@@ -151,6 +165,10 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                 final previousCategory = selectedCategory;
                 setState(() {
                   selectedCategory = category;
+                  // Clear project selection when changing category to avoid conflicts
+                  if (category?.id != previousCategory?.id) {
+                    selectedProject = null;
+                  }
                 });
 
                 // Reload tasks if we're showing tasks and category changed
@@ -162,6 +180,8 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                         monthDate: currentMonth,
                         depth: depth,
                         categoryId: category?.id,
+                        projectId:
+                            null, // Clear project filter when category changes
                       );
                 }
               },
@@ -182,6 +202,35 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                 }),
               ),
             ],
+            IconButton(
+              onPressed: () async {
+                final ProjectData? projectData = await showSelectProjectDialog(
+                  context,
+                );
+                final previousProject = selectedProject;
+                setState(() {
+                  selectedProject = projectData;
+                });
+
+                // Reload tasks if we're showing tasks and project changed
+                if (!showProjects && projectData?.id != previousProject?.id) {
+                  final currentMonth = ref.read(timelineDateNotifierProvider);
+                  ref
+                      .read(taskCardsNotifierProvider(depth).notifier)
+                      .loadTasksForMonth(
+                        monthDate: currentMonth,
+                        depth: depth,
+                        categoryId: selectedCategory?.id,
+                        projectId: projectData?.id,
+                      );
+                }
+              },
+              icon: Icon(
+                selectedProject != null
+                    ? Icons.folder_special_rounded
+                    : Icons.folder_copy_outlined,
+              ),
+            ),
           ],
         ),
       ),
@@ -233,6 +282,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                           timelineStart: datesInMonth.first,
                           dayCardWidth: dayCardWidth,
                           scrollController: _horizontalScrollController,
+                          projectId: selectedProject?.id,
                         ),
                 ),
               ),

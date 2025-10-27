@@ -21,6 +21,10 @@ class DateNotifier extends StateNotifier<LocalDate> {
   void goToToday() {
     state = LocalDate.today();
   }
+
+  LocalDate getTodaysDate() {
+    return LocalDate.today();
+  }
 }
 
 class DateTimeNotifier extends StateNotifier<LocalDateTime> {

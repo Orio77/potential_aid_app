@@ -17,6 +17,7 @@ class TaskCards extends ConsumerStatefulWidget {
   final double dayCardWidth;
   final LocalDate timelineStart;
   final ScrollController? scrollController;
+  final int? projectId;
 
   const TaskCards({
     super.key,
@@ -25,6 +26,7 @@ class TaskCards extends ConsumerStatefulWidget {
     this.depth,
     this.categoryId,
     this.scrollController,
+    this.projectId,
   });
 
   @override
@@ -68,6 +70,7 @@ class _TaskCardsState extends ConsumerState<TaskCards> with AutoScrollMixin {
             monthDate: currentMonth,
             depth: depth,
             categoryId: widget.categoryId,
+            projectId: widget.projectId,
           );
     }
   }
@@ -107,6 +110,7 @@ class _TaskCardsState extends ConsumerState<TaskCards> with AutoScrollMixin {
               monthDate: next,
               depth: depth,
               categoryId: widget.categoryId,
+              projectId: widget.projectId,
             );
       }
     });
@@ -119,6 +123,7 @@ class _TaskCardsState extends ConsumerState<TaskCards> with AutoScrollMixin {
               monthDate: currentMonth,
               depth: depth,
               categoryId: widget.categoryId,
+              projectId: widget.projectId,
             );
       });
     }
@@ -290,6 +295,7 @@ class _TaskCardsState extends ConsumerState<TaskCards> with AutoScrollMixin {
             monthDate: currentMonth,
             depth: depth,
             categoryId: widget.categoryId,
+            projectId: widget.projectId,
           );
 
       // Success feedback

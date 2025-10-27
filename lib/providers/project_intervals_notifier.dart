@@ -77,21 +77,25 @@ class ProjectIntervalsNotifier
       LocalDate.today().toDateTimeUnspecified(),
     );
 
-    final projectIntervals = allProjects
-        .map(
-          (project) => ProjectInterval(
-            projectId: project.id,
-            name: project.name,
-            startDay: LocalDate.dateTime(project.startDate),
-            endDay: LocalDate.dateTime(project.deadline),
-            color: project.color != null ? Color(project.color!) : null,
-            categoryId: project.category,
-            progress: (project.current / project.goal).toDouble(),
-          ),
-        )
-        .toList();
+    final projectIntervals = mapProjectsToIntervals(allProjects).toList();
 
     setProjects(projectIntervals);
+  }
+
+  Iterable<ProjectInterval> mapProjectsToIntervals(
+    List<ProjectData> allProjects,
+  ) {
+    return allProjects.map(
+      (project) => ProjectInterval(
+        projectId: project.id,
+        name: project.name,
+        startDay: LocalDate.dateTime(project.startDate),
+        endDay: LocalDate.dateTime(project.deadline),
+        color: project.color != null ? Color(project.color!) : null,
+        categoryId: project.category,
+        progress: (project.current / project.goal).toDouble(),
+      ),
+    );
   }
 
   List<ProjectInterval> get projectsList => state.values.toList();
