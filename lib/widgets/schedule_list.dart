@@ -118,7 +118,7 @@ class ScheduleList extends ConsumerWidget {
                   return await showDialog<bool>(
                         context: context,
                         builder: (BuildContext dialogContext) {
-                          return DeleteTaskDialog(blockId: blockId);
+                          return DeleteBlockDialog(blockId: blockId);
                         },
                       ) ??
                       false;

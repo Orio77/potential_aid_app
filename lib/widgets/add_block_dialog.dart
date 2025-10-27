@@ -25,6 +25,7 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
   final _projectNameController = TextEditingController();
   final _focusNode = FocusNode();
   bool _hasRequestedInitialFocus = false;
+  bool _hasInitializedStartTime = false;
   late TimeOfDay _startTime;
   int _durationMinutes = 60;
   String? _errorMessage;
@@ -63,7 +64,10 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
         _focusNode.requestFocus();
         _hasRequestedInitialFocus = true;
       }
-      _initializeStartTime();
+      if (!_hasInitializedStartTime) {
+        _hasInitializedStartTime = true;
+        _initializeStartTime();
+      }
     });
   }
 

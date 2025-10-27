@@ -2,20 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
 
-class DeleteTaskDialog extends ConsumerStatefulWidget {
+class DeleteBlockDialog extends ConsumerStatefulWidget {
   final int blockId;
 
-  const DeleteTaskDialog({super.key, required this.blockId});
+  const DeleteBlockDialog({super.key, required this.blockId});
 
   @override
-  ConsumerState<DeleteTaskDialog> createState() => _DeleteTaskDialogState();
+  ConsumerState<DeleteBlockDialog> createState() => _DeleteTaskDialogState();
 }
 
-class _DeleteTaskDialogState extends ConsumerState<DeleteTaskDialog> {
+class _DeleteTaskDialogState extends ConsumerState<DeleteBlockDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Center(child: Text('Delete this task?')),
+      title: const Center(child: Text('Delete this block?')),
       actions: [
         Row(
           children: [
