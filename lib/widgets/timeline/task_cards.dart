@@ -152,7 +152,9 @@ class _TaskCardsState extends ConsumerState<TaskCards> with AutoScrollMixin {
     return Container(
       width: widget.dayCardWidth,
       decoration: BoxDecoration(
-        color: isHovered ? Colors.blue.withOpacity(0.1) : Colors.transparent,
+        color: isHovered
+            ? Colors.blue.withValues(alpha: 0.1)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
         border: isHovered ? Border.all(color: Colors.blue, width: 2) : null,
       ),
@@ -363,12 +365,12 @@ class _TaskCardsState extends ConsumerState<TaskCards> with AutoScrollMixin {
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
+                        color: Colors.black.withValues(alpha: 0.3),
                         blurRadius: 12,
                         offset: const Offset(0, 6),
                       ),
                       BoxShadow(
-                        color: Colors.blue.withOpacity(0.2),
+                        color: Colors.blue.withValues(alpha: 0.2),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -459,10 +461,10 @@ class _TaskCardsState extends ConsumerState<TaskCards> with AutoScrollMixin {
       height: 60,
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.grey.withOpacity(0.4),
+        color: Colors.grey.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: Colors.grey.withOpacity(0.8),
+          color: Colors.grey.withValues(alpha: 0.8),
           width: 2,
           style: BorderStyle.solid,
         ),
@@ -473,7 +475,7 @@ class _TaskCardsState extends ConsumerState<TaskCards> with AutoScrollMixin {
           children: [
             Icon(
               Icons.drag_indicator,
-              color: Colors.grey.withOpacity(0.8),
+              color: Colors.grey.withValues(alpha: 0.8),
               size: 24,
             ),
             const SizedBox(height: 4),
@@ -481,7 +483,7 @@ class _TaskCardsState extends ConsumerState<TaskCards> with AutoScrollMixin {
               'Moving...',
               style: TextStyle(
                 fontSize: 10,
-                color: Colors.grey.withOpacity(0.8),
+                color: Colors.grey.withValues(alpha: 0.8),
                 fontStyle: FontStyle.italic,
                 fontWeight: FontWeight.w500,
               ),

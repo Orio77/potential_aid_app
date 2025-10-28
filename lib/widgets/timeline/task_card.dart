@@ -21,22 +21,24 @@ class TaskCard extends ConsumerWidget {
     final project = ref.watch(projectProvider(task.projectId));
 
     return project.when(
-      data: (ProjectData? project) => _buildTaskCard(project!.color),
+      data: (ProjectData? project) => _buildTaskCard(
+        (project == null || project.color == null)
+            ? Colors.lightBlueAccent.toARGB32()
+            : project.color!,
+      ),
       error: (error, stackTrace) => Text("Error: $error"),
       loading: () => const CircularProgressIndicator(),
     );
   }
 
-  Container _buildTaskCard(int? projectColorCode) {
+  Container _buildTaskCard(int projectColorCode) {
     return Container(
       width: width,
       height: height ?? 60,
       margin: EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         gradient: ColorUtils.createNorthernLightsGradient(
-          baseColor: Color(
-            projectColorCode ?? Colors.lightBlueAccent.toARGB32(),
-          ),
+          baseColor: Color(projectColorCode),
         ),
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
