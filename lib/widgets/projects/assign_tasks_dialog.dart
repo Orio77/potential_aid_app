@@ -214,39 +214,63 @@ class _AssignTasksToTaskDialogState
                     projectTasksNotifier(widget.projectId).notifier,
                   );
 
+                  // Validation: Check for circular references
+                  for (final task in widget.tasksToAssign) {
+                    // Get all descendants of the task being moved
+                    final allDescendants = await notifier.getAllDescendants(
+                      task.id,
+                    );
+
+                    // Check if selected parent is the task itself or any of its descendants
+                    if (selectedTask!.id == task.id ||
+                        allDescendants.any(
+                          (desc) => desc.id == selectedTask!.id,
+                        )) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Cannot assign task to itself or its descendants',
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+                  }
+
+                  // Process each task
                   for (final task in widget.tasksToAssign) {
                     // Get all descendants recursively
                     final allDescendants = await notifier.getAllDescendants(
                       task.id,
                     );
 
-                    // Calculate the depth difference
-                    final newParentDepth = selectedTask!.depth;
+                    // Calculate new depth for the task
+                    final newTaskDepth = selectedTask!.depth + 1;
                     final oldTaskDepth = task.depth;
-                    final depthDifference = (newParentDepth + 1) - oldTaskDepth;
+                    final depthDifference = newTaskDepth - oldTaskDepth;
 
                     // Update the main task
                     await notifier.updateTask(
                       task.id,
                       TaskCompanion(
                         parentTaskId: Value(selectedTask!.id),
-                        depth: Value(selectedTask!.depth + 1),
+                        depth: Value(newTaskDepth),
                       ),
                     );
 
                     // Update all descendants with adjusted depths
                     for (final descendant in allDescendants) {
+                      final newDescendantDepth =
+                          descendant.depth + depthDifference;
                       await notifier.updateTask(
                         descendant.id,
-                        TaskCompanion(
-                          depth: Value(descendant.depth + depthDifference),
-                        ),
+                        TaskCompanion(depth: Value(newDescendantDepth)),
                       );
                     }
                   }
 
                   ref.invalidate(projectTasksNotifier(widget.projectId));
-
                   navigator.pop(selectedTask);
                 }
               : null,
