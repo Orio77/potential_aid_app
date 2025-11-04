@@ -1,4 +1,4 @@
-# Habit Timer App
+# Scheduling and Project Management App
 
 ## Overview
 
