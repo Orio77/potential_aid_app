@@ -1,0 +1,165 @@
+workflows:
+  ios-free-signing:
+    name: iOS Free Development (7-day)
+    max_build_duration: 120
+    environment:
+      vars:
+        # Define environment variables
+        BUNDLE_ID: "com.example.potentialAidApp"
+        XCODE_WORKSPACE: "Runner.xcworkspace"
+        XCODE_SCHEME: "Runner"
+        APP_NAME: "Potential Aid App"
+        # You need to set these in Codemagic UI as environment variables:
+        # APPLE_ID - Your Apple ID email
+        # APPLE_ID_PASSWORD - Your Apple ID password (or app-specific password)
+      flutter: stable
+      cocoapods: default
+      xcode: latest
+    scripts:
+      - name: Set up debug keychain
+        script: |
+          keychain initialize
+      - name: Generate free development certificate and provisioning profile
+        script: |
+          # This generates a free development certificate and provisioning profile
+          # using your Apple ID (no paid developer account needed)
+          app-store-connect fetch-signing-files $BUNDLE_ID \
+            --type IOS_APP_DEVELOPMENT \
+            --create \
+            --apple-id $APPLE_ID \
+            --password $APPLE_ID_PASSWORD
+      - name: Set up signing key
+        script: |
+          keychain add-certificates
+      - name: Set up code signing settings on Xcode project
+        script: |
+          xcode-project use-profiles
+      - name: Get Flutter packages
+        script: |
+          flutter packages pub get
+      - name: Install CocoaPods dependencies
+        script: |
+          find . -name "Podfile" -execdir pod install \;
+      - name: Flutter analyze
+        script: |
+          flutter analyze
+      - name: Flutter unit tests
+        script: |
+          flutter test
+        ignore_failure: true
+      - name: Build ipa for development distribution (7-day signing)
+        script: |
+          flutter build ipa \
+            --release \
+            --build-name=1.0.0 \
+            --build-number=$(($(app-store-connect get-latest-build-number "$BUNDLE_ID") + 1)) \
+            --export-options-plist=/tmp/xcodebuild_config/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_config/export_options.plist
+      - flutter_drive.log
+    publishing:
+      email:
+        recipients:
+          - user@example.com # Replace with your email
+        notify:
+          success: true
+          failure: true
+      slack:
+        # Add your Slack webhook here if needed
+        channel: "#ios-builds"
+        notify_on_build_start: true
+        notify:
+          success: true
+          failure: true
+
+  # Alternative workflow for manual certificate management
+  ios-manual-signing:
+    name: iOS Manual Signing (7-day)
+    max_build_duration: 120
+    environment:
+      vars:
+        BUNDLE_ID: "com.example.potentialAidApp"
+        APP_NAME: "Potential Aid App"
+        # Manual certificate variables (set these in Codemagic UI)
+        # CERTIFICATE_PRIVATE_KEY - Base64 encoded .p12 file
+        # CERTIFICATE_PASSWORD - Password for .p12 file
+        # PROVISIONING_PROFILE - Base64 encoded .mobileprovision file
+      flutter: stable
+      cocoapods: default
+      xcode: latest
+    scripts:
+      - name: Set up debug keychain
+        script: |
+          keychain initialize
+      - name: Set up provisioning profiles
+        script: |
+          PROFILES_HOME="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILES_HOME"
+          PROFILE_PATH="$(mktemp "$PROFILES_HOME"/$(uuidgen).mobileprovision)"
+          echo ${PROVISIONING_PROFILE} | base64 --decode > "$PROFILE_PATH"
+          echo "Saved provisioning profile $PROFILE_PATH"
+      - name: Set up signing certificate
+        script: |
+          echo $CERTIFICATE_PRIVATE_KEY | base64 --decode > /tmp/certificate.p12
+          if [ -z "${CERTIFICATE_PASSWORD}" ]; then
+            # certificate is not password-protected
+            keychain add-certificates --certificate /tmp/certificate.p12
+          else
+            # certificate is password-protected
+            keychain add-certificates --certificate /tmp/certificate.p12 --certificate-password $CERTIFICATE_PASSWORD
+          fi
+      - name: Get Flutter packages
+        script: |
+          flutter packages pub get
+      - name: Install CocoaPods dependencies
+        script: |
+          find . -name "Podfile" -execdir pod install \;
+      - name: Flutter analyze
+        script: |
+          flutter analyze
+      - name: Flutter unit tests
+        script: |
+          flutter test
+        ignore_failure: true
+      - name: Build ipa manually
+        script: |
+          # Build for development (7-day signing)
+          flutter build ipa \
+            --release \
+            --build-name=1.0.0 \
+            --build-number=$BUILD_NUMBER \
+            --export-method=development
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - flutter_drive.log
+    publishing:
+      email:
+        recipients:
+          - user@example.com # Replace with your email
+        notify:
+          success: true
+          failure: true
+
+  # Workflow for testing on simulators (no signing required)
+  ios-test:
+    name: iOS Test (Simulator)
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          flutter packages pub get
+      - name: Flutter analyze
+        script: |
+          flutter analyze
+      - name: Flutter unit tests
+        script: |
+          flutter test
+      - name: Build for iOS simulator
+        script: |
+          flutter build ios --simulator --debug
+    artifacts:
+      - flutter_drive.log
