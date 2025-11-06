@@ -10,7 +10,7 @@ import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/task_cards_notifier.dart';
 import 'package:potential_aid_app/providers/task_search_notifier.dart';
 import 'package:potential_aid_app/widgets/projects/complete_task_dialog.dart';
-import 'package:potential_aid_app/widgets/util/arrow_painter.dart';
+import 'package:potential_aid_app/widgets/breakdown/arrow_painter.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
 
 class TaskBreakdownScreen extends ConsumerStatefulWidget {

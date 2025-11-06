@@ -7,8 +7,8 @@ import 'package:potential_aid_app/providers/completion_notifier.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/utils/completion_utils.dart';
-import 'package:potential_aid_app/widgets/complete_block_dialog.dart';
-import 'package:potential_aid_app/widgets/edit_block_dialog.dart';
+import 'package:potential_aid_app/widgets/schedule/complete_block_dialog.dart';
+import 'package:potential_aid_app/widgets/schedule/edit_block_dialog.dart';
 import 'package:potential_aid_app/widgets/schedule/blocks_task_list.dart';
 import 'package:time_machine/time_machine.dart';
 

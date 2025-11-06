@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/block_with_tasks_notifier.dart';
-import 'package:potential_aid_app/widgets/block_completion_element.dart';
-import 'package:potential_aid_app/widgets/task_completion_element.dart';
+import 'package:potential_aid_app/widgets/schedule/block_completion_element.dart';
+import 'package:potential_aid_app/widgets/schedule/task_completion_element.dart';
 
 class CompleteBlockDialog extends ConsumerStatefulWidget {
   final int blockId;

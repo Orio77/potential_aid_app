@@ -4,7 +4,7 @@ import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/task_search_notifier.dart';
-import 'package:potential_aid_app/widgets/goal_progress_input.dart';
+import 'package:potential_aid_app/widgets/common/goal_progress_input.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
 import 'package:time_machine/time_machine.dart';
 

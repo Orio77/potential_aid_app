@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/screens/project_category_list_screen.dart';
 import 'package:potential_aid_app/screens/stats_screen.dart';
 import 'package:potential_aid_app/screens/timeline_screen.dart';
-import 'package:potential_aid_app/widgets/add_block_dialog.dart';
-import 'package:potential_aid_app/widgets/date_header.dart';
-import 'package:potential_aid_app/widgets/schedule_list.dart';
+import 'package:potential_aid_app/widgets/schedule/add_block_dialog.dart';
+import 'package:potential_aid_app/widgets/schedule/date_header.dart';
+import 'package:potential_aid_app/widgets/schedule/schedule_list.dart';
 import 'package:potential_aid_app/widgets/stats/schedule_progress_bar.dart';
 
 class MainScreen extends ConsumerWidget {

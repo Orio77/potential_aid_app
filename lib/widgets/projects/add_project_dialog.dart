@@ -8,7 +8,7 @@ import 'package:potential_aid_app/providers/project_intervals_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/providers/stats_provider.dart';
 import 'package:potential_aid_app/utils/time_utils.dart';
-import 'package:potential_aid_app/widgets/goal_progress_input.dart';
+import 'package:potential_aid_app/widgets/common/goal_progress_input.dart';
 
 class AddProjectDialog extends ConsumerStatefulWidget {
   final int? categoryId;

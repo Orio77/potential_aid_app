@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
-import 'package:potential_aid_app/widgets/add_task_dialog.dart';
+import 'package:potential_aid_app/widgets/projects/add_task_dialog.dart';
 import 'package:potential_aid_app/widgets/projects/assign_tasks_dialog.dart';
 import 'package:potential_aid_app/widgets/projects/categories/add_to_category_button.dart';
 import 'package:potential_aid_app/widgets/projects/delete_project.dart';

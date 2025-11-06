@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/providers/block_with_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/completion_notifier.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
-import 'package:potential_aid_app/widgets/delete_task_dialog.dart';
-import 'package:potential_aid_app/widgets/edit_block_dialog.dart';
-import 'package:potential_aid_app/widgets/schedule_block.dart';
+import 'package:potential_aid_app/widgets/projects/delete_task_dialog.dart';
+import 'package:potential_aid_app/widgets/schedule/edit_block_dialog.dart';
+import 'package:potential_aid_app/widgets/schedule/schedule_block.dart';
 
 class ScheduleList extends ConsumerWidget {
   const ScheduleList({super.key});

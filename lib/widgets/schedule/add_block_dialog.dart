@@ -1,51 +1,72 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
-import 'package:potential_aid_app/data/tables/block.dart';
-import 'package:potential_aid_app/providers/block_with_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/project_search_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
+import 'package:potential_aid_app/providers/settings_notifier.dart';
 import 'package:potential_aid_app/screens/project_screen.dart';
-import 'package:potential_aid_app/widgets/duration_picker_dialog.dart';
+import 'package:potential_aid_app/utils/time_utils.dart';
+import 'package:potential_aid_app/widgets/common/duration_picker_dialog.dart';
 import 'package:potential_aid_app/widgets/schedule/block_add_task_list.dart';
-import 'package:potential_aid_app/widgets/tasks_for_deadline_dialog.dart';
+import 'package:potential_aid_app/widgets/schedule/tasks_for_deadline_dialog.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
-import 'package:time_machine/time_machine.dart';
 
-class EditBlockDialog extends ConsumerStatefulWidget {
-  final int blockId;
-
-  const EditBlockDialog({super.key, required this.blockId});
+class AddBlockDialog extends ConsumerStatefulWidget {
+  const AddBlockDialog({super.key});
 
   @override
-  ConsumerState<EditBlockDialog> createState() => _EditTaskDialogState();
+  ConsumerState<AddBlockDialog> createState() => _AddBlockDialogState();
 }
 
-class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
+class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _projectNameController;
-  bool _isLoading = false;
+  final _projectNameController = TextEditingController();
+  final _focusNode = FocusNode();
+  bool _hasRequestedInitialFocus = false;
+  bool _hasInitializedStartTime = false;
+  late TimeOfDay _startTime;
+  int _durationMinutes = 60;
   String? _errorMessage;
-
   ProjectData? _selectedProject;
-  TimeOfDay? _startTime;
-  int? _duration;
-  bool _isInitialized = false;
-  late List<TaskData> _selectedTasks;
+  List<TaskData> _selectedTasks = [];
+  final Map<int, List<TaskData>> _cachedProjectTasks = {};
 
   @override
   void initState() {
     super.initState();
-    _selectedTasks = [];
-    _projectNameController = TextEditingController();
+
+    final settings = ref.read(settingsNotifierProvider);
     _projectNameController.addListener(() {
-      if (_projectNameController.text.isEmpty) {
-        setState(() {
+      setState(() {
+        if (_projectNameController.text.isEmpty) {
+          if (_selectedProject != null) {
+            _cachedProjectTasks[_selectedProject!.id] = List.from(
+              _selectedTasks,
+            );
+          }
           _selectedProject = null;
-          _selectedTasks = [];
-        });
+          _selectedTasks.clear();
+        }
+      });
+    });
+
+    final defaultStartTime = settings.defaultStartTime;
+    _durationMinutes = settings.defaultTaskLength;
+    _startTime = TimeOfDay(
+      hour: defaultStartTime ~/ 60,
+      minute: defaultStartTime % 60,
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_hasRequestedInitialFocus) {
+        _focusNode.requestFocus();
+        _hasRequestedInitialFocus = true;
+      }
+      if (!_hasInitializedStartTime) {
+        _hasInitializedStartTime = true;
+        _initializeStartTime();
       }
     });
   }
@@ -53,23 +74,41 @@ class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
   @override
   void dispose() {
     _projectNameController.dispose();
+    _focusNode.dispose();
+
     super.dispose();
   }
 
-  void _initializeFromBlock(
-    BlockWithTasks blockWithTasks,
-    ProjectData project,
-  ) {
-    if (!_isInitialized) {
-      _startTime = _minutesToTimeOfDay(blockWithTasks.block.startMinuteOfDay);
-      _duration = blockWithTasks.block.lengthMinutes;
-
-      _selectedProject = project;
-      _projectNameController.text = project.name;
-      _selectedTasks = List.from(blockWithTasks.tasks ?? []);
-
-      _isInitialized = true;
+  Future<void> _initializeStartTime() async {
+    final calculatedTime = await _calculateNextAvailableTime();
+    if (mounted) {
+      setState(() {
+        _startTime = calculatedTime;
+      });
     }
+  }
+
+  Future<TimeOfDay> _calculateNextAvailableTime() async {
+    final settings = ref.read(settingsNotifierProvider);
+    final schedule = ref.read(scheduleNotifierProvider);
+
+    if (schedule.isEmpty) {
+      final defaultMinutes = settings.defaultStartTime;
+      return TimeOfDay(hour: defaultMinutes ~/ 60, minute: defaultMinutes % 60);
+    }
+
+    final lastBlockId = schedule.last;
+    final lastBlock = await ref
+        .read(scheduleNotifierProvider.notifier)
+        .getBlockById(lastBlockId);
+    final lastEndMinutes =
+        lastBlock!.startMinuteOfDay + lastBlock.lengthMinutes;
+    final nextStartMinutes = lastEndMinutes + settings.defaultBreakTime;
+
+    return TimeOfDay(
+      hour: nextStartMinutes ~/ 60,
+      minute: nextStartMinutes % 60,
+    );
   }
 
   String? _validateProjectName(String? value) {
@@ -80,83 +119,72 @@ class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
     return null;
   }
 
-  TimeOfDay _minutesToTimeOfDay(int minutes) {
-    return TimeOfDay(hour: minutes ~/ 60, minute: minutes % 60);
+  void _onTasksChanged(List<TaskData> tasks) {
+    setState(() {
+      _selectedTasks = tasks;
+    });
   }
 
-  int _timeOfDayToMinutes(TimeOfDay time) {
-    return time.hour * 60 + time.minute;
-  }
-
-  Future<void> _saveEditBlock(int blockId) async {
-    if (!_formKey.currentState!.validate() ||
-        _startTime == null ||
-        _duration == null) {
+  Future<void> _saveBlock() async {
+    if (!_formKey.currentState!.validate()) {
       return;
     }
 
+    if (_selectedProject == null && _projectNameController.text.isNotEmpty) {
+      final now = ref.read(dateNotifierProvider).toDateTimeUnspecified();
+      final newProjectId = await ref
+          .read(projectsNotifierProvider.notifier)
+          .addProject(
+            name: _projectNameController.text.trim(),
+            startDate: now,
+            deadline: now.add(Duration(days: 7)),
+            startPoint: 0,
+            current: 0,
+            goal: 1,
+            unit: "completed",
+          );
+
+      // Get the newly created project
+      final projects = ref.read(projectsNotifierProvider);
+      _selectedProject = projects.firstWhere((p) => p.id == newProjectId);
+    }
+
     setState(() {
-      _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      await ref
+      final blockId = await ref
           .read(scheduleNotifierProvider.notifier)
-          .editBlock(
-            blockId,
-            _timeOfDayToMinutes(_startTime!),
-            _duration,
-            _selectedProject?.id,
-            _selectedTasks.map((t) => t.id).toList(),
+          .addBlock(
+            TimeUtils.datetimeToMinutes(_startTime),
+            _durationMinutes,
+            _selectedProject!.id,
           );
-      if (mounted) {
-        Navigator.of(context).pop();
+      if (_selectedTasks.isNotEmpty) {
+        await _saveBlockTasks(blockId, _selectedTasks);
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to save task: ${e.toString()}';
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Failed to save block $e';
+        });
+      }
     }
+  }
+
+  Future<void> _saveBlockTasks(int blockId, List<TaskData> tasks) async {
+    await ref
+        .read(scheduleNotifierProvider.notifier)
+        .assignTasksToBlock(blockId, tasks.map((t) => t.id).toList());
   }
 
   @override
   Widget build(BuildContext context) {
     final deadlineDate = ref.watch(dateNotifierProvider);
-    final blockAsync = ref.watch(blockTasksNotifier(widget.blockId));
-
-    return blockAsync.when(
-      data: (data) {
-        final projectAsync = ref.watch(projectProvider(data.block.projectId));
-        return projectAsync.when(
-          data: (project) {
-            _initializeFromBlock(data, project!);
-            return _buildEditBlockDialog(data, project, deadlineDate);
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stackTrace) => Center(child: (Text("Error: $error"))),
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stackTrace) => Center(child: (Text("Error: $error"))),
-    );
-  }
-
-  Widget _buildEditBlockDialog(
-    BlockWithTasks block,
-    ProjectData project,
-    LocalDate deadlineDate,
-  ) {
-    if (_startTime == null || _duration == null) {
-      return const Center(child: CircularProgressIndicator());
-    }
 
     return AlertDialog(
-      title: const Center(child: Text('Edit Block')),
+      title: const Center(child: Text('Add New Block')),
       content: SizedBox(
         width: double.maxFinite,
         child: Form(
@@ -169,14 +197,27 @@ class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
                   Expanded(
                     child: SearchTextField<ProjectData, ProjectSearchNotifier>(
                       controller: _projectNameController,
+                      focusNode: _focusNode,
                       labelText: 'Project name',
                       validator: _validateProjectName,
                       searchProvider: projectSearchProvider,
                       getDisplayText: (block) => block.name,
                       onItemSelected: (projectData) {
                         setState(() {
+                          if (_selectedProject != null) {
+                            _cachedProjectTasks[_selectedProject!.id] =
+                                List.from(_selectedTasks);
+                          }
+
                           _selectedProject = projectData;
-                          _selectedTasks = [];
+
+                          if (_cachedProjectTasks.containsKey(projectData.id)) {
+                            _selectedTasks = List.from(
+                              _cachedProjectTasks[projectData.id]!,
+                            );
+                          } else {
+                            _selectedTasks.clear();
+                          }
                         });
                       },
                       leadingIcon: (project) => const Icon(
@@ -219,11 +260,7 @@ class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
                   child: BlockAddTaskList(
                     project: _selectedProject,
                     initialTasks: _selectedTasks,
-                    onTasksChanged: (tasks) {
-                      setState(() {
-                        _selectedTasks = tasks;
-                      });
-                    },
+                    onTasksChanged: _onTasksChanged,
                   ),
                 ),
               ],
@@ -233,15 +270,15 @@ class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
               ListTile(
                 leading: const Icon(Icons.access_time),
                 title: const Text('Start Time'),
-                subtitle: Text(_startTime!.format(context)),
-                onTap: _isLoading ? null : _pickStartTime,
+                subtitle: Text(_startTime.format(context)),
+                onTap: _pickStartTime,
               ),
 
               ListTile(
                 leading: const Icon(Icons.timer),
                 title: const Text('Duration'),
-                subtitle: Text('$_duration minutes'),
-                onTap: _isLoading ? null : _pickDuration,
+                subtitle: Text('$_durationMinutes minutes'),
+                onTap: _pickDuration,
               ),
 
               if (_errorMessage != null) ...[
@@ -258,7 +295,9 @@ class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
       actionsAlignment: MainAxisAlignment.spaceBetween,
       actions: [
         TextButton(
-          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
           child: const Text('Cancel'),
         ),
         ElevatedButton(
@@ -281,14 +320,16 @@ class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
           child: Icon(Icons.list),
         ),
         ElevatedButton(
-          onPressed: _isLoading ? null : (() => _saveEditBlock(widget.blockId)),
-          child: _isLoading
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Save'),
+          onPressed: (_projectNameController.text.isEmpty)
+              ? null
+              : () async {
+                  final navigator = Navigator.of(context);
+                  await _saveBlock();
+                  if (mounted && _errorMessage == null) {
+                    navigator.pop();
+                  }
+                },
+          child: const Text('Save'),
         ),
       ],
     );
@@ -297,7 +338,7 @@ class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
   Future<void> _pickStartTime() async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
-      initialTime: _startTime!,
+      initialTime: _startTime,
     );
 
     if (picked != null) {
@@ -310,23 +351,21 @@ class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
   Future<void> _pickDuration() async {
     final int? picked = await showDialog(
       context: context,
-      builder: (context) => DurationPickerDialog(initialDuration: _duration!),
+      builder: (context) =>
+          DurationPickerDialog(initialDuration: _durationMinutes),
     );
 
     if (picked != null) {
       setState(() {
-        _duration = picked;
+        _durationMinutes = picked;
       });
     }
   }
 }
 
-Future<void> showEditBlockDialog(
-  BuildContext context, {
-  required int blockId,
-}) async {
+Future<void> showAddBlockDialog(BuildContext context) async {
   await showDialog(
     context: context,
-    builder: (context) => EditBlockDialog(blockId: blockId),
+    builder: (context) => const AddBlockDialog(),
   );
 }
