@@ -28,10 +28,6 @@ workflows:
         script: |
           flutter packages pub get
 
-      - name: Install CocoaPods dependencies
-        script: |
-          cd ios && pod install  # ✅ Fixed - navigates to ios directory first
-
       - name: Build IPA with automatic signing
         script: |
           flutter build ipa \
