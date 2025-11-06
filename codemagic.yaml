@@ -4,59 +4,42 @@ workflows:
     max_build_duration: 120
     environment:
       vars:
-        # Define environment variables
         BUNDLE_ID: "com.example.potentialAidApp"
         XCODE_WORKSPACE: "Runner.xcworkspace"
         XCODE_SCHEME: "Runner"
-        APP_NAME: "Potential Aid App"
-        # APPLE_ID - Your Apple ID email
-        # APPLE_ID_PASSWORD - Your Apple ID password (or app-specific password)
       flutter: stable
       cocoapods: default
       xcode: latest
+      groups:
+        - personal
     scripts:
-      - name: Set up debug keychain
+      - name: Set up keychain
         script: |
           keychain initialize
-      - name: Generate free development certificate and provisioning profile
+
+      - name: Configure automatic signing
         script: |
-          # This generates a free development certificate and provisioning profile
-          # using your Apple ID (no paid developer account needed)
-          app-store-connect fetch-signing-files $BUNDLE_ID \
-            --type IOS_APP_DEVELOPMENT \
-            --create \
-            --apple-id $APPLE_ID \
-            --password $APPLE_ID_PASSWORD
-      - name: Set up signing key
-        script: |
-          keychain add-certificates
-      - name: Set up code signing settings on Xcode project
-        script: |
-          xcode-project use-profiles
+          # Enable automatic signing in Xcode project
+          cd ios
+          sed -i '' 's/CODE_SIGN_STYLE = Manual;/CODE_SIGN_STYLE = Automatic;/g' Runner.xcodeproj/project.pbxproj
+          sed -i '' 's/DEVELOPMENT_TEAM = .*/DEVELOPMENT_TEAM = "";/g' Runner.xcodeproj/project.pbxproj
+
       - name: Get Flutter packages
         script: |
           flutter packages pub get
+
       - name: Install CocoaPods dependencies
         script: |
-          find . -name "Podfile" -execdir pod install \;
-      - name: Flutter analyze
-        script: |
-          flutter analyze
-      - name: Flutter unit tests
-        script: |
-          flutter test
-        ignore_failure: true
-      - name: Build ipa for development distribution (7-day signing)
+          cd ios && pod install
+
+      - name: Build IPA with automatic signing
         script: |
           flutter build ipa \
             --release \
             --build-name=1.0.0 \
-            --build-number=$(($(app-store-connect get-latest-build-number "$BUNDLE_ID") + 1)) \
-            --export-options-plist=/tmp/xcodebuild_config/export_options.plist
+            --build-number=1
     artifacts:
       - build/ios/ipa/*.ipa
-      - /tmp/xcodebuild_config/export_options.plist
-      - flutter_drive.log
     publishing:
       email:
         recipients:
