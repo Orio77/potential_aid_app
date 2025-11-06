@@ -133,7 +133,8 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                   child: Icon(Icons.link_rounded),
                 ),
                 ElevatedButton(
-                  onPressed: () => showAddTaskDialog(context, data.id),
+                  onPressed: () =>
+                      showAddTaskDialog(context: context, projectId: data.id),
                   child: Icon(Icons.add_task),
                 ),
               ],

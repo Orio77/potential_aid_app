@@ -9,6 +9,7 @@ import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/task_cards_notifier.dart';
 import 'package:potential_aid_app/providers/task_search_notifier.dart';
+import 'package:potential_aid_app/services/deadline_service.dart';
 import 'package:potential_aid_app/widgets/projects/complete_task_dialog.dart';
 import 'package:potential_aid_app/widgets/breakdown/arrow_painter.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
@@ -433,62 +434,13 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     return !subtask.isExisting
         ? SizedBox.shrink()
         : IconButton(
-            onPressed: () async {
-              final notCompletedFilter =
-                  <Expression<bool> Function($TaskTable)>[
-                    (table) => table.isCompleted.equals(false),
-                  ];
-              final today = ref
-                  .read(dateNotifierProvider.notifier)
-                  .getTodaysDate();
-              var tomorrow = today.addDays(1).toDateTimeUnspecified();
-              await ref
-                  .read(projectTasksNotifier(widget.task.projectId).notifier)
-                  .updateTask(
-                    subtask.savedId,
-                    TaskCompanion(deadline: Value(tomorrow)),
-                  );
-              _updateAllNestedSubtasksDeadline(
-                subtask.savedId,
-                tomorrow,
-                notCompletedFilter,
-              );
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Center(
-                    child: Text(
-                      "Moved subtask to: ${tomorrow.day}-${tomorrow.month}-${tomorrow.year}",
-                      style: TextStyle(fontSize: 20),
-                    ),
-                  ),
-                  backgroundColor: Colors.green,
-                  duration: Duration(milliseconds: 1000), // 0.5 seconds
-                ),
-              );
-            },
+            onPressed: () async => await DeadlineService.moveTaskToTomorrow(
+              ref: ref,
+              context: context,
+              task: subtask.taskData!,
+            ),
             icon: Icon(Icons.edit_calendar_rounded),
           );
-  }
-
-  Future<void> _updateAllNestedSubtasksDeadline(
-    int parentTaskId,
-    DateTime deadline,
-    List<Expression<bool> Function($TaskTable)> filters,
-  ) async {
-    final notifier = ref.read(
-      projectTasksNotifier(widget.task.projectId).notifier,
-    );
-
-    final subtasks = await notifier.getSubtasks(parentTaskId, filters);
-
-    for (final subtask in subtasks) {
-      await notifier.updateTask(
-        subtask.id,
-        TaskCompanion(deadline: Value(deadline)),
-      );
-
-      await _updateAllNestedSubtasksDeadline(subtask.id, deadline, filters);
-    }
   }
 
   Widget _buildCompleteTaskButton(SubtaskItem subtask) {

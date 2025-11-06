@@ -10,8 +10,9 @@ import 'package:time_machine/time_machine.dart';
 
 class AddTaskDialog extends ConsumerStatefulWidget {
   final int projectId;
+  final TaskData? taskData;
 
-  const AddTaskDialog({super.key, required this.projectId});
+  const AddTaskDialog({super.key, required this.projectId, this.taskData});
 
   @override
   ConsumerState<AddTaskDialog> createState() => _AddTaskDialogState();
@@ -35,6 +36,14 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
   void initState() {
     super.initState();
 
+    if (widget.taskData != null) {
+      _taskNameController.text = widget.taskData!.name;
+      _currentController.text = widget.taskData!.current.toString();
+      _endGoalController.text = widget.taskData!.endGoal.toString();
+      _unitController.text = widget.taskData!.unit!;
+      _deadline = widget.taskData!.deadline!;
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
     });
@@ -51,8 +60,12 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
   }
 
   void _initializeValues() {
-    _currentDate = ref.watch(dateNotifierProvider).toDateTimeUnspecified();
-    _deadline = _currentDate.add(Duration(days: 7));
+    if (widget.taskData == null) {
+      _currentDate = ref.watch(dateNotifierProvider).toDateTimeUnspecified();
+      _deadline = _currentDate.add(Duration(days: 7));
+    } else {
+      _deadline = widget.taskData!.deadline!;
+    }
   }
 
   @override
@@ -69,7 +82,11 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Center(child: Text('Add New Task')),
+      title: Center(
+        child: widget.taskData == null
+            ? Text('Add New Task')
+            : Text('Edit Task'),
+      ),
       content: SizedBox(
         width: double.maxFinite,
         child: Form(
@@ -218,9 +235,14 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
   }
 }
 
-Future<void> showAddTaskDialog(BuildContext context, int projectId) async {
+Future<void> showAddTaskDialog({
+  required BuildContext context,
+  required int projectId,
+  TaskData? taskData,
+}) async {
   await showDialog(
     context: context,
-    builder: (context) => AddTaskDialog(projectId: projectId),
+    builder: (context) =>
+        AddTaskDialog(projectId: projectId, taskData: taskData),
   );
 }

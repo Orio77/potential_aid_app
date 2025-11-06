@@ -84,7 +84,11 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
     final today = ref.read(dateNotifierProvider).toDateTimeUnspecified();
 
     return AlertDialog(
-      title: const Center(child: Text('Add New Project')),
+      title: Center(
+        child: widget.projectData == null
+            ? Text('Add New Project')
+            : Text('Edit Project'),
+      ),
       content: SizedBox(
         width: double.maxFinite,
         child: Form(
