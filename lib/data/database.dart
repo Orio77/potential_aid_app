@@ -32,7 +32,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 25;
+  int get schemaVersion => 26;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -40,6 +40,142 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
     },
     onUpgrade: (Migrator m, int from, int to) async {
+      if (from < 26) {
+        // Add sync columns to all tables using custom SQL
+
+        // Task table
+        await customStatement('ALTER TABLE task ADD COLUMN supabase_id TEXT');
+        await customStatement(
+          'ALTER TABLE task ADD COLUMN last_modified INTEGER NOT NULL DEFAULT (strftime("%s", "now"))',
+        );
+        await customStatement(
+          'ALTER TABLE task ADD COLUMN needs_sync INTEGER NOT NULL DEFAULT 0',
+        );
+        await customStatement(
+          'ALTER TABLE task ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0',
+        );
+        await customStatement(
+          'ALTER TABLE task ADD COLUMN version INTEGER NOT NULL DEFAULT 1',
+        );
+
+        // Project table
+        await customStatement(
+          'ALTER TABLE project ADD COLUMN supabase_id TEXT',
+        );
+        await customStatement(
+          'ALTER TABLE project ADD COLUMN last_modified INTEGER NOT NULL DEFAULT (strftime("%s", "now"))',
+        );
+        await customStatement(
+          'ALTER TABLE project ADD COLUMN needs_sync INTEGER NOT NULL DEFAULT 0',
+        );
+        await customStatement(
+          'ALTER TABLE project ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0',
+        );
+        await customStatement(
+          'ALTER TABLE project ADD COLUMN version INTEGER NOT NULL DEFAULT 1',
+        );
+
+        // ProjectCategory table
+        await customStatement(
+          'ALTER TABLE project_category ADD COLUMN supabase_id TEXT',
+        );
+        await customStatement(
+          'ALTER TABLE project_category ADD COLUMN last_modified INTEGER NOT NULL DEFAULT (strftime("%s", "now"))',
+        );
+        await customStatement(
+          'ALTER TABLE project_category ADD COLUMN needs_sync INTEGER NOT NULL DEFAULT 0',
+        );
+        await customStatement(
+          'ALTER TABLE project_category ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0',
+        );
+        await customStatement(
+          'ALTER TABLE project_category ADD COLUMN version INTEGER NOT NULL DEFAULT 1',
+        );
+
+        // Block table
+        await customStatement('ALTER TABLE block ADD COLUMN supabase_id TEXT');
+        await customStatement(
+          'ALTER TABLE block ADD COLUMN last_modified INTEGER NOT NULL DEFAULT (strftime("%s", "now"))',
+        );
+        await customStatement(
+          'ALTER TABLE block ADD COLUMN needs_sync INTEGER NOT NULL DEFAULT 0',
+        );
+        await customStatement(
+          'ALTER TABLE block ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0',
+        );
+        await customStatement(
+          'ALTER TABLE block ADD COLUMN version INTEGER NOT NULL DEFAULT 1',
+        );
+
+        // TaskCompletion table
+        await customStatement(
+          'ALTER TABLE task_completion ADD COLUMN supabase_id TEXT',
+        );
+        await customStatement(
+          'ALTER TABLE task_completion ADD COLUMN last_modified INTEGER NOT NULL DEFAULT (strftime("%s", "now"))',
+        );
+        await customStatement(
+          'ALTER TABLE task_completion ADD COLUMN needs_sync INTEGER NOT NULL DEFAULT 0',
+        );
+        await customStatement(
+          'ALTER TABLE task_completion ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0',
+        );
+        await customStatement(
+          'ALTER TABLE task_completion ADD COLUMN version INTEGER NOT NULL DEFAULT 1',
+        );
+
+        // BlockCompletion table
+        await customStatement(
+          'ALTER TABLE block_completion ADD COLUMN supabase_id TEXT',
+        );
+        await customStatement(
+          'ALTER TABLE block_completion ADD COLUMN last_modified INTEGER NOT NULL DEFAULT (strftime("%s", "now"))',
+        );
+        await customStatement(
+          'ALTER TABLE block_completion ADD COLUMN needs_sync INTEGER NOT NULL DEFAULT 0',
+        );
+        await customStatement(
+          'ALTER TABLE block_completion ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0',
+        );
+        await customStatement(
+          'ALTER TABLE block_completion ADD COLUMN version INTEGER NOT NULL DEFAULT 1',
+        );
+
+        // BlockTask table
+        await customStatement(
+          'ALTER TABLE block_task ADD COLUMN supabase_id TEXT',
+        );
+        await customStatement(
+          'ALTER TABLE block_task ADD COLUMN last_modified INTEGER NOT NULL DEFAULT (strftime("%s", "now"))',
+        );
+        await customStatement(
+          'ALTER TABLE block_task ADD COLUMN needs_sync INTEGER NOT NULL DEFAULT 0',
+        );
+        await customStatement(
+          'ALTER TABLE block_task ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0',
+        );
+        await customStatement(
+          'ALTER TABLE block_task ADD COLUMN version INTEGER NOT NULL DEFAULT 1',
+        );
+
+        // Settings table
+        await customStatement(
+          'ALTER TABLE settings ADD COLUMN supabase_id TEXT',
+        );
+        await customStatement(
+          'ALTER TABLE settings ADD COLUMN last_modified INTEGER NOT NULL DEFAULT (strftime("%s", "now"))',
+        );
+        await customStatement(
+          'ALTER TABLE settings ADD COLUMN needs_sync INTEGER NOT NULL DEFAULT 0',
+        );
+        await customStatement(
+          'ALTER TABLE settings ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0',
+        );
+        await customStatement(
+          'ALTER TABLE settings ADD COLUMN version INTEGER NOT NULL DEFAULT 1',
+        );
+      }
+
       if (from < 25) {
         // Create new table without unique constraint - include ALL columns
         await customStatement('''

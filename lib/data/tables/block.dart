@@ -11,6 +11,13 @@ class Block extends Table {
   DateTimeColumn get dayLocal => dateTime()();
   IntColumn get startMinuteOfDay => integer()();
   IntColumn get lengthMinutes => integer()();
+
+  // Sync Fields
+  TextColumn get supabaseId => text().nullable()();
+  DateTimeColumn get lastModified => dateTime()();
+  BoolColumn get needsSync => boolean().withDefault(const Constant(false))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  IntColumn get version => integer().withDefault(const Constant(1))();
 }
 
 class BlockWithTasks {

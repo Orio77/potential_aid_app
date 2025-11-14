@@ -9,4 +9,11 @@ class Settings extends Table {
   IntColumn get defaultStartTime => integer()();
   IntColumn get defaultTaskLength => integer()();
   IntColumn get defaultBreakTime => integer()();
+
+  // Sync Fields
+  TextColumn get supabaseId => text().nullable()();
+  DateTimeColumn get lastModified => dateTime()();
+  BoolColumn get needsSync => boolean().withDefault(const Constant(false))();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  IntColumn get version => integer().withDefault(const Constant(1))();
 }
