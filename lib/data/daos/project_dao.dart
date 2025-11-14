@@ -115,6 +115,7 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
 
     final projectCompanion = ProjectCompanion(
       current: Value(projectData.current + completionCount),
+      lastModified: Value(DateTime.now()),
     );
 
     final res = await (update(
@@ -170,6 +171,7 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
       title: Value(title),
       iconCodePoint: Value(iconCode),
       orderIndex: Value(orderIndex),
+      lastModified: DateTime.now(),
     );
     return await into(projectCategory).insert(companion);
   }

@@ -26,6 +26,10 @@ class _AddToCategoryDialogState extends ConsumerState<AddToCategoryDialog> {
     _selectedCategory = ProjectCategoryData(
       id: -1,
       iconCodePoint: widget.iconCodePoint,
+      lastModified: DateTime.now(),
+      needsSync: true,
+      isDeleted: false,
+      version: 1,
     );
   }
 

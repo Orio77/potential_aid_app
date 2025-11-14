@@ -138,6 +138,7 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
       dayLocal: dateTime,
       startMinuteOfDay: startMinute,
       lengthMinutes: lengthMinutes,
+      lastModified: DateTime.now(),
     );
 
     final blockId = await _database.into(_database.block).insert(block);

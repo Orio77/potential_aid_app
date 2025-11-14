@@ -13,7 +13,11 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
 
   Future<void> assignTaskToBlock(int blockId, int taskId) async {
     await into(blockTask).insert(
-      BlockTaskCompanion(blockId: Value(blockId), taskId: Value(taskId)),
+      BlockTaskCompanion(
+        blockId: Value(blockId),
+        taskId: Value(taskId),
+        lastModified: Value(DateTime.now()),
+      ),
       mode: InsertMode.insertOrIgnore,
     );
   }
@@ -25,7 +29,11 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
       for (final taskId in taskIds) {
         batch.insert(
           blockTask,
-          BlockTaskCompanion(blockId: Value(blockId), taskId: Value(taskId)),
+          BlockTaskCompanion(
+            blockId: Value(blockId),
+            taskId: Value(taskId),
+            lastModified: Value(DateTime.now()),
+          ),
           mode: InsertMode.insertOrIgnore,
         );
       }
@@ -137,6 +145,7 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
         blockId: blockId,
         count: minutes,
         completedAt: completedAt,
+        lastModified: DateTime.now(),
       ),
     );
 

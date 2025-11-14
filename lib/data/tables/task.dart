@@ -26,7 +26,4 @@ class Task extends Table {
   BoolColumn get needsSync => boolean().withDefault(const Constant(false))();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
   IntColumn get version => integer().withDefault(const Constant(1))();
-  BoolColumn get needsSync => boolean().withDefault(const Constant(false))();
-  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
-  IntColumn get version => integer().withDefault(const Constant(1))();
 }

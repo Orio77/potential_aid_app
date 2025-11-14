@@ -21,6 +21,7 @@ extension AppDatabaseProjects on AppDatabase {
       goal: Value(goal ?? 1),
       unit: Value(unit ?? ""),
       category: Value(category),
+      lastModified: Value(DateTime.now()),
     );
 
     return await into(project).insert(projectComp);

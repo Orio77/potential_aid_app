@@ -81,6 +81,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
       defaultStartTime: state.defaultStartTime,
       defaultTaskLength: state.defaultTaskLength,
       defaultBreakTime: state.defaultBreakTime,
+      lastModified: DateTime.now(),
     );
 
     // Use insertOnConflictUpdate with proper conflict resolution

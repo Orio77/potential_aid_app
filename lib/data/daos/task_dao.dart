@@ -72,6 +72,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
       parentTaskId: Value(parentTaskId),
       depth: Value(depth ?? 0),
       orderIndex: Value(orderIndex ?? 0),
+      lastModified: DateTime.now(),
     );
 
     final query = into(task).insert(taskData);
@@ -120,6 +121,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
           taskId: taskId,
           count: count,
           completedAt: completedAt,
+          lastModified: DateTime.now(),
         ),
       );
 
@@ -128,6 +130,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
           isCompleted: Value(completed),
           current: Value(taskData.current + count),
           completedAt: Value(completed ? completedAt : null),
+          lastModified: Value(DateTime.now()),
         ),
       );
 
@@ -150,6 +153,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
             taskId: subtask.id,
             count: subtask.endGoal - subtask.current,
             completedAt: completedAt,
+            lastModified: DateTime.now(),
           ),
         );
       }
@@ -163,6 +167,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
             isCompleted: Value(true),
             current: Value(subtask.endGoal),
             completedAt: Value(completedAt),
+            lastModified: Value(DateTime.now()),
           ),
           where: (t) => t.id.equals(subtask.id),
         );
@@ -195,10 +200,10 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
         query.where(pred);
       }
     }
-    
+
     // Order by order_index to maintain proper subtask ordering
     query.orderBy([(t) => OrderingTerm.asc(t.orderIndex)]);
-    
+
     return await query.get();
   }
 
