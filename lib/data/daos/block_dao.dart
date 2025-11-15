@@ -11,12 +11,37 @@ part 'block_dao.g.dart';
 class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
   BlockDao(super.attachedDatabase);
 
+  // Sync helper methods
+  BlockTaskCompanion _withSyncFieldsBT(BlockTaskCompanion companion) {
+    return companion.copyWith(
+      lastModified: Value(DateTime.now()),
+      needsSync: Value(true),
+      version: Value(
+        (companion.version.present ? companion.version.value : 1) + 1,
+      ),
+    );
+  }
+
+  BlockCompletionCompanion _withSyncFieldsBC(
+    BlockCompletionCompanion companion,
+  ) {
+    return companion.copyWith(
+      lastModified: Value(DateTime.now()),
+      needsSync: Value(true),
+      version: Value(
+        (companion.version.present ? companion.version.value : 1) + 1,
+      ),
+    );
+  }
+
   Future<void> assignTaskToBlock(int blockId, int taskId) async {
     await into(blockTask).insert(
-      BlockTaskCompanion(
-        blockId: Value(blockId),
-        taskId: Value(taskId),
-        lastModified: Value(DateTime.now()),
+      _withSyncFieldsBT(
+        BlockTaskCompanion(
+          blockId: Value(blockId),
+          taskId: Value(taskId),
+          lastModified: Value(DateTime.now()),
+        ),
       ),
       mode: InsertMode.insertOrIgnore,
     );
@@ -29,10 +54,12 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
       for (final taskId in taskIds) {
         batch.insert(
           blockTask,
-          BlockTaskCompanion(
-            blockId: Value(blockId),
-            taskId: Value(taskId),
-            lastModified: Value(DateTime.now()),
+          _withSyncFieldsBT(
+            BlockTaskCompanion(
+              blockId: Value(blockId),
+              taskId: Value(taskId),
+              lastModified: Value(DateTime.now()),
+            ),
           ),
           mode: InsertMode.insertOrIgnore,
         );
@@ -141,11 +168,13 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
     if (minutes < 0) throw ArgumentError('Count must not be negative');
 
     final completionId = await into(db.blockCompletion).insert(
-      BlockCompletionCompanion.insert(
-        blockId: blockId,
-        count: minutes,
-        completedAt: completedAt,
-        lastModified: DateTime.now(),
+      _withSyncFieldsBC(
+        BlockCompletionCompanion.insert(
+          blockId: blockId,
+          count: minutes,
+          completedAt: completedAt,
+          lastModified: DateTime.now(),
+        ),
       ),
     );
 

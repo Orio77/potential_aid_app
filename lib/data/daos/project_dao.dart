@@ -10,6 +10,47 @@ part 'project_dao.g.dart';
 class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
   ProjectDao(super.attachedDatabase);
 
+  // Sync helper methods
+  ProjectCompanion _withSyncFieldsP(ProjectCompanion companion) {
+    return companion.copyWith(
+      lastModified: Value(DateTime.now()),
+      needsSync: Value(true),
+      version: Value(
+        (companion.version.present ? companion.version.value : 1) + 1,
+      ),
+    );
+  }
+
+  ProjectCategoryCompanion _withSyncFieldsPC(
+    ProjectCategoryCompanion companion,
+  ) {
+    return companion.copyWith(
+      lastModified: Value(DateTime.now()),
+      needsSync: Value(true),
+      version: Value(
+        (companion.version.present ? companion.version.value : 1) + 1,
+      ),
+    );
+  }
+
+  ProjectCompanion _markProjectForDeletion(int version) {
+    return ProjectCompanion(
+      isDeleted: Value(true),
+      needsSync: Value(true),
+      lastModified: Value(DateTime.now()),
+      version: Value(version + 1),
+    );
+  }
+
+  ProjectCategoryCompanion _markCategoryForDeletion(int version) {
+    return ProjectCategoryCompanion(
+      isDeleted: Value(true),
+      needsSync: Value(true),
+      lastModified: Value(DateTime.now()),
+      version: Value(version + 1),
+    );
+  }
+
   Future<ProjectData?> getProjectByName(String name) async {
     final query = select(project)..where((p) => p.name.equals(name));
 
@@ -82,13 +123,21 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
   }
 
   Future<void> deleteProject(int projectId) async {
-    await (delete(project)..where((p) => p.id.equals(projectId))).go();
+    // Get current version for soft delete
+    final currentProject = await getProjectById(projectId);
+    if (currentProject != null) {
+      final deleteCompanion = _markProjectForDeletion(currentProject.version);
+      await (update(
+        project,
+      )..where((p) => p.id.equals(projectId))).write(deleteCompanion);
+    }
   }
 
   Future<int> updateProject(int projectId, ProjectCompanion updates) async {
+    final syncAwareUpdates = _withSyncFieldsP(updates);
     return await (update(
       project,
-    )..where((p) => p.id.equals(projectId))).write(updates);
+    )..where((p) => p.id.equals(projectId))).write(syncAwareUpdates);
   }
 
   Future<List<ProjectData>> searchProjects({
@@ -113,9 +162,8 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
       project,
     )..where((p) => p.id.equals(projectId))).getSingle();
 
-    final projectCompanion = ProjectCompanion(
-      current: Value(projectData.current + completionCount),
-      lastModified: Value(DateTime.now()),
+    final projectCompanion = _withSyncFieldsP(
+      ProjectCompanion(current: Value(projectData.current + completionCount)),
     );
 
     final res = await (update(
@@ -167,11 +215,13 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
     int? iconCode,
     int? orderIndex,
   }) async {
-    var companion = ProjectCategoryCompanion.insert(
-      title: Value(title),
-      iconCodePoint: Value(iconCode),
-      orderIndex: Value(orderIndex),
-      lastModified: DateTime.now(),
+    var companion = _withSyncFieldsPC(
+      ProjectCategoryCompanion.insert(
+        title: Value(title),
+        iconCodePoint: Value(iconCode),
+        orderIndex: Value(orderIndex),
+        lastModified: DateTime.now(),
+      ),
     );
     return await into(projectCategory).insert(companion);
   }
@@ -206,15 +256,20 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
     int categoryId,
     ProjectCategoryCompanion updates,
   ) async {
+    final syncAwareUpdates = _withSyncFieldsPC(updates);
     return await (update(
       projectCategory,
-    )..where((pc) => pc.id.equals(categoryId))).write(updates);
+    )..where((pc) => pc.id.equals(categoryId))).write(syncAwareUpdates);
   }
 
   Future<void> deleteProjectCategoryById(int projectCategoryId) async {
-    await (delete(
+    // Get current version for soft delete
+    final currentCategory = await getProjectCategoryById(projectCategoryId);
+    final deleteCompanion = _markCategoryForDeletion(currentCategory.version);
+
+    await (update(
       projectCategory,
-    )..where((pc) => pc.id.equals(projectCategoryId))).go();
+    )..where((pc) => pc.id.equals(projectCategoryId))).write(deleteCompanion);
   }
 
   Future<List<ProjectData>> getProjectsByCategory(int categoryId) async {

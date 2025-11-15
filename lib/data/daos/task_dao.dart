@@ -9,6 +9,26 @@ part 'task_dao.g.dart';
 class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
   TaskDao(super.db);
 
+  // Sync helper methods
+  TaskCompanion _withSyncFields(TaskCompanion companion) {
+    return companion.copyWith(
+      lastModified: Value(DateTime.now()),
+      needsSync: Value(true),
+      version: Value(
+        (companion.version.present ? companion.version.value : 1) + 1,
+      ),
+    );
+  }
+
+  TaskCompanion _markForDeletion(int version) {
+    return TaskCompanion(
+      isDeleted: Value(true),
+      needsSync: Value(true),
+      lastModified: Value(DateTime.now()),
+      version: Value(version + 1),
+    );
+  }
+
   Future<TaskData> getTaskById(int taskId) async {
     return await (select(task)..where((t) => t.id.equals(taskId))).getSingle();
   }
@@ -61,33 +81,40 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
     int? depth,
     int? orderIndex,
   ]) async {
-    final taskData = TaskCompanion.insert(
-      name: name,
-      projectId: projectId,
-      deadline: Value(deadline),
-      unit: Value(unit ?? ''),
-      startPoint: Value(startPoint ?? 0),
-      current: Value(current ?? 0),
-      endGoal: Value(endGoal ?? 1),
-      parentTaskId: Value(parentTaskId),
-      depth: Value(depth ?? 0),
-      orderIndex: Value(orderIndex ?? 0),
-      lastModified: DateTime.now(),
+    final taskData = _withSyncFields(
+      TaskCompanion.insert(
+        name: name,
+        projectId: projectId,
+        deadline: Value(deadline),
+        unit: Value(unit ?? ''),
+        startPoint: Value(startPoint ?? 0),
+        current: Value(current ?? 0),
+        endGoal: Value(endGoal ?? 1),
+        parentTaskId: Value(parentTaskId),
+        depth: Value(depth ?? 0),
+        orderIndex: Value(orderIndex ?? 0),
+        lastModified: DateTime.now(),
+      ),
     );
 
-    final query = into(task).insert(taskData);
-
-    return await query;
+    return await into(task).insert(taskData);
   }
 
   Future<int> updateTask(int taskId, TaskCompanion updates) async {
+    final syncAwareUpdates = _withSyncFields(updates);
     return await (update(
       task,
-    )..where((t) => t.id.equals(taskId))).write(updates);
+    )..where((t) => t.id.equals(taskId))).write(syncAwareUpdates);
   }
 
   Future<void> deleteTask(int taskId) async {
-    await (delete(task)..where((t) => t.id.equals(taskId))).go();
+    // Get current version for soft delete
+    final currentTask = await getTaskById(taskId);
+    final deleteCompanion = _markForDeletion(currentTask.version);
+
+    await (update(
+      task,
+    )..where((t) => t.id.equals(taskId))).write(deleteCompanion);
   }
 
   Future<List<TaskData>> getTasksByProject(int projectId) async {
@@ -122,15 +149,18 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
           count: count,
           completedAt: completedAt,
           lastModified: DateTime.now(),
+          needsSync: Value(true),
+          version: Value(1),
         ),
       );
 
       await (update(task)..where((task) => task.id.equals(taskId))).write(
-        TaskCompanion(
-          isCompleted: Value(completed),
-          current: Value(taskData.current + count),
-          completedAt: Value(completed ? completedAt : null),
-          lastModified: Value(DateTime.now()),
+        _withSyncFields(
+          TaskCompanion(
+            isCompleted: Value(completed),
+            current: Value(taskData.current + count),
+            completedAt: Value(completed ? completedAt : null),
+          ),
         ),
       );
 
@@ -154,6 +184,8 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
             count: subtask.endGoal - subtask.current,
             completedAt: completedAt,
             lastModified: DateTime.now(),
+            needsSync: Value(true),
+            version: Value(1),
           ),
         );
       }
@@ -163,11 +195,12 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
       for (final subtask in incompleteSubtasks) {
         batch.update(
           task,
-          TaskCompanion(
-            isCompleted: Value(true),
-            current: Value(subtask.endGoal),
-            completedAt: Value(completedAt),
-            lastModified: Value(DateTime.now()),
+          _withSyncFields(
+            TaskCompanion(
+              isCompleted: Value(true),
+              current: Value(subtask.endGoal),
+              completedAt: Value(completedAt),
+            ),
           ),
           where: (t) => t.id.equals(subtask.id),
         );

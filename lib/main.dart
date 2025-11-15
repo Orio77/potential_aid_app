@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:potential_aid_app/config/supabase_config.dart';
 import 'package:potential_aid_app/screens/main_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:time_machine/time_machine.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await Supabase.initialize(
+    url: SupabaseConfig.supabaseUrl,
+    anonKey: SupabaseConfig.supabaseAnonKey,
+  );
+
   await TimeMachine.initialize({'rootBundle': rootBundle});
   runApp(const ProviderScope(child: MyApp()));
 }
