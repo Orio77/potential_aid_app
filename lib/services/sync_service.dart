@@ -108,7 +108,13 @@ class SyncService {
   Future<void> initialize() async {
     try {
       await _supabaseService.initialize();
-      await _supabaseService.signInAnonymously();
+      // Try shared user authentication first, fallback to anonymous
+      try {
+        await _supabaseService.signInWithSharedAccount();
+      } catch (e) {
+        print('Shared user auth failed, falling back to anonymous: $e');
+        await _supabaseService.signInAnonymously();
+      }
     } catch (e) {
       print('Failed to initialize sync service: $e');
       // Continue without sync functionality if auth fails
@@ -1414,6 +1420,15 @@ class SyncService {
       final localModified = existingLocal['last_modified'] as DateTime?;
       final localVersion = existingLocal['version'] as int? ?? 1;
       final localNeedsSync = existingLocal['needs_sync'] as bool? ?? false;
+      final requiresLocalId = tableName != 'block_task';
+      final int? localId = requiresLocalId ? existingLocal['id'] as int? : null;
+
+      if (requiresLocalId && localId == null) {
+        print(
+          '⚠️  Local record for $tableName is missing its primary key while syncing $supabaseId',
+        );
+        return;
+      }
 
       // Conflict resolution strategy
       if (localNeedsSync) {
@@ -1424,7 +1439,7 @@ class SyncService {
             if (remoteModified.isAfter(localModified)) {
               await _updateLocalWithRemote(
                 tableName,
-                existingLocal['id'] as int,
+                tableName == 'block_task' ? 0 : localId!,
                 remoteRecord,
               );
               print('🔄 Updated $tableName with newer remote: $supabaseId');
@@ -1436,7 +1451,7 @@ class SyncService {
           } else {
             await _updateLocalWithRemote(
               tableName,
-              existingLocal['id'] as int,
+              tableName == 'block_task' ? 0 : localId!,
               remoteRecord,
             );
             print('🔄 Updated $tableName with remote: $supabaseId');
@@ -1452,13 +1467,13 @@ class SyncService {
           if (tableName == 'block_task') {
             await _markBlockTaskAsDeleted(supabaseId);
           } else {
-            await _markLocalAsDeleted(tableName, existingLocal['id'] as int);
+            await _markLocalAsDeleted(tableName, localId!);
           }
           print('🗑️ Marked $tableName as deleted: $supabaseId');
         } else {
           await _updateLocalWithRemote(
             tableName,
-            existingLocal['id'] as int,
+            tableName == 'block_task' ? 0 : localId!,
             remoteRecord,
           );
           print('✅ Updated $tableName from remote: $supabaseId');

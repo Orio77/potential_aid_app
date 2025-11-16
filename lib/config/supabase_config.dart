@@ -8,8 +8,17 @@ class SupabaseConfig {
   static String supabaseAnonKey =
       dotenv.env['SUPABASE_ANON_KEY'] ?? 'your-anon-key';
 
+  // Shared user credentials for cross-device sync
+  static String sharedUserEmail =
+      dotenv.env['SHARED_USER_EMAIL'] ?? 'sync@potentialaid.local';
+  static String sharedUserPassword =
+      dotenv.env['SHARED_USER_PASSWORD'] ?? 'sync-password-2024';
+
   // Helper method to validate configuration
   static bool get isConfigured =>
       supabaseUrl != 'https://your-supabase-url.supabase.co' &&
       supabaseAnonKey != 'your-anon-key';
+
+  static bool get hasSharedUserCredentials =>
+      sharedUserEmail.isNotEmpty && sharedUserPassword.isNotEmpty;
 }

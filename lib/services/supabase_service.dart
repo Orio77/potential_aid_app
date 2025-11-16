@@ -38,7 +38,25 @@ class SupabaseService {
   /// Check if user is authenticated
   bool get isAuthenticated => client.auth.currentUser != null;
 
-  /// Sign in anonymously (for basic sync without user accounts)
+  /// Sign in with shared user account for cross-device sync
+  Future<void> signInWithSharedAccount() async {
+    if (isAuthenticated) return;
+
+    if (!SupabaseConfig.hasSharedUserCredentials) {
+      throw Exception('Shared user credentials not configured');
+    }
+
+    final response = await client.auth.signInWithPassword(
+      email: SupabaseConfig.sharedUserEmail,
+      password: SupabaseConfig.sharedUserPassword,
+    );
+
+    if (response.user == null) {
+      throw Exception('Failed to authenticate with shared Supabase user');
+    }
+  }
+
+  /// Sign in anonymously (fallback for basic sync without user accounts)
   Future<void> signInAnonymously() async {
     if (isAuthenticated) return;
 
