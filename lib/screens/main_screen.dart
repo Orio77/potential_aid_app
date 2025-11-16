@@ -7,6 +7,7 @@ import 'package:potential_aid_app/widgets/schedule/add_block_dialog.dart';
 import 'package:potential_aid_app/widgets/schedule/date_header.dart';
 import 'package:potential_aid_app/widgets/schedule/schedule_list.dart';
 import 'package:potential_aid_app/widgets/stats/schedule_progress_bar.dart';
+import 'package:potential_aid_app/widgets/sync/sync_button.dart';
 
 class MainScreen extends ConsumerWidget {
   const MainScreen({super.key});
@@ -24,13 +25,19 @@ class MainScreen extends ConsumerWidget {
         ),
         centerTitle: true,
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        leading: IconButton(
-          icon: Icon(Icons.stacked_bar_chart),
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (context) => const StatsScreen()),
-            );
-          },
+        leadingWidth: 120,
+        leading: Row(
+          children: [
+            IconButton(
+              icon: Icon(Icons.stacked_bar_chart),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const StatsScreen()),
+                );
+              },
+            ),
+            SyncButton(),
+          ],
         ),
         actions: [
           IconButton(

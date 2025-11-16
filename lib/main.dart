@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/config/supabase_config.dart';
 import 'package:potential_aid_app/screens/main_screen.dart';
@@ -8,6 +9,9 @@ import 'package:time_machine/time_machine.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load environment variables first
+  await dotenv.load(fileName: "assets/.env");
 
   await Supabase.initialize(
     url: SupabaseConfig.supabaseUrl,

@@ -42,11 +42,13 @@ class AppDatabase extends _$AppDatabase {
     onUpgrade: (Migrator m, int from, int to) async {
       if (from < 26) {
         // Add sync columns to all tables using custom SQL
+        // Use static timestamp since strftime() functions aren't allowed in ALTER TABLE DEFAULT values
+        final defaultTimestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
         // Task table
         await customStatement('ALTER TABLE task ADD COLUMN supabase_id TEXT');
         await customStatement(
-          'ALTER TABLE task ADD COLUMN last_modified INTEGER NOT NULL DEFAULT (strftime("%s", "now"))',
+          'ALTER TABLE task ADD COLUMN last_modified INTEGER NOT NULL DEFAULT $defaultTimestamp',
         );
         await customStatement(
           'ALTER TABLE task ADD COLUMN needs_sync INTEGER NOT NULL DEFAULT 0',
@@ -63,7 +65,7 @@ class AppDatabase extends _$AppDatabase {
           'ALTER TABLE project ADD COLUMN supabase_id TEXT',
         );
         await customStatement(
-          'ALTER TABLE project ADD COLUMN last_modified INTEGER NOT NULL DEFAULT (strftime("%s", "now"))',
+          'ALTER TABLE project ADD COLUMN last_modified INTEGER NOT NULL DEFAULT $defaultTimestamp',
         );
         await customStatement(
           'ALTER TABLE project ADD COLUMN needs_sync INTEGER NOT NULL DEFAULT 0',
@@ -80,7 +82,7 @@ class AppDatabase extends _$AppDatabase {
           'ALTER TABLE project_category ADD COLUMN supabase_id TEXT',
         );
         await customStatement(
-          'ALTER TABLE project_category ADD COLUMN last_modified INTEGER NOT NULL DEFAULT (strftime("%s", "now"))',
+          'ALTER TABLE project_category ADD COLUMN last_modified INTEGER NOT NULL DEFAULT $defaultTimestamp',
         );
         await customStatement(
           'ALTER TABLE project_category ADD COLUMN needs_sync INTEGER NOT NULL DEFAULT 0',
@@ -95,7 +97,7 @@ class AppDatabase extends _$AppDatabase {
         // Block table
         await customStatement('ALTER TABLE block ADD COLUMN supabase_id TEXT');
         await customStatement(
-          'ALTER TABLE block ADD COLUMN last_modified INTEGER NOT NULL DEFAULT (strftime("%s", "now"))',
+          'ALTER TABLE block ADD COLUMN last_modified INTEGER NOT NULL DEFAULT $defaultTimestamp',
         );
         await customStatement(
           'ALTER TABLE block ADD COLUMN needs_sync INTEGER NOT NULL DEFAULT 0',
@@ -112,7 +114,7 @@ class AppDatabase extends _$AppDatabase {
           'ALTER TABLE task_completion ADD COLUMN supabase_id TEXT',
         );
         await customStatement(
-          'ALTER TABLE task_completion ADD COLUMN last_modified INTEGER NOT NULL DEFAULT (strftime("%s", "now"))',
+          'ALTER TABLE task_completion ADD COLUMN last_modified INTEGER NOT NULL DEFAULT $defaultTimestamp',
         );
         await customStatement(
           'ALTER TABLE task_completion ADD COLUMN needs_sync INTEGER NOT NULL DEFAULT 0',
@@ -129,7 +131,7 @@ class AppDatabase extends _$AppDatabase {
           'ALTER TABLE block_completion ADD COLUMN supabase_id TEXT',
         );
         await customStatement(
-          'ALTER TABLE block_completion ADD COLUMN last_modified INTEGER NOT NULL DEFAULT (strftime("%s", "now"))',
+          'ALTER TABLE block_completion ADD COLUMN last_modified INTEGER NOT NULL DEFAULT $defaultTimestamp',
         );
         await customStatement(
           'ALTER TABLE block_completion ADD COLUMN needs_sync INTEGER NOT NULL DEFAULT 0',
@@ -146,7 +148,7 @@ class AppDatabase extends _$AppDatabase {
           'ALTER TABLE block_task ADD COLUMN supabase_id TEXT',
         );
         await customStatement(
-          'ALTER TABLE block_task ADD COLUMN last_modified INTEGER NOT NULL DEFAULT (strftime("%s", "now"))',
+          'ALTER TABLE block_task ADD COLUMN last_modified INTEGER NOT NULL DEFAULT $defaultTimestamp',
         );
         await customStatement(
           'ALTER TABLE block_task ADD COLUMN needs_sync INTEGER NOT NULL DEFAULT 0',
@@ -163,7 +165,7 @@ class AppDatabase extends _$AppDatabase {
           'ALTER TABLE settings ADD COLUMN supabase_id TEXT',
         );
         await customStatement(
-          'ALTER TABLE settings ADD COLUMN last_modified INTEGER NOT NULL DEFAULT (strftime("%s", "now"))',
+          'ALTER TABLE settings ADD COLUMN last_modified INTEGER NOT NULL DEFAULT $defaultTimestamp',
         );
         await customStatement(
           'ALTER TABLE settings ADD COLUMN needs_sync INTEGER NOT NULL DEFAULT 0',
