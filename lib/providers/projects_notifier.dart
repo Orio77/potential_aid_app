@@ -1,7 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:potential_aid_app/data/daos/database_projects.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/data/models/project_interval.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
@@ -16,7 +15,7 @@ class ProjectsNotifier extends StateNotifier<List<ProjectData>> {
   }
 
   Future<void> _loadProjects() async {
-    final projects = await _database.getAllProjects(predicates);
+    final projects = await _database.projectDao.getAllProjects(predicates);
     state = projects;
   }
 
@@ -37,7 +36,7 @@ class ProjectsNotifier extends StateNotifier<List<ProjectData>> {
     String? unit,
     int? category,
   }) async {
-    final projectId = await _database.addProject(
+    final projectId = await _database.projectDao.addProject(
       name: name,
       startDate: startDate,
       deadline: deadline,

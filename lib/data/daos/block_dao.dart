@@ -11,6 +11,16 @@ part 'block_dao.g.dart';
 class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
   BlockDao(super.attachedDatabase);
 
+  BlockCompanion _withSyncFieldsB(BlockCompanion companion) {
+    return companion.copyWith(
+      lastModified: Value(DateTime.now()),
+      needsSync: Value(true),
+      version: Value(
+        (companion.version.present ? companion.version.value : 1) + 1,
+      ),
+    );
+  }
+
   // Sync helper methods
   BlockTaskCompanion _withSyncFieldsBT(BlockTaskCompanion companion) {
     return companion.copyWith(
@@ -31,6 +41,45 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
       version: Value(
         (companion.version.present ? companion.version.value : 1) + 1,
       ),
+    );
+  }
+
+  BlockCompanion _markBlockForDeletion(int version) {
+    return BlockCompanion(
+      isDeleted: Value(true),
+      needsSync: Value(true),
+      lastModified: Value(DateTime.now()),
+      version: Value(version + 1),
+    );
+  }
+
+  BlockTaskCompanion _markBlockTaskForDeletion(int version) {
+    return BlockTaskCompanion(
+      isDeleted: Value(true),
+      needsSync: Value(true),
+      lastModified: Value(DateTime.now()),
+      version: Value(version + 1),
+    );
+  }
+
+  Future<int> addBlock(BlockCompanion companion) async {
+    return await into(block).insert(
+      companion.copyWith(
+        lastModified: Value(DateTime.now()),
+        needsSync: Value(true),
+        version: Value(1),
+      ),
+    );
+  }
+
+  Future<void> addBlockTask(BlockTaskCompanion companion) async {
+    await into(blockTask).insert(
+      companion.copyWith(
+        lastModified: Value(DateTime.now()),
+        needsSync: Value(true),
+        version: Value(1),
+      ),
+      mode: InsertMode.insertOrIgnore,
     );
   }
 
@@ -68,10 +117,83 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
   }
 
   Future<void> removeTaskFromBlock(int blockId, int taskId) async {
-    await (delete(blockTask)..where(
-          (bt) => (bt.blockId.equals(blockId) & bt.taskId.equals(taskId)),
-        ))
-        .go();
+    final currentBlockTask = await getBlockTaskById(blockId, taskId);
+    if (currentBlockTask != null) {
+      final deleteCompanion = _markBlockTaskForDeletion(
+        currentBlockTask.version,
+      );
+      print(
+        'Deleting block task ${currentBlockTask.blockId} - ${currentBlockTask.taskId}',
+      );
+      await (update(blockTask)..where(
+            (bt) => (bt.blockId.equals(blockId) & bt.taskId.equals(taskId)),
+          ))
+          .write(deleteCompanion);
+      print(
+        'BlockTask ${currentBlockTask.blockId} - ${currentBlockTask.taskId} marked for deletion: ${deleteCompanion.isDeleted}',
+      );
+    }
+  }
+
+  Future<void> deleteBlock(int blockId) async {
+    final currentBlock = await getBlockById(blockId);
+    if (currentBlock != null) {
+      final deleteCompanion = _markBlockForDeletion(currentBlock.version);
+      print('Deleting block ${currentBlock.id}');
+      await (update(
+        block,
+      )..where((b) => b.id.equals(blockId))).write(deleteCompanion);
+      print(
+        'Block ${currentBlock.id} marked for deletion: ${deleteCompanion.isDeleted}',
+      );
+    }
+  }
+
+  Future<void> deleteBlockTask(int blockId, int taskId) async {
+    final currentBlockTask = await getBlockTaskById(blockId, taskId);
+    if (currentBlockTask != null) {
+      final deleteCompanion = _markBlockTaskForDeletion(
+        currentBlockTask.version,
+      );
+      print(
+        'Deleting block task ${currentBlockTask.blockId} - ${currentBlockTask.taskId}',
+      );
+      await (update(blockTask)..where(
+            (bt) => (bt.blockId.equals(blockId) & bt.taskId.equals(taskId)),
+          ))
+          .write(deleteCompanion);
+      print(
+        'BlockTask ${currentBlockTask.blockId} - ${currentBlockTask.taskId} marked for deletion: ${deleteCompanion.isDeleted}',
+      );
+    }
+  }
+
+  Future<void> deleteBlockTaskByBlockId(int blockId) async {
+    final currentBlockTasks = await getBlockTasksForBlock(blockId);
+    for (final currentBlockTask in currentBlockTasks) {
+      final deleteCompanion = _markBlockTaskForDeletion(
+        currentBlockTask.version,
+      );
+      print(
+        'Deleting block task ${currentBlockTask.blockId} - ${currentBlockTask.taskId}',
+      );
+      await (update(blockTask)..where(
+            (bt) =>
+                (bt.blockId.equals(blockId) &
+                bt.taskId.equals(currentBlockTask.taskId)),
+          ))
+          .write(deleteCompanion);
+      print(
+        'BlockTask ${currentBlockTask.blockId} - ${currentBlockTask.taskId} marked for deletion: ${deleteCompanion.isDeleted}',
+      );
+    }
+  }
+
+  Future<int> updateBlock(int blockId, BlockCompanion updates) async {
+    final syncAwareUpdates = _withSyncFieldsB(updates);
+    return await (update(
+      block,
+    )..where((b) => b.id.equals(blockId))).write(syncAwareUpdates);
   }
 
   Future<List<TaskData>> getTasksForBlock(int blockId) async {
@@ -96,6 +218,19 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
     final query = select(block)..where((b) => b.id.equals(blockId));
 
     return await query.getSingleOrNull();
+  }
+
+  Future<BlockTaskData?> getBlockTaskById(int blockId, int taskId) async {
+    final query = select(blockTask)
+      ..where((bt) => (bt.blockId.equals(blockId) & bt.taskId.equals(taskId)));
+
+    return await query.getSingleOrNull();
+  }
+
+  Future<List<BlockTaskData>> getBlockTasksForBlock(int blockId) async {
+    final query = select(blockTask)..where((bt) => bt.blockId.equals(blockId));
+
+    return await query.get();
   }
 
   Future<List<BlockWithTasks>> getBlocksWithTasks(DateTime date) async {

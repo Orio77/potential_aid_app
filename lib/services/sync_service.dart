@@ -42,7 +42,7 @@ class SyncResult {
 /// - Offline support with sync queuing
 /// - Status monitoring and progress tracking
 class SyncService {
-  SyncService(this._database) {
+  SyncService(this._database, {this.onSyncComplete}) {
     // Initialize stream controllers
     _statusController = StreamController<SyncStatus>.broadcast();
     _resultController = StreamController<SyncResult?>.broadcast();
@@ -64,6 +64,7 @@ class SyncService {
       const Uuid(); // Will be used for generating UUIDs in migration
   final Map<String, Map<int, String?>> _localToSupabaseCache = {};
   final Map<String, Map<String, int>> _supabaseToLocalCache = {};
+  final void Function()? onSyncComplete;
 
   SyncStatus _currentStatus = SyncStatus.idle;
   DateTime? _lastSyncTime;
@@ -198,6 +199,9 @@ class SyncService {
       _updateSyncResult(result);
       _updateStatus(SyncStatus.success);
 
+      // Trigger callback to invalidate providers and refresh UI with new data
+      _notifyProviderInvalidation();
+
       print(
         '✅ Sync completed successfully: $totalRecordsSynced records synced',
       );
@@ -214,6 +218,19 @@ class SyncService {
       _updateStatus(SyncStatus.error);
 
       return result;
+    }
+  }
+
+  /// Trigger callback to invalidate providers after sync
+  void _notifyProviderInvalidation() {
+    if (onSyncComplete != null) {
+      try {
+        onSyncComplete!();
+        print('📱 Triggered provider invalidation after sync');
+      } catch (e) {
+        print('⚠️  Error triggering provider invalidation: $e');
+        // Continue execution even if callback fails
+      }
     }
   }
 
@@ -336,6 +353,10 @@ class SyncService {
                 .map((r) => _getField<String>(r, 'supabaseId'))
                 .whereType<String>()
                 .toList();
+            final ids = deletes
+                .map((r) => _getField<int>(r, 'id'))
+                .whereType<int>()
+                .toList();
 
             if (supabaseIds.isNotEmpty) {
               await _supabaseService.deleteRecords(remoteTable, supabaseIds);
@@ -343,12 +364,18 @@ class SyncService {
 
             // Mark local deletes as synced
             await _markRecordsAsSynced(localTable, deletes, []);
+
+            // delete records locally
+            await _deleteLocalRecordsByIds(localTable, ids);
           }
 
           tableStats[localTable] = recordsToSync.length;
           totalRecords += recordsToSync.length;
         }
       }
+
+      // Trigger callback to invalidate providers and refresh UI after push
+      _notifyProviderInvalidation();
 
       return SyncResult(
         success: true,
@@ -394,6 +421,9 @@ class SyncService {
           print('✅ Applied $localTable: ${remoteRecords.length} records');
         }
       }
+
+      // Trigger callback to invalidate providers and refresh UI with new data
+      _notifyProviderInvalidation();
 
       return SyncResult(
         success: true,
@@ -491,6 +521,20 @@ class SyncService {
       print('✅ Last sync time saved: ${time.toIso8601String()}');
     } catch (e) {
       print('❌ Error saving last sync time: $e');
+    }
+  }
+
+  /// Clear the stored last sync time - useful when resetting sync state
+  /// This will force a full sync on the next sync operation
+  Future<void> clearLastSyncTime() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('last_sync_time');
+      _lastSyncTime = null;
+
+      print('✅ Last sync time cleared - next sync will be a full sync');
+    } catch (e) {
+      print('❌ Error clearing last sync time: $e');
     }
   }
 
@@ -1412,6 +1456,8 @@ class SyncService {
         if (!isRemoteDeleted) {
           await _insertRemoteRecord(tableName, remoteRecord);
           print('✅ Inserted new $tableName record: $supabaseId');
+        } else {
+          await _deleteLocalRecordsByIds(tableName, [remoteRecord['id']]);
         }
         return;
       }
@@ -2288,6 +2334,56 @@ class SyncService {
           await _markSingleRecordAsSynced(tableName, recordId);
         }
       }
+    }
+  }
+
+  Future<void> _deleteLocalRecordsByIds(
+    String localTable,
+    List<int> ids,
+  ) async {
+    try {
+      switch (localTable) {
+        case 'task':
+          await (_database.delete(
+            _database.task,
+          )..where((t) => t.id.isIn(ids))).go();
+          break;
+        case 'project':
+          await (_database.delete(
+            _database.project,
+          )..where((p) => p.id.isIn(ids))).go();
+          break;
+        case 'project_category':
+          await (_database.delete(
+            _database.projectCategory,
+          )..where((pc) => pc.id.isIn(ids))).go();
+          break;
+        case 'block':
+          await (_database.delete(
+            _database.block,
+          )..where((b) => b.id.isIn(ids))).go();
+          break;
+        case 'task_completion':
+          await (_database.delete(
+            _database.taskCompletion,
+          )..where((tc) => tc.id.isIn(ids))).go();
+          break;
+        case 'block_completion':
+          await (_database.delete(
+            _database.blockCompletion,
+          )..where((bc) => bc.id.isIn(ids))).go();
+          break;
+        case 'settings':
+          await (_database.delete(
+            _database.settings,
+          )..where((s) => s.id.isIn(ids))).go();
+          break;
+        default:
+          print('Delete not implemented for table: $localTable');
+      }
+      print('✅ Deleted ${ids.length} records from $localTable');
+    } catch (e) {
+      print('❌ Error deleting records from $localTable: $e');
     }
   }
 }

@@ -40,11 +40,11 @@ class SupabaseService {
 
   /// Sign in with shared user account for cross-device sync
   Future<void> signInWithSharedAccount() async {
-    if (isAuthenticated) return;
-
     if (!SupabaseConfig.hasSharedUserCredentials) {
       throw Exception('Shared user credentials not configured');
     }
+
+    await client.auth.signOut();
 
     final response = await client.auth.signInWithPassword(
       email: SupabaseConfig.sharedUserEmail,
@@ -110,7 +110,10 @@ class SupabaseService {
   Future<void> deleteRecords(String tableName, List<String> supabaseIds) async {
     if (supabaseIds.isEmpty) return;
 
-    await client.from(tableName).delete().inFilter('supabase_id', supabaseIds);
+    await client
+        .from(tableName)
+        .update({'is_deleted': true})
+        .inFilter('supabase_id', supabaseIds);
   }
 
   /// Check connectivity to Supabase

@@ -51,6 +51,33 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
     );
   }
 
+  Future<int> addProject({
+    required String name,
+    required DateTime startDate,
+    required DateTime deadline,
+    int? startPoint,
+    int? current,
+    int? goal,
+    String? unit,
+    int? category,
+  }) async {
+    final projectComp = ProjectCompanion(
+      name: Value(name),
+      startDate: Value(startDate),
+      startPoint: Value(startPoint ?? 0),
+      deadline: Value(deadline),
+      current: Value(current ?? 0),
+      goal: Value(goal ?? 1),
+      unit: Value(unit ?? ""),
+      category: Value(category),
+      lastModified: Value(DateTime.now()),
+    );
+
+    final syncedProjectComp = _withSyncFieldsP(projectComp);
+
+    return await into(project).insert(syncedProjectComp);
+  }
+
   Future<ProjectData?> getProjectByName(String name) async {
     final query = select(project)..where((p) => p.name.equals(name));
 
@@ -75,6 +102,20 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
 
       return projectData;
     });
+  }
+
+  Future<List<ProjectData>> getAllProjects([
+    List<Expression<bool> Function($ProjectTable)>? predicates,
+  ]) {
+    final query = select(project);
+
+    if (predicates != null && predicates.isNotEmpty) {
+      for (final pred in predicates) {
+        query.where(pred);
+      }
+    }
+
+    return query.get();
   }
 
   Future<List<ProjectData>> getProjectsInDateRange(
@@ -127,9 +168,13 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
     final currentProject = await getProjectById(projectId);
     if (currentProject != null) {
       final deleteCompanion = _markProjectForDeletion(currentProject.version);
+      print('Deleting project ${currentProject.name}');
       await (update(
         project,
       )..where((p) => p.id.equals(projectId))).write(deleteCompanion);
+      print(
+        'Project ${currentProject.name} marked for deletion: ${deleteCompanion.isDeleted}',
+      );
     }
   }
 

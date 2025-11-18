@@ -57,12 +57,13 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
     int? projectId,
     List<int>? taskIds,
   ) async {
-    BlockData block = await (_database.select(
-      _database.block,
-    )..where((block) => block.id.equals(blockId))).getSingle();
-    List<BlockTaskData> initialTasks = await (_database.select(
-      _database.blockTask,
-    )..where((b) => b.blockId.equals(blockId))).get();
+    BlockData? block = await _database.blockDao.getBlockById(blockId);
+    if (block == null) {
+      return;
+    }
+
+    List<BlockTaskData> initialTasks = await _database.blockDao
+        .getBlockTasksForBlock(blockId);
     List<int> initialTaskIds = initialTasks.map((bt) => bt.taskId).toList();
 
     final newStartMinute = (startMinute == null || startMinute <= 0)
@@ -77,9 +78,8 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
     final newTaskIds = taskIds ?? initialTaskIds;
 
     await _database.transaction(() async {
-      await (_database.update(
-        _database.block,
-      )..where((block) => block.id.equals(blockId))).write(
+      await _database.blockDao.updateBlock(
+        blockId,
         BlockCompanion(
           startMinuteOfDay: Value(newStartMinute),
           lengthMinutes: Value(newLengthMinutes),
@@ -87,9 +87,7 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
         ),
       );
 
-      await (_database.delete(
-        _database.blockTask,
-      )..where((bt) => bt.blockId.equals(blockId))).go();
+      await _database.blockDao.deleteBlockTaskByBlockId(blockId);
 
       if (newTaskIds.isNotEmpty) {
         final blockTaskEntries = newTaskIds
@@ -101,9 +99,9 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
             )
             .toList();
 
-        await _database.batch((batch) {
-          batch.insertAll(_database.blockTask, blockTaskEntries);
-        });
+        for (var entry in blockTaskEntries) {
+          await _database.blockDao.addBlockTask(entry);
+        }
       }
     });
 
@@ -112,17 +110,16 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
   }
 
   Future<void> editTask(int taskId, String? taskName) async {
-    TaskData task = await (_database.select(
-      _database.task,
-    )..where((task) => task.id.equals(taskId))).getSingle();
+    TaskData task = await _database.taskDao.getTaskById(taskId);
 
     final newTaskName = (taskName == null || taskName.trim().isEmpty)
         ? task.name
         : taskName;
 
-    await (_database.update(_database.task)
-          ..where((task) => task.id.equals(taskId)))
-        .write(TaskCompanion(name: Value(newTaskName)));
+    await _database.taskDao.updateTask(
+      taskId,
+      TaskCompanion(name: Value(newTaskName)),
+    );
   }
 
   Future<int> addBlock(
@@ -141,15 +138,14 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
       lastModified: DateTime.now(),
     );
 
-    final blockId = await _database.into(_database.block).insert(block);
+    final blockId = await _database.blockDao.addBlock(block);
+
     await _loadScheduleForCurrentDate();
     return blockId;
   }
 
   Future<void> removeBlock(int blockId) async {
-    await (_database.delete(
-      _database.block,
-    )..where((block) => block.id.equals(blockId))).go();
+    await _database.blockDao.deleteBlock(blockId);
 
     _ref.invalidate(blockCompletionPercentageProvider(blockId));
 
@@ -212,12 +208,11 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
       for (int i = 0; i < orderedBlocks.length; i++) {
         final block = orderedBlocks[i];
 
-        // Assign the i-th earliest start time to the block at position i
-        await (_database.update(
-          _database.block,
-        )..where((b) => b.id.equals(block.block.id))).write(
-          BlockCompanion(startMinuteOfDay: Value(originalStartTimes[i])),
+        final bc = BlockCompanion(
+          startMinuteOfDay: Value(originalStartTimes[i]),
         );
+
+        await _database.blockDao.updateBlock(block.block.id, bc);
       }
     });
   }
@@ -236,9 +231,7 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
       dateTime,
     );
 
-    final task = await (_database.select(
-      _database.task,
-    )..where((t) => t.id.equals(taskId))).getSingle();
+    final task = await _database.taskDao.getTaskById(taskId);
     _ref.invalidate(projectStatsNotifier(task.projectId));
 
     final monthYearDate = LocalDate.today();
@@ -280,9 +273,11 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
 
     _ref.invalidate(blockCompletionPercentageProvider(blockId));
 
-    final block = await (_database.select(
-      _database.block,
-    )..where((b) => b.id.equals(blockId))).getSingle();
+    final block = await _database.blockDao.getBlockById(blockId);
+    if (block == null) {
+      return completionId;
+    }
+
     _ref.invalidate(projectStatsNotifier(block.projectId));
 
     final monthYearDate = LocalDate.today();

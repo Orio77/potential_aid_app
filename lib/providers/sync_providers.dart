@@ -3,10 +3,85 @@ import 'package:potential_aid_app/providers/database_provider.dart';
 import 'package:potential_aid_app/services/sync_service.dart';
 import 'package:potential_aid_app/services/supabase_service.dart';
 
+// Import other providers for invalidation (but not watch them to avoid cycles)
+import 'package:potential_aid_app/providers/projects_notifier.dart';
+import 'package:potential_aid_app/providers/project_categories_notifier.dart';
+import 'package:potential_aid_app/providers/project_intervals_notifier.dart';
+import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
+import 'package:potential_aid_app/providers/tasks_notifier.dart';
+import 'package:potential_aid_app/providers/task_cards_notifier.dart';
+import 'package:potential_aid_app/providers/task_search_notifier.dart';
+import 'package:potential_aid_app/providers/block_with_tasks_notifier.dart';
+import 'package:potential_aid_app/providers/schedule_notifier.dart';
+import 'package:potential_aid_app/providers/completion_notifier.dart';
+import 'package:potential_aid_app/providers/settings_notifier.dart';
+import 'package:potential_aid_app/providers/stats_provider.dart';
+import 'package:potential_aid_app/providers/date_notifier.dart';
+import 'package:potential_aid_app/providers/timeline_date_notifier.dart';
+
 // Sync Service Provider
 final syncServiceProvider = Provider<SyncService>((ref) {
   final database = ref.watch(databaseProvider);
-  final syncService = SyncService(database);
+
+  // Create a callback to invalidate all data providers after sync
+  void invalidateAllProviders() {
+    try {
+      // Import the providers we need to invalidate
+      // This is safe because we're not watching them, just invalidating them
+
+      // Projects and related data
+      ref.invalidate(projectsNotifierProvider);
+      ref.invalidate(projectProvider);
+      ref.invalidate(projectByBlockProvider);
+      ref.invalidate(descendantProjectProvider);
+      ref.invalidate(projectTimeLineProvider);
+      ref.invalidate(projectIntervalsNotifierProvider);
+      ref.invalidate(individualProjectProvider);
+
+      // Project categories
+      ref.invalidate(projectCategoriesProvider);
+      ref.invalidate(projectCategoryByIdProvider);
+      ref.invalidate(projectCategoryByProjectIdProvider);
+
+      // Tasks
+      ref.invalidate(tasksNotifierProvider);
+      ref.invalidate(taskCardsNotifierProvider);
+      ref.invalidate(taskSearchProvider);
+      ref.invalidate(projectTasksNotifier);
+
+      // Schedule and blocks
+      ref.invalidate(scheduleNotifierProvider);
+      ref.invalidate(blockTasksNotifier);
+
+      // Completion and stats
+      ref.invalidate(blockCompletionPercentageProvider);
+      ref.invalidate(scheduleDayCompletionPercentagesProvider);
+      ref.invalidate(completionChangeNotifierProvider);
+      ref.invalidate(projectStatsNotifier);
+      ref.invalidate(taskCompletionMonthlyNotifier);
+      ref.invalidate(blockCompletionMonthlyNotifier);
+
+      // Settings
+      ref.invalidate(settingsNotifierProvider);
+
+      // Date/Timeline providers (these may not change but invalidating for consistency)
+      ref.invalidate(dateNotifierProvider);
+      ref.invalidate(dateTimeNotifierProvider);
+      ref.invalidate(timelineDateNotifierProvider);
+
+      // Note: Sync-related providers will auto-update when needed
+      // We don't invalidate them here to avoid circular dependencies
+
+      print('🔄 All providers invalidated after sync');
+    } catch (e) {
+      print('⚠️ Error invalidating providers: $e');
+    }
+  }
+
+  final syncService = SyncService(
+    database,
+    onSyncComplete: invalidateAllProviders,
+  );
 
   // Ensure the sync service is initialized
   syncService.initialize().catchError((e) {
