@@ -45,7 +45,9 @@ class TaskCardsNotifier extends StateNotifier<Map<LocalDate, List<TaskData>>> {
       tasksByDate.putIfAbsent(deadlineDate, () => []).add(task);
     }
 
-    state = tasksByDate;
+    if (mounted) {
+      state = tasksByDate;
+    }
   }
 }
 

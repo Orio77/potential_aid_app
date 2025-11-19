@@ -14,7 +14,10 @@ class ProjectCategoriesNotifier
   }
 
   Future<void> _loadCategories() async {
-    state = await _database.projectDao.getAllProjectCategories();
+    final categories = await _database.projectDao.getAllProjectCategories();
+    if (mounted) {
+      state = categories;
+    }
   }
 
   Future<int> addCategory({

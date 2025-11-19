@@ -32,7 +32,9 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
   Future<void> _loadScheduleForCurrentDate() async {
     final blocks = await getBlocksWithTasks();
 
-    state = blocks.map((b) => b.block.id).toList();
+    if (mounted) {
+      state = blocks.map((b) => b.block.id).toList();
+    }
   }
 
   Future<List<BlockWithTasks>> getBlocksWithTasks() async {
@@ -64,6 +66,8 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
 
     List<BlockTaskData> initialTasks = await _database.blockDao
         .getBlockTasksForBlock(blockId);
+    // Filter out deleted tasks to ensure we correctly identify tasks to add/remove
+    initialTasks = initialTasks.where((bt) => !bt.isDeleted).toList();
     List<int> initialTaskIds = initialTasks.map((bt) => bt.taskId).toList();
 
     final newStartMinute = (startMinute == null || startMinute <= 0)
@@ -87,21 +91,21 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
         ),
       );
 
-      await _database.blockDao.deleteBlockTaskByBlockId(blockId);
+      final tasksToRemove = initialTaskIds
+          .where((id) => !newTaskIds.contains(id))
+          .toList();
+      final tasksToAdd = newTaskIds
+          .where((id) => !initialTaskIds.contains(id))
+          .toList();
 
-      if (newTaskIds.isNotEmpty) {
-        final blockTaskEntries = newTaskIds
-            .map(
-              (taskId) => BlockTaskCompanion(
-                blockId: Value(blockId),
-                taskId: Value(taskId),
-              ),
-            )
-            .toList();
+      for (final taskId in tasksToRemove) {
+        await _database.blockDao.removeTaskFromBlock(blockId, taskId);
+      }
 
-        for (var entry in blockTaskEntries) {
-          await _database.blockDao.addBlockTask(entry);
-        }
+      for (final taskId in tasksToAdd) {
+        await _database.blockDao.addBlockTask(
+          BlockTaskCompanion(blockId: Value(blockId), taskId: Value(taskId)),
+        );
       }
     });
 

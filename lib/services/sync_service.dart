@@ -314,24 +314,35 @@ class SyncService {
         final localTable = entry.key;
         final remoteTable = entry.value;
 
+        print("Pushing changes for $localTable to $remoteTable");
+
         final recordsToSync = await getRecordsNeedingSync(localTable);
+
+        print('🔄 Found $localTable: ${recordsToSync.length} records to sync');
 
         if (recordsToSync.isNotEmpty) {
           final (creates, updates, deletes) = _categorizeRecords(recordsToSync);
+
+          print(
+            '🆕 Creates: ${creates.length}, ✏️ Updates: ${updates.length}, 🗑️ Deletes: ${deletes.length}',
+          );
 
           // Handle creates and updates
           if (creates.isNotEmpty || updates.isNotEmpty) {
             final upsertRecords = <Map<String, dynamic>>[];
             for (final record in [...creates, ...updates]) {
+              print('Preparing record for upsert: $record');
               final supabaseId = await _ensureSupabaseIdValue(
                 localTable,
                 record,
               );
+              print('Supabase ID for record: $supabaseId');
               final remoteRecord = await _convertLocalToRemote(
                 localTable,
                 record,
                 supabaseId,
               );
+              print("Converted remote record: $remoteRecord");
               upsertRecords.add(remoteRecord);
             }
 
@@ -349,6 +360,9 @@ class SyncService {
 
           // Handle deletes
           if (deletes.isNotEmpty) {
+            print(
+              '🗑️ Found ${deletes.length} records to delete in $localTable',
+            );
             final supabaseIds = deletes
                 .map((r) => _getField<String>(r, 'supabaseId'))
                 .whereType<String>()
@@ -358,7 +372,12 @@ class SyncService {
                 .whereType<int>()
                 .toList();
 
+            deletes.forEach((record) {
+              print("Record to delete: $record");
+            });
+
             if (supabaseIds.isNotEmpty) {
+              print('🗑️ Deleting from remote $remoteTable: $supabaseIds');
               await _supabaseService.deleteRecords(remoteTable, supabaseIds);
             }
 
@@ -397,9 +416,12 @@ class SyncService {
     Map<String, int> tableStats = {};
 
     try {
+      // for every table
       for (final entry in _tableMapping.entries) {
         final localTable = entry.key;
         final remoteTable = entry.value;
+
+        print("Pulling remote changes for $localTable from $remoteTable");
 
         // Fetch remote records modified since last sync
         final remoteRecords = await _supabaseService.fetchRecords(
@@ -411,6 +433,16 @@ class SyncService {
         if (remoteRecords.isNotEmpty) {
           print('🔄 Pulling $localTable: ${remoteRecords.length} records');
 
+          // Log deleted records specifically
+          final deletedCount = remoteRecords
+              .where((r) => r['is_deleted'] == true || r['is_deleted'] == 1)
+              .length;
+          if (deletedCount > 0) {
+            print('🗑️ Received $deletedCount deleted records for $localTable');
+          } else {
+            print('No deleted records for $localTable');
+          }
+
           for (final remoteRecord in remoteRecords) {
             await _applyRemoteChangeToLocal(localTable, remoteRecord);
           }
@@ -419,6 +451,8 @@ class SyncService {
           totalRecords += remoteRecords.length;
 
           print('✅ Applied $localTable: ${remoteRecords.length} records');
+        } else {
+          print('No remote changes for $localTable');
         }
       }
 
@@ -518,7 +552,7 @@ class SyncService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('last_sync_time', time.toIso8601String());
 
-      print('✅ Last sync time saved: ${time.toIso8601String()}');
+      print('✅ Last sync time saved: ${time}');
     } catch (e) {
       print('❌ Error saving last sync time: $e');
     }
@@ -696,7 +730,7 @@ class SyncService {
     remoteRecord['last_modified'] =
         remoteRecord['last_modified'] ??
         _normalizeValue(
-          localRecord['lastModified'] ?? DateTime.now(),
+          localRecord['lastModified'] ?? DateTime.now().toIso8601String(),
           fieldName: 'last_modified',
         );
 
@@ -1438,12 +1472,14 @@ class SyncService {
         print('Warning: Remote record missing supabase_id for $tableName');
         return;
       }
+      print('Applying remote change to $tableName: $supabaseId');
 
       // Check if local record exists
       final existingLocal = await _findLocalRecordBySupabaseId(
         tableName,
         supabaseId,
       );
+      print('Existing local record: $existingLocal');
 
       // Parse remote timestamps
       final remoteModified = _parseDateTime(remoteRecord['last_modified']);
@@ -1451,13 +1487,15 @@ class SyncService {
       final isRemoteDeleted =
           remoteRecord['is_deleted'] == true || remoteRecord['is_deleted'] == 1;
 
+      print(
+        'Remote record - last_modified: $remoteModified, version: $remoteVersion, is_deleted: $isRemoteDeleted',
+      );
+
       if (existingLocal == null) {
         // No local record exists - insert if not deleted
         if (!isRemoteDeleted) {
           await _insertRemoteRecord(tableName, remoteRecord);
           print('✅ Inserted new $tableName record: $supabaseId');
-        } else {
-          await _deleteLocalRecordsByIds(tableName, [remoteRecord['id']]);
         }
         return;
       }
@@ -1476,7 +1514,22 @@ class SyncService {
         return;
       }
 
-      // Conflict resolution strategy
+      // Handle remote deletion early if record is marked as deleted
+      if (isRemoteDeleted) {
+        print(
+          'Remote record existing locally marked as deleted for $tableName: $supabaseId',
+        );
+        if (tableName == 'block_task') {
+          await _deleteBlockTaskBySupabaseId(supabaseId);
+        } else {
+          // Use localId for deletion, not remoteRecord['id']
+          await _deleteLocalRecordsByIds(tableName, [localId!]);
+        }
+        print('🗑️ Deleted local $tableName record: $supabaseId');
+        return;
+      }
+
+      // Conflict resolution strategy for non-deleted records
       if (localNeedsSync) {
         // Local has pending changes - use version-based resolution
         if (remoteVersion > localVersion) {
@@ -1509,21 +1562,12 @@ class SyncService {
         }
       } else {
         // No local pending changes - safe to apply remote
-        if (isRemoteDeleted) {
-          if (tableName == 'block_task') {
-            await _markBlockTaskAsDeleted(supabaseId);
-          } else {
-            await _markLocalAsDeleted(tableName, localId!);
-          }
-          print('🗑️ Marked $tableName as deleted: $supabaseId');
-        } else {
-          await _updateLocalWithRemote(
-            tableName,
-            tableName == 'block_task' ? 0 : localId!,
-            remoteRecord,
-          );
-          print('✅ Updated $tableName from remote: $supabaseId');
-        }
+        await _updateLocalWithRemote(
+          tableName,
+          tableName == 'block_task' ? 0 : localId!,
+          remoteRecord,
+        );
+        print('✅ Updated $tableName from remote: $supabaseId');
       }
     } catch (e) {
       print('❌ Error applying remote change to $tableName: $e');
@@ -2080,119 +2124,15 @@ class SyncService {
     }
   }
 
-  /// Mark local record as deleted (soft delete)
-  Future<void> _markLocalAsDeleted(String tableName, int localId) async {
-    final now = DateTime.now();
-
-    switch (tableName) {
-      case 'task':
-        await (_database.update(
-          _database.task,
-        )..where((t) => t.id.equals(localId))).write(
-          TaskCompanion(
-            isDeleted: const Value(true),
-            lastModified: Value(now),
-            needsSync: const Value(false),
-          ),
-        );
-        break;
-      case 'project':
-        await (_database.update(
-          _database.project,
-        )..where((p) => p.id.equals(localId))).write(
-          ProjectCompanion(
-            isDeleted: const Value(true),
-            lastModified: Value(now),
-            needsSync: const Value(false),
-          ),
-        );
-        break;
-      case 'project_category':
-        await (_database.update(
-          _database.projectCategory,
-        )..where((pc) => pc.id.equals(localId))).write(
-          ProjectCategoryCompanion(
-            isDeleted: const Value(true),
-            lastModified: Value(now),
-            needsSync: const Value(false),
-          ),
-        );
-        break;
-      case 'block':
-        await (_database.update(
-          _database.block,
-        )..where((b) => b.id.equals(localId))).write(
-          BlockCompanion(
-            isDeleted: const Value(true),
-            lastModified: Value(now),
-            needsSync: const Value(false),
-          ),
-        );
-        break;
-      case 'task_completion':
-        await (_database.update(
-          _database.taskCompletion,
-        )..where((tc) => tc.id.equals(localId))).write(
-          TaskCompletionCompanion(
-            isDeleted: const Value(true),
-            lastModified: Value(now),
-            needsSync: const Value(false),
-          ),
-        );
-        break;
-      case 'block_completion':
-        await (_database.update(
-          _database.blockCompletion,
-        )..where((bc) => bc.id.equals(localId))).write(
-          BlockCompletionCompanion(
-            isDeleted: const Value(true),
-            lastModified: Value(now),
-            needsSync: const Value(false),
-          ),
-        );
-        break;
-      case 'block_task':
-        // For block_task, we need to handle the composite key differently
-        // Since localId doesn't exist for composite keys, we need alternative approach
-        print(
-          'Warning: _markLocalAsDeleted called for block_task with localId: $localId. BlockTask uses composite keys.',
-        );
-        // Note: This method should ideally be redesigned to accept supabase_id for BlockTask
-        // For now, we'll skip the operation as it needs to be called differently
-        break;
-      case 'settings':
-        await (_database.update(
-          _database.settings,
-        )..where((s) => s.id.equals(localId))).write(
-          SettingsCompanion(
-            isDeleted: const Value(true),
-            lastModified: Value(now),
-            needsSync: const Value(false),
-          ),
-        );
-        break;
-      default:
-        print('Delete marking not implemented for table: $tableName');
-    }
-  }
-
-  /// Mark BlockTask as deleted using supabase_id (proper way for composite keys)
-  Future<void> _markBlockTaskAsDeleted(String supabaseId) async {
-    final now = DateTime.now();
-
+  /// Delete BlockTask by supabase_id (used for pulling remote deletions)
+  Future<void> _deleteBlockTaskBySupabaseId(String supabaseId) async {
     try {
-      await (_database.update(
+      await (_database.delete(
         _database.blockTask,
-      )..where((bt) => bt.supabaseId.equals(supabaseId))).write(
-        BlockTaskCompanion(
-          isDeleted: const Value(true),
-          lastModified: Value(now),
-          needsSync: const Value(false),
-        ),
-      );
-      print('✅ BlockTask marked as deleted: $supabaseId');
+      )..where((bt) => bt.supabaseId.equals(supabaseId))).go();
+      print('✅ BlockTask deleted: $supabaseId');
     } catch (e) {
-      print('❌ Error marking BlockTask as deleted: $e');
+      print('❌ Error deleting BlockTask: $e');
     }
   }
 

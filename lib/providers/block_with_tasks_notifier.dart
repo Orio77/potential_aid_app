@@ -17,9 +17,13 @@ class BlockWithTasksNotifier extends StateNotifier<AsyncValue<BlockWithTasks>> {
       final blockWithTasks = await _database.blockDao.getBlockWithTasks(
         blockId,
       );
-      state = AsyncValue.data(blockWithTasks);
+      if (mounted) {
+        state = AsyncValue.data(blockWithTasks);
+      }
     } catch (e, trace) {
-      state = AsyncValue.error(e, trace);
+      if (mounted) {
+        state = AsyncValue.error(e, trace);
+      }
     }
   }
 }

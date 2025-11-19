@@ -16,7 +16,9 @@ class ProjectsNotifier extends StateNotifier<List<ProjectData>> {
 
   Future<void> _loadProjects() async {
     final projects = await _database.projectDao.getAllProjects(predicates);
-    state = projects;
+    if (mounted) {
+      state = projects;
+    }
   }
 
   void setPredicates(

@@ -11,7 +11,10 @@ class TasksNotifierProvider extends StateNotifier<List<TaskData>> {
   }
 
   Future<void> loadTasks() async {
-    state = await _database.taskDao.getAllTasks(predicates);
+    final tasks = await _database.taskDao.getAllTasks(predicates);
+    if (mounted) {
+      state = tasks;
+    }
   }
 
   Future<void> updateTask(int taskId, TaskCompanion taskCompanion) async {

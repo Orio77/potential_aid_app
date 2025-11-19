@@ -42,7 +42,9 @@ class ProjectIntervalsNotifier
         )
         .toList();
 
-    setProjects(projectIntervals);
+    if (mounted) {
+      setProjects(projectIntervals);
+    }
   }
 
   void setProjects(List<ProjectInterval> projects) {
@@ -79,7 +81,9 @@ class ProjectIntervalsNotifier
 
     final projectIntervals = mapProjectsToIntervals(allProjects).toList();
 
-    setProjects(projectIntervals);
+    if (mounted) {
+      setProjects(projectIntervals);
+    }
   }
 
   Iterable<ProjectInterval> mapProjectsToIntervals(

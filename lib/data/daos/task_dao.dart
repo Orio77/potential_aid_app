@@ -42,6 +42,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
     List<Expression<bool> Function($TaskTable)>? predicates,
   ]) {
     final query = select(task);
+    query.where((t) => t.isDeleted.equals(false));
 
     if (predicates != null && predicates.isNotEmpty) {
       for (final pred in predicates) {
@@ -227,6 +228,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
     List<Expression<bool> Function($TaskTable)>? predicates,
   ) async {
     final query = select(task)..where((t) => t.parentTaskId.equals(taskId));
+    query.where((st) => st.isDeleted.equals(false));
 
     if (predicates != null && predicates.isNotEmpty) {
       for (final pred in predicates) {

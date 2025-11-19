@@ -22,16 +22,6 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
   }
 
   // Sync helper methods
-  BlockTaskCompanion _withSyncFieldsBT(BlockTaskCompanion companion) {
-    return companion.copyWith(
-      lastModified: Value(DateTime.now()),
-      needsSync: Value(true),
-      version: Value(
-        (companion.version.present ? companion.version.value : 1) + 1,
-      ),
-    );
-  }
-
   BlockCompletionCompanion _withSyncFieldsBC(
     BlockCompletionCompanion companion,
   ) {
@@ -73,47 +63,80 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
   }
 
   Future<void> addBlockTask(BlockTaskCompanion companion) async {
-    await into(blockTask).insert(
-      companion.copyWith(
-        lastModified: Value(DateTime.now()),
-        needsSync: Value(true),
-        version: Value(1),
-      ),
-      mode: InsertMode.insertOrIgnore,
-    );
+    final existing =
+        await (select(blockTask)..where(
+              (bt) =>
+                  bt.blockId.equals(companion.blockId.value) &
+                  bt.taskId.equals(companion.taskId.value),
+            ))
+            .getSingleOrNull();
+
+    if (existing != null) {
+      await (update(blockTask)..where(
+            (bt) =>
+                bt.blockId.equals(companion.blockId.value) &
+                bt.taskId.equals(companion.taskId.value),
+          ))
+          .write(
+            BlockTaskCompanion(
+              isDeleted: const Value(false),
+              needsSync: const Value(true),
+              lastModified: Value(DateTime.now()),
+              version: Value(existing.version + 1),
+            ),
+          );
+    } else {
+      await into(blockTask).insert(
+        companion.copyWith(
+          lastModified: Value(DateTime.now()),
+          needsSync: Value(true),
+          version: Value(1),
+          isDeleted: Value(false),
+        ),
+      );
+    }
   }
 
   Future<void> assignTaskToBlock(int blockId, int taskId) async {
-    await into(blockTask).insert(
-      _withSyncFieldsBT(
+    final existing =
+        await (select(blockTask)..where(
+              (bt) => bt.blockId.equals(blockId) & bt.taskId.equals(taskId),
+            ))
+            .getSingleOrNull();
+
+    if (existing != null) {
+      await (update(blockTask)..where(
+            (bt) => bt.blockId.equals(blockId) & bt.taskId.equals(taskId),
+          ))
+          .write(
+            BlockTaskCompanion(
+              isDeleted: const Value(false),
+              needsSync: const Value(true),
+              lastModified: Value(DateTime.now()),
+              version: Value(existing.version + 1),
+            ),
+          );
+    } else {
+      await into(blockTask).insert(
         BlockTaskCompanion(
           blockId: Value(blockId),
           taskId: Value(taskId),
           lastModified: Value(DateTime.now()),
+          isDeleted: const Value(false),
+          needsSync: const Value(true),
+          version: const Value(1),
         ),
-      ),
-      mode: InsertMode.insertOrIgnore,
-    );
+      );
+    }
   }
 
   Future<void> assignTasksToBlock(int blockId, List<int> taskIds) async {
     if (taskIds.isEmpty) return;
 
-    await batch((batch) {
-      for (final taskId in taskIds) {
-        batch.insert(
-          blockTask,
-          _withSyncFieldsBT(
-            BlockTaskCompanion(
-              blockId: Value(blockId),
-              taskId: Value(taskId),
-              lastModified: Value(DateTime.now()),
-            ),
-          ),
-          mode: InsertMode.insertOrIgnore,
-        );
-      }
-    });
+    // Process sequentially to handle upserts correctly
+    for (final taskId in taskIds) {
+      await assignTaskToBlock(blockId, taskId);
+    }
   }
 
   Future<void> removeTaskFromBlock(int blockId, int taskId) async {

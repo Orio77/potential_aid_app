@@ -19,20 +19,23 @@ class ProjectSearchNotifier extends StateNotifier<List<ProjectData>> {
       return;
     }
 
+    predicates ??= [];
+    predicates.add((ProjectData p) => p.isDeleted == false);
+
     List<ProjectData> base = await _database.projectDao.searchProjects(
       query: query,
       limit: limit,
     );
 
-    if (predicates == null || predicates.isEmpty) {
+    if (predicates.isEmpty) {
       state = base;
       return;
     }
 
     final filtered = base.where((project) {
       return andMode
-          ? predicates.every((p) => p(project))
-          : predicates.any((p) => p(project));
+          ? predicates!.every((p) => p(project))
+          : predicates!.any((p) => p(project));
     }).toList();
 
     state = filtered;

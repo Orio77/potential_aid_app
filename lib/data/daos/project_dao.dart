@@ -108,6 +108,7 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
     List<Expression<bool> Function($ProjectTable)>? predicates,
   ]) {
     final query = select(project);
+    query.where((p) => p.isDeleted.equals(false));
 
     if (predicates != null && predicates.isNotEmpty) {
       for (final pred in predicates) {
