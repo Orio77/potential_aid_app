@@ -124,11 +124,14 @@ class _ResizableProjectIntervalState
                   final projectData = await ref
                       .read(projectsNotifierProvider.notifier)
                       .getProjectById(widget.project.projectId!);
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => ProjectScreen(data: projectData!),
-                    ),
-                  );
+                  if (context.mounted) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (routeContext) =>
+                            ProjectScreen(data: projectData!),
+                      ),
+                    );
+                  }
                 },
                 child: Stack(
                   children: [

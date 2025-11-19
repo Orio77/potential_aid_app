@@ -226,14 +226,16 @@ class _AssignTasksToTaskDialogState
                         allDescendants.any(
                           (desc) => desc.id == selectedTask!.id,
                         )) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Cannot assign task to itself or its descendants',
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Cannot assign task to itself or its descendants',
+                            ),
+                            backgroundColor: Colors.red,
                           ),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
+                        );
+                      }
                       return;
                     }
                   }

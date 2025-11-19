@@ -25,57 +25,51 @@ final syncServiceProvider = Provider<SyncService>((ref) {
 
   // Create a callback to invalidate all data providers after sync
   void invalidateAllProviders() {
-    try {
-      // Import the providers we need to invalidate
-      // This is safe because we're not watching them, just invalidating them
+    // Import the providers we need to invalidate
+    // This is safe because we're not watching them, just invalidating them
 
-      // Projects and related data
-      ref.invalidate(projectsNotifierProvider);
-      ref.invalidate(projectProvider);
-      ref.invalidate(projectByBlockProvider);
-      ref.invalidate(descendantProjectProvider);
-      ref.invalidate(projectTimeLineProvider);
-      ref.invalidate(projectIntervalsNotifierProvider);
-      ref.invalidate(individualProjectProvider);
+    // Projects and related data
+    ref.invalidate(projectsNotifierProvider);
+    ref.invalidate(projectProvider);
+    ref.invalidate(projectByBlockProvider);
+    ref.invalidate(descendantProjectProvider);
+    ref.invalidate(projectTimeLineProvider);
+    ref.invalidate(projectIntervalsNotifierProvider);
+    ref.invalidate(individualProjectProvider);
 
-      // Project categories
-      ref.invalidate(projectCategoriesProvider);
-      ref.invalidate(projectCategoryByIdProvider);
-      ref.invalidate(projectCategoryByProjectIdProvider);
+    // Project categories
+    ref.invalidate(projectCategoriesProvider);
+    ref.invalidate(projectCategoryByIdProvider);
+    ref.invalidate(projectCategoryByProjectIdProvider);
 
-      // Tasks
-      ref.invalidate(tasksNotifierProvider);
-      ref.invalidate(taskCardsNotifierProvider);
-      ref.invalidate(taskSearchProvider);
-      ref.invalidate(projectTasksNotifier);
+    // Tasks
+    ref.invalidate(tasksNotifierProvider);
+    ref.invalidate(taskCardsNotifierProvider);
+    ref.invalidate(taskSearchProvider);
+    ref.invalidate(projectTasksNotifier);
 
-      // Schedule and blocks
-      ref.invalidate(scheduleNotifierProvider);
-      ref.invalidate(blockTasksNotifier);
+    // Schedule and blocks
+    ref.invalidate(scheduleNotifierProvider);
+    ref.invalidate(blockTasksNotifier);
 
-      // Completion and stats
-      ref.invalidate(blockCompletionPercentageProvider);
-      ref.invalidate(scheduleDayCompletionPercentagesProvider);
-      ref.invalidate(completionChangeNotifierProvider);
-      ref.invalidate(projectStatsNotifier);
-      ref.invalidate(taskCompletionMonthlyNotifier);
-      ref.invalidate(blockCompletionMonthlyNotifier);
+    // Completion and stats
+    ref.invalidate(blockCompletionPercentageProvider);
+    ref.invalidate(scheduleDayCompletionPercentagesProvider);
+    ref.invalidate(completionChangeNotifierProvider);
+    ref.invalidate(projectStatsNotifier);
+    ref.invalidate(taskCompletionMonthlyNotifier);
+    ref.invalidate(blockCompletionMonthlyNotifier);
 
-      // Settings
-      ref.invalidate(settingsNotifierProvider);
+    // Settings
+    ref.invalidate(settingsNotifierProvider);
 
-      // Date/Timeline providers (these may not change but invalidating for consistency)
-      ref.invalidate(dateNotifierProvider);
-      ref.invalidate(dateTimeNotifierProvider);
-      ref.invalidate(timelineDateNotifierProvider);
+    // Date/Timeline providers (these may not change but invalidating for consistency)
+    ref.invalidate(dateNotifierProvider);
+    ref.invalidate(dateTimeNotifierProvider);
+    ref.invalidate(timelineDateNotifierProvider);
 
-      // Note: Sync-related providers will auto-update when needed
-      // We don't invalidate them here to avoid circular dependencies
-
-      print('🔄 All providers invalidated after sync');
-    } catch (e) {
-      print('⚠️ Error invalidating providers: $e');
-    }
+    // Note: Sync-related providers will auto-update when needed
+    // We don't invalidate them here to avoid circular dependencies
   }
 
   final syncService = SyncService(
@@ -84,9 +78,7 @@ final syncServiceProvider = Provider<SyncService>((ref) {
   );
 
   // Ensure the sync service is initialized
-  syncService.initialize().catchError((e) {
-    print('Failed to initialize sync service: $e');
-  });
+  syncService.initialize().catchError((e) {});
 
   ref.onDispose(syncService.dispose);
   return syncService;
@@ -96,7 +88,6 @@ final syncServiceProvider = Provider<SyncService>((ref) {
 final syncStatusProvider = StreamProvider<SyncStatus>((ref) {
   final syncService = ref.read(syncServiceProvider);
   return syncService.statusStream.handleError((error) {
-    print('Sync status stream error: $error');
     return SyncStatus.error;
   });
 });
@@ -105,7 +96,6 @@ final syncStatusProvider = StreamProvider<SyncStatus>((ref) {
 final lastSyncResultProvider = StreamProvider<SyncResult?>((ref) {
   final syncService = ref.read(syncServiceProvider);
   return syncService.resultStream.handleError((error) {
-    print('Sync result stream error: $error');
     return null;
   });
 });
@@ -150,7 +140,6 @@ final syncActionProvider = FutureProvider.family
             ref.invalidate(syncNeededProvider);
           } catch (e) {
             // Silently catch errors during provider invalidation
-            print('Provider invalidation after sync: $e');
           }
         });
       }
@@ -184,7 +173,7 @@ final syncStatusDisplayProvider =
                 },
                 loading: () =>
                     (text: 'Ready', isError: false, isSuccess: false),
-                error: (_, __) =>
+                error: (_, _) =>
                     (text: 'Ready', isError: false, isSuccess: false),
               );
             case SyncStatus.syncing:
@@ -198,6 +187,6 @@ final syncStatusDisplayProvider =
           }
         },
         loading: () => (text: 'Loading...', isError: false, isSuccess: false),
-        error: (_, __) => (text: 'Error', isError: true, isSuccess: false),
+        error: (_, _) => (text: 'Error', isError: true, isSuccess: false),
       );
     });

@@ -453,11 +453,13 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
               final task = await ref
                   .read(projectTasksNotifier(widget.task.projectId).notifier)
                   .getTask(subtask.savedId);
-              await showCompleteTaskDialog(context, task);
-              setState(() {
-                isLoading = true;
-              });
-              _initializeSubtasks();
+              if (mounted) {
+                await showCompleteTaskDialog(context, task);
+                setState(() {
+                  isLoading = true;
+                });
+                _initializeSubtasks();
+              }
             },
             icon: Icon(Icons.task_alt_sharp),
           );

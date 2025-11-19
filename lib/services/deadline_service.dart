@@ -54,7 +54,9 @@ class DeadlineService {
     }
 
     // Show confirmation message
-    _showDeadlineUpdateSnackBar(context, newDeadline);
+    if (context.mounted) {
+      _showDeadlineUpdateSnackBar(context, newDeadline);
+    }
   }
 
   static Future<void> _updateAllNestedSubtasksDeadline({

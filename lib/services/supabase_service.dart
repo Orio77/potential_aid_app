@@ -80,26 +80,14 @@ class SupabaseService {
     // Add user filter if provided (for multi-user support)
     if (userId != null) {
       query = query.eq('user_id', userId);
-      print("Fetching records for user_id: $userId table: $tableName");
-    } else {
-      print(
-        "UserId was null, fetching records for all users from table: $tableName",
-      );
-    }
+    } else {}
 
     // Add timestamp filter for incremental sync
     if (lastSyncTime != null) {
       query = query.gte('last_modified', lastSyncTime.toIso8601String());
-      print(
-        "Fetching records modified since $lastSyncTime from table: $tableName",
-      );
     }
 
     final response = await query;
-    print("Fetched ${response.length} records from $tableName");
-    response.forEach((record) {
-      print("Record: $record");
-    });
     return List<Map<String, dynamic>>.from(response);
   }
 
@@ -122,7 +110,6 @@ class SupabaseService {
   Future<void> deleteRecords(String tableName, List<String> supabaseIds) async {
     if (supabaseIds.isEmpty) return;
 
-    print('🗑️ SupabaseService: Deleting from $tableName: $supabaseIds');
     // Adjusting for timezone differences by adding 1 hour
     final now = DateTime.now().toIso8601String();
 
@@ -130,8 +117,6 @@ class SupabaseService {
         .from(tableName)
         .update({'is_deleted': true, 'last_modified': now})
         .inFilter('supabase_id', supabaseIds);
-
-    print('✅ SupabaseService: Marked as deleted with timestamp $now');
   }
 
   /// Check connectivity to Supabase

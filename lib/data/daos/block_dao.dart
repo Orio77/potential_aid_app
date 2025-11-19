@@ -133,7 +133,7 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
   Future<void> assignTasksToBlock(int blockId, List<int> taskIds) async {
     if (taskIds.isEmpty) return;
 
-    // Process sequentially to handle upserts correctly
+    // Process sequentially to handle upsert correctly
     for (final taskId in taskIds) {
       await assignTaskToBlock(blockId, taskId);
     }
@@ -145,16 +145,10 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
       final deleteCompanion = _markBlockTaskForDeletion(
         currentBlockTask.version,
       );
-      print(
-        'Deleting block task ${currentBlockTask.blockId} - ${currentBlockTask.taskId}',
-      );
       await (update(blockTask)..where(
             (bt) => (bt.blockId.equals(blockId) & bt.taskId.equals(taskId)),
           ))
           .write(deleteCompanion);
-      print(
-        'BlockTask ${currentBlockTask.blockId} - ${currentBlockTask.taskId} marked for deletion: ${deleteCompanion.isDeleted}',
-      );
     }
   }
 
@@ -162,13 +156,9 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
     final currentBlock = await getBlockById(blockId);
     if (currentBlock != null) {
       final deleteCompanion = _markBlockForDeletion(currentBlock.version);
-      print('Deleting block ${currentBlock.id}');
       await (update(
         block,
       )..where((b) => b.id.equals(blockId))).write(deleteCompanion);
-      print(
-        'Block ${currentBlock.id} marked for deletion: ${deleteCompanion.isDeleted}',
-      );
     }
   }
 
@@ -178,16 +168,10 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
       final deleteCompanion = _markBlockTaskForDeletion(
         currentBlockTask.version,
       );
-      print(
-        'Deleting block task ${currentBlockTask.blockId} - ${currentBlockTask.taskId}',
-      );
       await (update(blockTask)..where(
             (bt) => (bt.blockId.equals(blockId) & bt.taskId.equals(taskId)),
           ))
           .write(deleteCompanion);
-      print(
-        'BlockTask ${currentBlockTask.blockId} - ${currentBlockTask.taskId} marked for deletion: ${deleteCompanion.isDeleted}',
-      );
     }
   }
 
@@ -197,18 +181,12 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
       final deleteCompanion = _markBlockTaskForDeletion(
         currentBlockTask.version,
       );
-      print(
-        'Deleting block task ${currentBlockTask.blockId} - ${currentBlockTask.taskId}',
-      );
       await (update(blockTask)..where(
             (bt) =>
                 (bt.blockId.equals(blockId) &
                 bt.taskId.equals(currentBlockTask.taskId)),
           ))
           .write(deleteCompanion);
-      print(
-        'BlockTask ${currentBlockTask.blockId} - ${currentBlockTask.taskId} marked for deletion: ${deleteCompanion.isDeleted}',
-      );
     }
   }
 

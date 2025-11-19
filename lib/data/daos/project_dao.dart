@@ -169,13 +169,9 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
     final currentProject = await getProjectById(projectId);
     if (currentProject != null) {
       final deleteCompanion = _markProjectForDeletion(currentProject.version);
-      print('Deleting project ${currentProject.name}');
       await (update(
         project,
       )..where((p) => p.id.equals(projectId))).write(deleteCompanion);
-      print(
-        'Project ${currentProject.name} marked for deletion: ${deleteCompanion.isDeleted}',
-      );
     }
   }
 

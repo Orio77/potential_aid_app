@@ -147,7 +147,7 @@ class _ReorderableGridState<T> extends State<ReorderableGrid<T>> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
           style: BorderStyle.solid,
           width: 2,
         ),

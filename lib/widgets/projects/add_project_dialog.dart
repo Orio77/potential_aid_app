@@ -258,7 +258,9 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
                     );
                 ref.invalidate(projectProvider(project.id));
                 ref.invalidate(projectIntervalsNotifierProvider);
-                Navigator.of(context).pop();
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                }
               },
               child: const Text('Save'),
             ),

@@ -113,11 +113,9 @@ class SyncService {
       try {
         await _supabaseService.signInWithSharedAccount();
       } catch (e) {
-        print('Shared user auth failed, falling back to anonymous: $e');
         await _supabaseService.signInAnonymously();
       }
     } catch (e) {
-      print('Failed to initialize sync service: $e');
       // Continue without sync functionality if auth fails
       _updateStatus(SyncStatus.offline);
     }
@@ -155,15 +153,12 @@ class SyncService {
         );
       }
 
-      print('🔄 Starting sync process...');
-
       int totalRecordsSynced = 0;
       Map<String, int> tableStats = {};
 
       // Determine if this is first sync (initial migration scenario)
       final isFirstSync = _lastSyncTime == null;
       if (isFirstSync) {
-        print('🚀 First sync detected - checking for existing local data');
         final migrationResult = await _performInitialMigration();
         totalRecordsSynced += migrationResult.recordsSynced;
         tableStats.addAll(migrationResult.tableStats);
@@ -202,12 +197,8 @@ class SyncService {
       // Trigger callback to invalidate providers and refresh UI with new data
       _notifyProviderInvalidation();
 
-      print(
-        '✅ Sync completed successfully: $totalRecordsSynced records synced',
-      );
       return result;
     } catch (e) {
-      print('❌ Sync failed: $e');
       final result = SyncResult(
         success: false,
         error: e.toString(),
@@ -226,9 +217,7 @@ class SyncService {
     if (onSyncComplete != null) {
       try {
         onSyncComplete!();
-        print('📱 Triggered provider invalidation after sync');
       } catch (e) {
-        print('⚠️  Error triggering provider invalidation: $e');
         // Continue execution even if callback fails
       }
     }
@@ -242,8 +231,6 @@ class SyncService {
   /// Handle initial migration when local DB has existing data but remote is empty
   /// This is crucial for users who have been using the app offline
   Future<SyncResult> _performInitialMigration() async {
-    print('📤 Performing initial migration: Local -> Remote');
-
     int totalRecords = 0;
     Map<String, int> tableStats = {};
 
@@ -256,8 +243,6 @@ class SyncService {
         final recordsToMigrate = await _getAllRecords(localTable);
 
         if (recordsToMigrate.isNotEmpty) {
-          print('🔄 Migrating $localTable: ${recordsToMigrate.length} records');
-
           // Convert local records to remote format
           final remoteRecords = <Map<String, dynamic>>[];
           for (final record in recordsToMigrate) {
@@ -285,8 +270,6 @@ class SyncService {
 
           tableStats[localTable] = recordsToMigrate.length;
           totalRecords = totalRecords + recordsToMigrate.length;
-
-          print('✅ Migrated $localTable: ${recordsToMigrate.length} records');
         }
       }
 
@@ -297,15 +280,12 @@ class SyncService {
         timestamp: DateTime.now(),
       );
     } catch (e) {
-      print('❌ Migration failed: $e');
       rethrow;
     }
   }
 
   /// Push local changes (where needs_sync = true) to remote
   Future<SyncResult> _pushLocalChanges() async {
-    print('📤 Pushing local changes to remote');
-
     int totalRecords = 0;
     Map<String, int> tableStats = {};
 
@@ -314,35 +294,24 @@ class SyncService {
         final localTable = entry.key;
         final remoteTable = entry.value;
 
-        print("Pushing changes for $localTable to $remoteTable");
-
         final recordsToSync = await getRecordsNeedingSync(localTable);
-
-        print('🔄 Found $localTable: ${recordsToSync.length} records to sync');
 
         if (recordsToSync.isNotEmpty) {
           final (creates, updates, deletes) = _categorizeRecords(recordsToSync);
-
-          print(
-            '🆕 Creates: ${creates.length}, ✏️ Updates: ${updates.length}, 🗑️ Deletes: ${deletes.length}',
-          );
 
           // Handle creates and updates
           if (creates.isNotEmpty || updates.isNotEmpty) {
             final upsertRecords = <Map<String, dynamic>>[];
             for (final record in [...creates, ...updates]) {
-              print('Preparing record for upsert: $record');
               final supabaseId = await _ensureSupabaseIdValue(
                 localTable,
                 record,
               );
-              print('Supabase ID for record: $supabaseId');
               final remoteRecord = await _convertLocalToRemote(
                 localTable,
                 record,
                 supabaseId,
               );
-              print("Converted remote record: $remoteRecord");
               upsertRecords.add(remoteRecord);
             }
 
@@ -360,9 +329,6 @@ class SyncService {
 
           // Handle deletes
           if (deletes.isNotEmpty) {
-            print(
-              '🗑️ Found ${deletes.length} records to delete in $localTable',
-            );
             final supabaseIds = deletes
                 .map((r) => _getField<String>(r, 'supabaseId'))
                 .whereType<String>()
@@ -372,12 +338,7 @@ class SyncService {
                 .whereType<int>()
                 .toList();
 
-            deletes.forEach((record) {
-              print("Record to delete: $record");
-            });
-
             if (supabaseIds.isNotEmpty) {
-              print('🗑️ Deleting from remote $remoteTable: $supabaseIds');
               await _supabaseService.deleteRecords(remoteTable, supabaseIds);
             }
 
@@ -403,15 +364,12 @@ class SyncService {
         timestamp: DateTime.now(),
       );
     } catch (e) {
-      print('❌ Push failed: $e');
       rethrow;
     }
   }
 
   /// Pull remote changes and apply to local database
   Future<SyncResult> _pullRemoteChanges() async {
-    print('📥 Pulling remote changes to local');
-
     int totalRecords = 0;
     Map<String, int> tableStats = {};
 
@@ -421,8 +379,6 @@ class SyncService {
         final localTable = entry.key;
         final remoteTable = entry.value;
 
-        print("Pulling remote changes for $localTable from $remoteTable");
-
         // Fetch remote records modified since last sync
         final remoteRecords = await _supabaseService.fetchRecords(
           remoteTable,
@@ -431,17 +387,12 @@ class SyncService {
         );
 
         if (remoteRecords.isNotEmpty) {
-          print('🔄 Pulling $localTable: ${remoteRecords.length} records');
-
           // Log deleted records specifically
           final deletedCount = remoteRecords
               .where((r) => r['is_deleted'] == true || r['is_deleted'] == 1)
               .length;
           if (deletedCount > 0) {
-            print('🗑️ Received $deletedCount deleted records for $localTable');
-          } else {
-            print('No deleted records for $localTable');
-          }
+          } else {}
 
           for (final remoteRecord in remoteRecords) {
             await _applyRemoteChangeToLocal(localTable, remoteRecord);
@@ -449,11 +400,7 @@ class SyncService {
 
           tableStats[localTable] = remoteRecords.length;
           totalRecords += remoteRecords.length;
-
-          print('✅ Applied $localTable: ${remoteRecords.length} records');
-        } else {
-          print('No remote changes for $localTable');
-        }
+        } else {}
       }
 
       // Trigger callback to invalidate providers and refresh UI with new data
@@ -466,7 +413,6 @@ class SyncService {
         timestamp: DateTime.now(),
       );
     } catch (e) {
-      print('❌ Pull failed: $e');
       rethrow;
     }
   }
@@ -480,7 +426,6 @@ class SyncService {
       _currentStatus = status;
 
       // Log status changes for debugging
-      print('🔄 Sync status changed: ${oldStatus.name} -> ${status.name}');
 
       // Cancel any pending status update
       _statusDebounceTimer?.cancel();
@@ -499,12 +444,8 @@ class SyncService {
   }
 
   void _notifyStatusChange(SyncStatus status) {
-    try {
-      if (!_statusController.isClosed) {
-        _statusController.add(status);
-      }
-    } catch (e) {
-      print('Error updating status stream: $e');
+    if (!_statusController.isClosed) {
+      _statusController.add(status);
     }
   }
 
@@ -513,12 +454,8 @@ class SyncService {
     // Only update if result is different to prevent unnecessary rebuilds
     if (_lastSyncResult != result) {
       _lastSyncResult = result;
-      try {
-        if (!_resultController.isClosed) {
-          _resultController.add(result);
-        }
-      } catch (e) {
-        print('Error updating result stream: $e');
+      if (!_resultController.isClosed) {
+        _resultController.add(result);
       }
     }
   }
@@ -541,35 +478,22 @@ class SyncService {
 
       return null; // Will be null for first sync
     } catch (e) {
-      print('Error loading last sync time: $e');
       return null;
     }
   }
 
   /// Save last sync timestamp to local storage
   Future<void> _saveLastSyncTime(DateTime time) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('last_sync_time', time.toIso8601String());
-
-      print('✅ Last sync time saved: ${time}');
-    } catch (e) {
-      print('❌ Error saving last sync time: $e');
-    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('last_sync_time', time.toIso8601String());
   }
 
   /// Clear the stored last sync time - useful when resetting sync state
   /// This will force a full sync on the next sync operation
   Future<void> clearLastSyncTime() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('last_sync_time');
-      _lastSyncTime = null;
-
-      print('✅ Last sync time cleared - next sync will be a full sync');
-    } catch (e) {
-      print('❌ Error clearing last sync time: $e');
-    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('last_sync_time');
+    _lastSyncTime = null;
   }
 
   /// Get records that need to be synced for a given table
@@ -627,11 +551,9 @@ class SyncService {
           return settings.map((s) => s.toJson()).toList();
 
         default:
-          print('Unknown table: $tableName');
           return [];
       }
     } catch (e) {
-      print('Error getting records needing sync for $tableName: $e');
       return [];
     }
   }
@@ -696,11 +618,9 @@ class SyncService {
           return settings.map((s) => s.toJson()).toList();
 
         default:
-          print('Warning: Unknown table $tableName for migration');
           return [];
       }
     } catch (e) {
-      print('Error getting unmigrated records for $tableName: $e');
       return [];
     }
   }
@@ -875,9 +795,6 @@ class SyncService {
           _getField<int>(localRecord, 'parentTaskId'),
         );
         if (projectSupabaseId == null) {
-          print(
-            '⚠️  Missing project supabase_id for task ${_getField<int>(localRecord, 'id')}',
-          );
         } else {
           relationFields['project_supabase_id'] = projectSupabaseId;
         }
@@ -908,9 +825,6 @@ class SyncService {
           _getField<int>(localRecord, 'projectId'),
         );
         if (projectSupabaseId == null) {
-          print(
-            '⚠️  Missing project supabase_id for block ${_getField<int>(localRecord, 'id')}',
-          );
         } else {
           relationFields['project_supabase_id'] = projectSupabaseId;
         }
@@ -925,9 +839,6 @@ class SyncService {
           _getField<int>(localRecord, 'taskId'),
         );
         if (blockSupabaseId == null || taskSupabaseId == null) {
-          print(
-            '⚠️  Missing block/task supabase_id for block_task (block: ${_getField<int>(localRecord, 'blockId')}, task: ${_getField<int>(localRecord, 'taskId')})',
-          );
         } else {
           relationFields['block_supabase_id'] = blockSupabaseId;
           relationFields['task_supabase_id'] = taskSupabaseId;
@@ -939,9 +850,6 @@ class SyncService {
           _getField<int>(localRecord, 'taskId'),
         );
         if (taskSupabaseId == null) {
-          print(
-            '⚠️  Missing task supabase_id for task_completion ${_getField<int>(localRecord, 'id')}',
-          );
         } else {
           relationFields['task_supabase_id'] = taskSupabaseId;
         }
@@ -952,9 +860,6 @@ class SyncService {
           _getField<int>(localRecord, 'blockId'),
         );
         if (blockSupabaseId == null) {
-          print(
-            '⚠️  Missing block supabase_id for block_completion ${_getField<int>(localRecord, 'id')}',
-          );
         } else {
           relationFields['block_supabase_id'] = blockSupabaseId;
         }
@@ -1201,40 +1106,32 @@ class SyncService {
     List<Map<String, dynamic>> localRecords,
     List<Map<String, dynamic>> uploadedRecords,
   ) async {
-    try {
-      // Match local records with uploaded records and update supabase_id
-      for (
-        int i = 0;
-        i < localRecords.length && i < uploadedRecords.length;
-        i++
-      ) {
-        final localRecord = localRecords[i];
-        final uploadedRecord = uploadedRecords[i];
-        final supabaseId = uploadedRecord['supabase_id'] as String;
+    // Match local records with uploaded records and update supabase_id
+    for (
+      int i = 0;
+      i < localRecords.length && i < uploadedRecords.length;
+      i++
+    ) {
+      final localRecord = localRecords[i];
+      final uploadedRecord = uploadedRecords[i];
+      final supabaseId = uploadedRecord['supabase_id'] as String;
 
-        if (tableName == 'block_task') {
-          // Handle BlockTask with composite key
-          final blockId = _getField<int>(localRecord, 'blockId');
-          final taskId = _getField<int>(localRecord, 'taskId');
-          if (blockId == null || taskId == null) {
-            print(
-              'Warning: Missing block/task ids while updating block_task supabase ids',
-            );
-            continue;
-          }
-          await _updateBlockTaskSupabaseId(blockId, taskId, supabaseId);
-        } else {
-          // Handle other tables with single ID
-          final localId = _getField<int>(localRecord, 'id');
-          if (localId == null) {
-            print('Warning: Missing local id for $tableName during migration');
-            continue;
-          }
-          await _updateRecordSupabaseId(tableName, localId, supabaseId);
+      if (tableName == 'block_task') {
+        // Handle BlockTask with composite key
+        final blockId = _getField<int>(localRecord, 'blockId');
+        final taskId = _getField<int>(localRecord, 'taskId');
+        if (blockId == null || taskId == null) {
+          continue;
         }
+        await _updateBlockTaskSupabaseId(blockId, taskId, supabaseId);
+      } else {
+        // Handle other tables with single ID
+        final localId = _getField<int>(localRecord, 'id');
+        if (localId == null) {
+          continue;
+        }
+        await _updateRecordSupabaseId(tableName, localId, supabaseId);
       }
-    } catch (e) {
-      print('Error updating local records with remote IDs: $e');
     }
   }
 
@@ -1334,11 +1231,7 @@ class SyncService {
                   lastModified: Value(now),
                 ),
               );
-        } else {
-          print(
-            'Warning: Could not find BlockTask record for localId: $localId',
-          );
-        }
+        } else {}
         break;
       case 'settings':
         await (_database.update(
@@ -1352,7 +1245,6 @@ class SyncService {
         );
         break;
       default:
-        print('Warning: Unknown table $tableName for supabase_id update');
     }
 
     _localToSupabaseCache.putIfAbsent(tableName, () => {})[localId] =
@@ -1399,7 +1291,6 @@ class SyncService {
       // Use batch operation for better performance
       await _batchMarkRecordsAsSynced(tableName, records);
     } catch (e) {
-      print('Error marking records as synced: $e');
       // Fallback to individual marking
       for (final record in records) {
         final localId = _getField<int>(record, 'id');
@@ -1447,9 +1338,6 @@ class SyncService {
         // BlockTask has composite key, need to find by some identifier
         // Since BlockTask doesn't have a traditional single ID, this is a design issue
         // For now, we'll skip this and log a warning
-        print(
-          'Warning: _markSingleRecordAsSynced called for block_task with localId: $localId. BlockTask uses composite keys and needs redesigned handling.',
-        );
         break;
       case 'settings':
         await (_database.update(_database.settings)
@@ -1457,7 +1345,6 @@ class SyncService {
             .write(const SettingsCompanion(needsSync: Value(false)));
         break;
       default:
-        print('Warning: Unknown table $tableName for sync marking');
     }
   }
 
@@ -1469,17 +1356,14 @@ class SyncService {
     try {
       final supabaseId = remoteRecord['supabase_id'] as String?;
       if (supabaseId == null) {
-        print('Warning: Remote record missing supabase_id for $tableName');
         return;
       }
-      print('Applying remote change to $tableName: $supabaseId');
 
       // Check if local record exists
       final existingLocal = await _findLocalRecordBySupabaseId(
         tableName,
         supabaseId,
       );
-      print('Existing local record: $existingLocal');
 
       // Parse remote timestamps
       final remoteModified = _parseDateTime(remoteRecord['last_modified']);
@@ -1487,15 +1371,10 @@ class SyncService {
       final isRemoteDeleted =
           remoteRecord['is_deleted'] == true || remoteRecord['is_deleted'] == 1;
 
-      print(
-        'Remote record - last_modified: $remoteModified, version: $remoteVersion, is_deleted: $isRemoteDeleted',
-      );
-
       if (existingLocal == null) {
         // No local record exists - insert if not deleted
         if (!isRemoteDeleted) {
           await _insertRemoteRecord(tableName, remoteRecord);
-          print('✅ Inserted new $tableName record: $supabaseId');
         }
         return;
       }
@@ -1508,24 +1387,17 @@ class SyncService {
       final int? localId = requiresLocalId ? existingLocal['id'] as int? : null;
 
       if (requiresLocalId && localId == null) {
-        print(
-          '⚠️  Local record for $tableName is missing its primary key while syncing $supabaseId',
-        );
         return;
       }
 
       // Handle remote deletion early if record is marked as deleted
       if (isRemoteDeleted) {
-        print(
-          'Remote record existing locally marked as deleted for $tableName: $supabaseId',
-        );
         if (tableName == 'block_task') {
           await _deleteBlockTaskBySupabaseId(supabaseId);
         } else {
           // Use localId for deletion, not remoteRecord['id']
           await _deleteLocalRecordsByIds(tableName, [localId!]);
         }
-        print('🗑️ Deleted local $tableName record: $supabaseId');
         return;
       }
 
@@ -1541,25 +1413,15 @@ class SyncService {
                 tableName == 'block_task' ? 0 : localId!,
                 remoteRecord,
               );
-              print('🔄 Updated $tableName with newer remote: $supabaseId');
-            } else {
-              print(
-                '⚠️  Keeping local changes for $tableName: $supabaseId (newer local timestamp)',
-              );
-            }
+            } else {}
           } else {
             await _updateLocalWithRemote(
               tableName,
               tableName == 'block_task' ? 0 : localId!,
               remoteRecord,
             );
-            print('🔄 Updated $tableName with remote: $supabaseId');
           }
-        } else {
-          print(
-            '⚠️  Keeping local changes for $tableName: $supabaseId (higher local version)',
-          );
-        }
+        } else {}
       } else {
         // No local pending changes - safe to apply remote
         await _updateLocalWithRemote(
@@ -1567,10 +1429,8 @@ class SyncService {
           tableName == 'block_task' ? 0 : localId!,
           remoteRecord,
         );
-        print('✅ Updated $tableName from remote: $supabaseId');
       }
     } catch (e) {
-      print('❌ Error applying remote change to $tableName: $e');
       rethrow;
     }
   }
@@ -1626,7 +1486,6 @@ class SyncService {
           return null;
       }
     } catch (e) {
-      print('Error finding local record by supabase_id: $e');
       return null;
     }
   }
@@ -1646,7 +1505,6 @@ class SyncService {
           'projectSupabaseId',
         );
         if (projectLocalId == null) {
-          print('⚠️  Skipping task insert: missing project reference');
           break;
         }
         final parentTaskLocalId = await _resolveLocalId(
@@ -1746,7 +1604,6 @@ class SyncService {
           'projectSupabaseId',
         );
         if (projectLocalId == null) {
-          print('⚠️  Skipping block insert: missing project reference');
           break;
         }
         await _database
@@ -1776,7 +1633,6 @@ class SyncService {
           'taskSupabaseId',
         );
         if (taskLocalId == null) {
-          print('⚠️  Skipping task_completion insert: missing task');
           break;
         }
         await _database
@@ -1805,7 +1661,6 @@ class SyncService {
           'blockSupabaseId',
         );
         if (blockLocalId == null) {
-          print('⚠️  Skipping block_completion insert: missing block');
           break;
         }
         await _database
@@ -1839,7 +1694,6 @@ class SyncService {
           'taskSupabaseId',
         );
         if (blockLocalId == null || taskLocalId == null) {
-          print('⚠️  Skipping block_task insert: missing related record');
           break;
         }
         await _database
@@ -1884,7 +1738,6 @@ class SyncService {
             );
         break;
       default:
-        print('Insert not implemented for table: $tableName');
     }
   }
 
@@ -1904,7 +1757,6 @@ class SyncService {
           'projectSupabaseId',
         );
         if (projectLocalId == null) {
-          print('⚠️  Skipping task update: missing project reference');
           break;
         }
         final parentTaskLocalId = await _resolveLocalId(
@@ -1995,7 +1847,6 @@ class SyncService {
           'projectSupabaseId',
         );
         if (projectLocalId == null) {
-          print('⚠️  Skipping block update: missing project reference');
           break;
         }
         await (_database.update(
@@ -2022,7 +1873,6 @@ class SyncService {
           'taskSupabaseId',
         );
         if (taskLocalId == null) {
-          print('⚠️  Skipping task_completion update: missing task reference');
           break;
         }
         await (_database.update(
@@ -2048,9 +1898,6 @@ class SyncService {
           'blockSupabaseId',
         );
         if (blockLocalId == null) {
-          print(
-            '⚠️  Skipping block_completion update: missing block reference',
-          );
           break;
         }
         await (_database.update(
@@ -2081,7 +1928,6 @@ class SyncService {
           'taskSupabaseId',
         );
         if (blockLocalId == null || taskLocalId == null) {
-          print('⚠️  Skipping block_task update: missing related record');
           break;
         }
         await (_database.update(_database.blockTask)..where(
@@ -2120,20 +1966,14 @@ class SyncService {
         );
         break;
       default:
-        print('Update not implemented for table: $tableName');
     }
   }
 
   /// Delete BlockTask by supabase_id (used for pulling remote deletions)
   Future<void> _deleteBlockTaskBySupabaseId(String supabaseId) async {
-    try {
-      await (_database.delete(
-        _database.blockTask,
-      )..where((bt) => bt.supabaseId.equals(supabaseId))).go();
-      print('✅ BlockTask deleted: $supabaseId');
-    } catch (e) {
-      print('❌ Error deleting BlockTask: $e');
-    }
+    await (_database.delete(
+      _database.blockTask,
+    )..where((bt) => bt.supabaseId.equals(supabaseId))).go();
   }
 
   /// Update BlockTask supabase_id using composite key (proper way)
@@ -2144,21 +1984,16 @@ class SyncService {
   ) async {
     final now = DateTime.now();
 
-    try {
-      await (_database.update(_database.blockTask)..where(
-            (bt) => bt.blockId.equals(blockId) & bt.taskId.equals(taskId),
-          ))
-          .write(
-            BlockTaskCompanion(
-              supabaseId: Value(supabaseId),
-              needsSync: const Value(false),
-              lastModified: Value(now),
-            ),
-          );
-      print('✅ BlockTask supabase_id updated: $supabaseId');
-    } catch (e) {
-      print('❌ Error updating BlockTask supabase_id: $e');
-    }
+    await (_database.update(
+          _database.blockTask,
+        )..where((bt) => bt.blockId.equals(blockId) & bt.taskId.equals(taskId)))
+        .write(
+          BlockTaskCompanion(
+            supabaseId: Value(supabaseId),
+            needsSync: const Value(false),
+            lastModified: Value(now),
+          ),
+        );
   }
 
   /// Safely parse DateTime from various formats
@@ -2169,7 +2004,6 @@ class SyncService {
       try {
         return DateTime.parse(value);
       } catch (e) {
-        print('Warning: Could not parse DateTime: $value');
         return null;
       }
     }
@@ -2177,7 +2011,6 @@ class SyncService {
       try {
         return DateTime.fromMillisecondsSinceEpoch(value);
       } catch (e) {
-        print('Warning: Could not parse DateTime from int: $value');
         return null;
       }
     }
@@ -2263,10 +2096,7 @@ class SyncService {
           }
         }
       });
-
-      print('✅ Batch marked ${records.length} $tableName records as synced');
     } catch (e) {
-      print('❌ Error batch marking records as synced: $e');
       // Fallback to individual updates
       for (final record in records) {
         final recordId = record['id'] as int?;
@@ -2281,49 +2111,43 @@ class SyncService {
     String localTable,
     List<int> ids,
   ) async {
-    try {
-      switch (localTable) {
-        case 'task':
-          await (_database.delete(
-            _database.task,
-          )..where((t) => t.id.isIn(ids))).go();
-          break;
-        case 'project':
-          await (_database.delete(
-            _database.project,
-          )..where((p) => p.id.isIn(ids))).go();
-          break;
-        case 'project_category':
-          await (_database.delete(
-            _database.projectCategory,
-          )..where((pc) => pc.id.isIn(ids))).go();
-          break;
-        case 'block':
-          await (_database.delete(
-            _database.block,
-          )..where((b) => b.id.isIn(ids))).go();
-          break;
-        case 'task_completion':
-          await (_database.delete(
-            _database.taskCompletion,
-          )..where((tc) => tc.id.isIn(ids))).go();
-          break;
-        case 'block_completion':
-          await (_database.delete(
-            _database.blockCompletion,
-          )..where((bc) => bc.id.isIn(ids))).go();
-          break;
-        case 'settings':
-          await (_database.delete(
-            _database.settings,
-          )..where((s) => s.id.isIn(ids))).go();
-          break;
-        default:
-          print('Delete not implemented for table: $localTable');
-      }
-      print('✅ Deleted ${ids.length} records from $localTable');
-    } catch (e) {
-      print('❌ Error deleting records from $localTable: $e');
+    switch (localTable) {
+      case 'task':
+        await (_database.delete(
+          _database.task,
+        )..where((t) => t.id.isIn(ids))).go();
+        break;
+      case 'project':
+        await (_database.delete(
+          _database.project,
+        )..where((p) => p.id.isIn(ids))).go();
+        break;
+      case 'project_category':
+        await (_database.delete(
+          _database.projectCategory,
+        )..where((pc) => pc.id.isIn(ids))).go();
+        break;
+      case 'block':
+        await (_database.delete(
+          _database.block,
+        )..where((b) => b.id.isIn(ids))).go();
+        break;
+      case 'task_completion':
+        await (_database.delete(
+          _database.taskCompletion,
+        )..where((tc) => tc.id.isIn(ids))).go();
+        break;
+      case 'block_completion':
+        await (_database.delete(
+          _database.blockCompletion,
+        )..where((bc) => bc.id.isIn(ids))).go();
+        break;
+      case 'settings':
+        await (_database.delete(
+          _database.settings,
+        )..where((s) => s.id.isIn(ids))).go();
+        break;
+      default:
     }
   }
 }
