@@ -394,6 +394,15 @@ class SyncService {
           if (deletedCount > 0) {
           } else {}
 
+          // Sort tasks by depth to ensure parents are processed before children
+          if (localTable == 'task') {
+            remoteRecords.sort((a, b) {
+              final depthA = a['depth'] as int? ?? 0;
+              final depthB = b['depth'] as int? ?? 0;
+              return depthA.compareTo(depthB);
+            });
+          }
+
           for (final remoteRecord in remoteRecords) {
             await _applyRemoteChangeToLocal(localTable, remoteRecord);
           }

@@ -217,6 +217,7 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
                 endGoal: Value(endGoal!),
                 unit: Value(unit),
                 deadline: Value(_deadline),
+                parentTaskId: Value(widget.taskData!.parentTaskId),
               ),
             );
       }
