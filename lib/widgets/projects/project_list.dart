@@ -28,6 +28,7 @@ class _ProjectListState extends ConsumerState<ProjectList> {
               .where(
                 (p) => widget.category == null || p.category == widget.category,
               )
+              .where((p) => p.parentProjectId == null)
               .toList()
         : projects
               .where(

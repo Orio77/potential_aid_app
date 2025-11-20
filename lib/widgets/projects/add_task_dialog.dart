@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
@@ -60,8 +61,8 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
   }
 
   void _initializeValues() {
+    _currentDate = ref.watch(dateNotifierProvider).toDateTimeUnspecified();
     if (widget.taskData == null) {
-      _currentDate = ref.watch(dateNotifierProvider).toDateTimeUnspecified();
       _deadline = _currentDate.add(Duration(days: 7));
     } else {
       _deadline = widget.taskData!.deadline!;
@@ -194,16 +195,33 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
       final endGoal = int.tryParse(_endGoalController.text.trim());
       final unit = _unitController.text.trim();
 
-      await ref
-          .read(projectTasksNotifier(widget.projectId).notifier)
-          .addTask(
-            taskName,
-            widget.projectId,
-            _deadline,
-            unit: unit,
-            current: current,
-            endGoal: endGoal,
-          );
+      if (widget.taskData == null) {
+        await ref
+            .read(projectTasksNotifier(widget.projectId).notifier)
+            .addTask(
+              taskName,
+              widget.projectId,
+              _deadline,
+              unit: unit,
+              current: current,
+              endGoal: endGoal,
+            );
+      } else {
+        await ref
+            .read(projectTasksNotifier(widget.projectId).notifier)
+            .updateTask(
+              widget.taskData!.id,
+              TaskCompanion(
+                name: Value(taskName),
+                current: Value(current!),
+                endGoal: Value(endGoal!),
+                unit: Value(unit),
+                deadline: Value(_deadline),
+              ),
+            );
+      }
+
+      ref.invalidate(projectTasksNotifier(widget.projectId));
 
       if (mounted) {
         Navigator.of(context).pop();

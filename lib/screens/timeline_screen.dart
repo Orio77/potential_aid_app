@@ -34,7 +34,9 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
     super.initState();
     showProjects = true;
     depth = 0;
-    _horizontalScrollController = ScrollController();
+    _horizontalScrollController = ScrollController(
+      initialScrollOffset: dayCardWidth * (DateTime.now().day - 1),
+    );
   }
 
   @override

@@ -286,11 +286,34 @@ class _TaskCardsState extends ConsumerState<TaskCards> with AutoScrollMixin {
   Future<void> _updateTaskDeadline(TaskData task, LocalDate newDate) async {
     try {
       final newDeadline = newDate.toDateTimeUnspecified();
-      await ref
-          .read(tasksNotifierProvider(null).notifier)
-          .updateTask(task.id, TaskCompanion(deadline: Value(newDeadline)));
+      // update tasks deadline
+      var taskProvider = ref.read(tasksNotifierProvider(null).notifier);
+      await taskProvider.updateTask(
+        task.id,
+        TaskCompanion(deadline: Value(newDeadline)),
+      );
 
+      // update deadline of all subtasks
+      final subtasks = await ref
+          .read(tasksNotifierProvider(null).notifier)
+          .getAllSubtasks(task.id);
+
+      print("SUbtasks: ${subtasks.length}");
+
+      final affectedDepths = <int>{};
+      for (var sbt in subtasks) {
+        await taskProvider.updateTask(
+          sbt.id,
+          TaskCompanion(deadline: Value(newDeadline)),
+        );
+        affectedDepths.add(sbt.depth);
+        print("updated");
+      }
+
+      // refresh timeline
       final currentMonth = ref.read(timelineDateNotifierProvider);
+
+      // Refresh current depth
       await ref
           .read(taskCardsNotifierProvider(depth).notifier)
           .loadTasksForMonth(
@@ -299,6 +322,19 @@ class _TaskCardsState extends ConsumerState<TaskCards> with AutoScrollMixin {
             categoryId: widget.categoryId,
             projectId: widget.projectId,
           );
+
+      // Refresh affected subtask depths
+      for (final d in affectedDepths) {
+        if (d == depth) continue;
+        await ref
+            .read(taskCardsNotifierProvider(d).notifier)
+            .loadTasksForMonth(
+              monthDate: currentMonth,
+              depth: d,
+              categoryId: widget.categoryId,
+              projectId: widget.projectId,
+            );
+      }
 
       // Success feedback
       if (mounted) {

@@ -34,7 +34,7 @@ class TaskCard extends ConsumerWidget {
   Container _buildTaskCard(int projectColorCode) {
     return Container(
       width: width,
-      height: height ?? 60,
+      height: height ?? 64,
       margin: EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         gradient: ColorUtils.createNorthernLightsGradient(

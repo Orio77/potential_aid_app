@@ -223,6 +223,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
         .get();
   }
 
+  // Get subtasks, one level down, with optional filtering predicates
   Future<List<TaskData>> getSubtasks(
     int taskId,
     List<Expression<bool> Function($TaskTable)>? predicates,
@@ -242,6 +243,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
     return await query.get();
   }
 
+  // Recursive retrieval of all descendant tasks
   Future<List<TaskData>> getAllDescendantsRecursive(int taskId) async {
     final query = '''
       WITH RECURSIVE task_descendants AS (
@@ -266,23 +268,26 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
 
     return result
         .map(
-          (row) => TaskData.fromJson({
-            'id': row.data['id'],
-            'name': row.data['name'],
-            'projectId': row.data['project_id'],
-            'deadline': row.data['deadline'],
-            'unit': row.data['unit'],
-            'startPoint': row.data['start_point'],
-            'current': row.data['current'],
-            'endGoal': row.data['end_goal'],
-            'parentTaskId': row.data['parent_task_id'],
-            'depth': row.data['depth'],
-            'orderIndex': row.data['order_index'],
-            'isCompleted':
-                (row.data['is_completed'] as int) ==
-                1, // Convert SQLite int to bool
-            'completedAt': row.data['completed_at'],
-          }),
+          (row) => TaskData(
+            id: row.read<int>('id'),
+            name: row.read<String>('name'),
+            projectId: row.read<int>('project_id'),
+            deadline: row.read<DateTime?>('deadline'),
+            unit: row.read<String?>('unit'),
+            startPoint: row.read<int?>('start_point'),
+            current: row.read<int>('current'),
+            endGoal: row.read<int>('end_goal'),
+            parentTaskId: row.read<int?>('parent_task_id'),
+            depth: row.read<int>('depth'),
+            orderIndex: row.read<int>('order_index'),
+            isCompleted: row.read<bool>('is_completed'),
+            completedAt: row.read<DateTime?>('completed_at'),
+            supabaseId: row.read<String?>('supabase_id'),
+            lastModified: row.read<DateTime>('last_modified'),
+            needsSync: row.read<bool>('needs_sync'),
+            isDeleted: row.read<bool>('is_deleted'),
+            version: row.read<int>('version'),
+          ),
         )
         .toList();
   }

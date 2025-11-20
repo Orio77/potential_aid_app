@@ -21,6 +21,10 @@ class TasksNotifierProvider extends StateNotifier<List<TaskData>> {
     await _database.taskDao.updateTask(taskId, taskCompanion);
     await loadTasks();
   }
+
+  Future<List<TaskData>> getAllSubtasks(int taskId) async {
+    return await _database.taskDao.getAllDescendantsRecursive(taskId);
+  }
 }
 
 final tasksNotifierProvider =

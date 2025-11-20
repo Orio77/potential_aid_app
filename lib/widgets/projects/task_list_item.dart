@@ -32,6 +32,8 @@ class TaskListItem extends ConsumerStatefulWidget {
 }
 
 class _TaskListItemState extends ConsumerState<TaskListItem> {
+  bool _isDismissed = false;
+
   Future<void> _handleDeleteConfirmation(BuildContext context) async {
     if (widget.onDelete != null) {
       widget.onDelete!();
@@ -40,6 +42,10 @@ class _TaskListItemState extends ConsumerState<TaskListItem> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isDismissed) {
+      return const SizedBox.shrink();
+    }
+
     final task = widget.task;
     final progress = task.endGoal > 0 ? task.current / task.endGoal : 0.0;
 
@@ -90,6 +96,10 @@ class _TaskListItemState extends ConsumerState<TaskListItem> {
         return true;
       },
       onDismissed: (direction) async {
+        setState(() {
+          _isDismissed = true;
+        });
+
         if (direction == DismissDirection.endToStart) {
           _handleDeleteConfirmation(context);
         } else {
