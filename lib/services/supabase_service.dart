@@ -1,6 +1,6 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:potential_aid_app/config/supabase_config.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseService {
   static SupabaseService? _instance;
@@ -89,6 +89,28 @@ class SupabaseService {
 
     final response = await query;
     return List<Map<String, dynamic>>.from(response);
+  }
+
+  Future<List<Map<String, dynamic>>> fetchRecordsForDate(
+    String tableName,
+    DateTime date,
+  ) async {
+    // Create start and end of day timestamps
+    final startOfDay = DateTime(date.year, date.month, date.day);
+    final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59, 999);
+
+    final response = await client
+        .from(tableName)
+        .select()
+        .gte('created_at', startOfDay.toIso8601String())
+        .lte('created_at', endOfDay.toIso8601String());
+
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  /// Subscribe to changes in the tasks table
+  Stream<List<Map<String, dynamic>>> subscribeToTableChanges(String tableName) {
+    return client.from(tableName).stream(primaryKey: ['supabase_id']);
   }
 
   /// Generic method to upsert records to any table

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/screens/project_category_list_screen.dart';
-import 'package:potential_aid_app/screens/stats_screen.dart';
+import 'package:potential_aid_app/screens/completion_stats_screen.dart';
 import 'package:potential_aid_app/screens/timeline_screen.dart';
 import 'package:potential_aid_app/widgets/schedule/add_block_dialog.dart';
 import 'package:potential_aid_app/widgets/schedule/date_header.dart';
@@ -32,7 +32,9 @@ class MainScreen extends ConsumerWidget {
               icon: Icon(Icons.stacked_bar_chart),
               onPressed: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const StatsScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const CompletionStatsScreen(),
+                  ),
                 );
               },
             ),
