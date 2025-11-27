@@ -25,6 +25,7 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
   final _currentController = TextEditingController();
   final _endGoalController = TextEditingController();
   final _unitController = TextEditingController();
+  final _progressInputController = GoalProgressInputController();
   late DateTime _startDate;
   late DateTime _deadline;
   final _focusNode = FocusNode();
@@ -63,6 +64,10 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
     }
 
     super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+    });
   }
 
   @override
@@ -71,6 +76,7 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
     _currentController.dispose();
     _endGoalController.dispose();
     _unitController.dispose();
+    _focusNode.dispose();
 
     _projectNameController.removeListener(_updateButtonState);
     _currentController.removeListener(_updateButtonState);
@@ -99,12 +105,16 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
               TextFormField(
                 controller: _projectNameController,
                 focusNode: _focusNode,
+                autofocus: true,
                 decoration: const InputDecoration(
                   labelText: 'Project name',
                   border: OutlineInputBorder(),
                 ),
                 validator: _validateProjectName,
                 enabled: !_isLoading,
+                onFieldSubmitted: (_) {
+                  _progressInputController.focusFirst();
+                },
               ),
 
               const SizedBox(height: 16),
@@ -113,6 +123,7 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
                 currentController: _currentController,
                 endGoalController: _endGoalController,
                 unitController: _unitController,
+                controller: _progressInputController,
               ),
 
               const SizedBox(height: 16),
