@@ -429,6 +429,14 @@ class SyncRepository {
   }
 
   /// Mark records as synced (batch operation)
+  /// 
+  /// Uses Drift's batch API for efficient bulk updates. If batch operation fails
+  /// (e.g., due to database constraints or locking issues), automatically falls back
+  /// to individual record updates to ensure data consistency.
+  /// 
+  /// Parameters:
+  /// - tableName: The name of the table containing the records
+  /// - records: List of records to mark as synced
   Future<void> batchMarkRecordsAsSynced(
     String tableName,
     List<Map<String, dynamic>> records,

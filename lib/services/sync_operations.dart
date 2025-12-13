@@ -14,6 +14,8 @@ class SyncOperations {
   final Uuid _uuid = const Uuid();
 
   // Table mapping: local table name -> remote table name
+  // Note: Currently identical, but kept for future flexibility if table names diverge
+  // or if custom mapping logic is needed for specific tables
   static const Map<String, String> tableMapping = {
     'project_category': 'project_category',
     'project': 'project',

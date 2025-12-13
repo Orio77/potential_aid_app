@@ -125,6 +125,9 @@ class BreakdownSubtaskButton extends ConsumerWidget {
     required this.onSaveNeeded,
   });
 
+  /// Helper method to check if a subtask is new (not yet saved)
+  bool get _isNewSubtask => subtask.savedId == TaskBreakdownConstants.newSubtaskId;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return IconButton(
@@ -139,7 +142,7 @@ class BreakdownSubtaskButton extends ConsumerWidget {
   ) async {
     final navigator = Navigator.of(context);
 
-    if (subtask.savedId != TaskBreakdownConstants.newSubtaskId) {
+    if (!_isNewSubtask) {
       final task = await ref
           .read(projectTasksNotifier(parentTask.projectId).notifier)
           .getTask(subtask.savedId);

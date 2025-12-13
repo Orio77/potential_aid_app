@@ -20,6 +20,17 @@ class SyncConverter {
   };
 
   /// Normalize value for remote storage
+  /// 
+  /// Converts local values to remote-compatible formats:
+  /// - DateTime objects are converted to ISO8601 strings
+  /// - Color integers are converted to signed 32-bit format for PostgreSQL
+  /// - Epoch timestamps (int) are detected and converted to ISO8601 strings
+  /// 
+  /// Parameters:
+  /// - value: The value to normalize
+  /// - fieldName: Optional field name to apply field-specific normalization rules
+  /// 
+  /// Returns: Normalized value suitable for remote storage
   static dynamic normalizeValue(dynamic value, {String? fieldName}) {
     if (value is DateTime) {
       return value.toIso8601String();

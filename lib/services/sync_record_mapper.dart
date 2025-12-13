@@ -142,6 +142,17 @@ class SyncRecordMapper {
   }
 
   /// Apply remote change to local database with conflict resolution
+  /// 
+  /// Conflict Resolution Strategy:
+  /// 1. No local record exists → Insert remote record (unless deleted)
+  /// 2. Remote record is deleted → Delete local record
+  /// 3. Local has pending changes (needsSync=true):
+  ///    - Use version-based resolution (higher version wins)
+  ///    - If versions equal, use timestamp (more recent wins)
+  /// 4. Local has no pending changes → Apply remote changes
+  /// 
+  /// This strategy ensures that uncommitted local changes are preserved
+  /// while allowing remote updates when there's no conflict.
   Future<void> applyRemoteChangeToLocal(
     String tableName,
     Map<String, dynamic> remoteRecord,
