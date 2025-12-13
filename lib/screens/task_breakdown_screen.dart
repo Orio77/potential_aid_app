@@ -4,15 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/constants/task_breakdown_constants.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/managers/subtask_state_manager.dart';
-import 'package:potential_aid_app/models/subtask_item.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/task_cards_notifier.dart';
-import 'package:potential_aid_app/providers/task_search_notifier.dart';
-import 'package:potential_aid_app/services/deadline_service.dart';
-import 'package:potential_aid_app/widgets/projects/complete_task_dialog.dart';
 import 'package:potential_aid_app/widgets/breakdown/arrow_painter.dart';
-import 'package:potential_aid_app/widgets/util/search_text_field.dart';
+import 'package:potential_aid_app/widgets/breakdown/subtask_card.dart';
+import 'package:potential_aid_app/widgets/breakdown/subtask_buttons.dart';
 
 class TaskBreakdownScreen extends ConsumerStatefulWidget {
   final TaskData task;
@@ -50,6 +47,8 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     super.dispose();
   }
 
+  // Initialization and data loading
+
   void _initializeSubtasks() async {
     final notCompletedFilter = <Expression<bool> Function($TaskTable)>[
       (table) => table.isCompleted.equals(false),
@@ -61,7 +60,6 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     if (subtasksData.isEmpty) {
       _stateManager.initializeEmpty();
     } else {
-      // Prepare data with subtask counts
       final subtasksWithCounts = <({TaskData taskData, int subtaskCount})>[];
 
       for (final subtask in subtasksData) {
@@ -86,6 +84,8 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     });
   }
 
+  // User actions
+
   void _addSubtask() {
     final newSubtask = _stateManager.addSubtask();
     setState(() {
@@ -95,7 +95,6 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
       _dynamicSubtasksWidth = _stateManager.calculateDynamicSubtasksWidth();
     });
 
-    // Focus on the newly added subtask after the widget is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
       newSubtask.focusNode.requestFocus();
     });
@@ -146,7 +145,11 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     });
   }
 
-  void _correctIndexes(int index) {
+  void _removeSubtask(int index) async {
+    final subtask = _stateManager.getSubtask(index);
+    if (subtask != null && subtask.isExisting) {
+      await _deleteParentTaskFromSubtasks(index);
+    }
     _stateManager.removeSubtask(index);
     setState(() {
       _dynamicTotalWidth = _stateManager.calculateDynamicWidth(
@@ -177,7 +180,6 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
           orderIndex: i,
         );
 
-        // Update the subtask with the new saved ID
         final updatedSubtask = subtask.copyWith(
           savedId: taskId,
           isExisting: true,
@@ -225,6 +227,24 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     }
   }
 
+  void _handleTaskCompletion() {
+    setState(() {
+      isLoading = true;
+    });
+    _initializeSubtasks();
+  }
+
+  void _handleTextChanged(String value) {
+    setState(() {
+      _dynamicTotalWidth = _stateManager.calculateDynamicWidth(
+        widget.task.name,
+      );
+      _dynamicSubtasksWidth = _stateManager.calculateDynamicSubtasksWidth();
+    });
+  }
+
+  // Build methods
+
   Widget _buildArrows() {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -240,231 +260,6 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     );
   }
 
-  Widget _buildBreakdownSubtaskButton(int index) {
-    final navigator = Navigator.of(context);
-    final subtask = _stateManager.getSubtask(index);
-
-    return IconButton(
-      onPressed: () async {
-        if (subtask == null) return;
-
-        if (subtask.savedId != TaskBreakdownConstants.newSubtaskId) {
-          final task = await ref
-              .read(projectTasksNotifier(widget.task.projectId).notifier)
-              .getTask(subtask.savedId);
-          navigator.pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => TaskBreakdownScreen(task: task),
-            ),
-          );
-        } else {
-          await _saveSubtasks();
-          final updatedSubtask = _stateManager.getSubtask(index);
-          if (updatedSubtask != null &&
-              updatedSubtask.savedId != TaskBreakdownConstants.newSubtaskId) {
-            final task = await ref
-                .read(projectTasksNotifier(widget.task.projectId).notifier)
-                .getTask(updatedSubtask.savedId);
-            navigator.pushReplacement(
-              MaterialPageRoute(
-                builder: (context) => TaskBreakdownScreen(task: task),
-              ),
-            );
-          }
-        }
-      },
-      icon: Icon(Icons.account_tree_rounded),
-    );
-  }
-
-  Widget _buildGoToParentTaskButton() {
-    final navigator = Navigator.of(context);
-
-    return IconButton(
-      onPressed: () async {
-        final parentTask = await ref
-            .read(projectTasksNotifier(widget.task.projectId).notifier)
-            .getTask(widget.task.parentTaskId!);
-        navigator.pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => TaskBreakdownScreen(task: parentTask),
-          ),
-        );
-      },
-      icon: Icon(Icons.arrow_circle_left_outlined),
-    );
-  }
-
-  Widget _buildRemoveSubtaskButton(int index) {
-    return IconButton(
-      onPressed: () async {
-        final subtask = _stateManager.getSubtask(index);
-        if (subtask != null && subtask.isExisting) {
-          await _deleteParentTaskFromSubtasks(index);
-        }
-        _correctIndexes(index);
-      },
-      icon: Icon(Icons.delete),
-    );
-  }
-
-  Widget _buildSubtaskCountInfo(int index) {
-    final subtask = _stateManager.getSubtask(index);
-    final count = subtask?.subtaskCount ?? 0;
-
-    return Padding(
-      padding: EdgeInsets.fromLTRB(3, 0, 0, 0),
-      child: Container(
-        width: TaskBreakdownConstants.subtaskCountCircleSize,
-        height: TaskBreakdownConstants.subtaskCountCircleSize,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Theme.of(context).colorScheme.primary,
-        ),
-        child: Center(
-          child: Text(
-            count.toString(),
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onPrimary,
-              fontSize: TaskBreakdownConstants.subtaskCountFontSize,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSearchField(int index) {
-    final subtask = _stateManager.getSubtask(index);
-    if (subtask == null) return SizedBox.shrink();
-
-    return SearchTextField<TaskData, TaskSearchNotifier>(
-      controller: subtask.searchController,
-      focusNode: subtask.searchFocusNode,
-      labelText: 'Search existing tasks',
-      searchProvider: taskSearchProvider,
-      getDisplayText: (task) => task.name,
-      onItemSelected: (task) => _selectExistingTask(index, task),
-      leadingIcon: (task) =>
-          const Icon(Icons.task_alt, size: 16, color: Colors.blue),
-      trailingIcon: const Icon(
-        Icons.arrow_forward_ios,
-        size: 12,
-        color: Colors.grey,
-      ),
-      predicates: [
-        (task) => task.projectId == widget.task.projectId, // Same project
-        (task) => !task.isCompleted, // Not completed
-        (task) => task.id != widget.task.id, // Not the current task
-        (task) => !_stateManager.subtasks.any(
-          (s) => s.savedId == task.id,
-        ), // Not already added
-      ],
-      maxResults: TaskBreakdownConstants.maxSearchResults,
-    );
-  }
-
-  Widget _buildSubtaskCard(SubtaskItem? subtask, int index) {
-    if (subtask == null) {
-      return SizedBox.shrink(key: ValueKey('empty_${subtask!.id}'));
-    }
-
-    final isSubtaskCompleted =
-        subtask.taskData != null && subtask.taskData!.isCompleted;
-
-    return Card(
-      key: Key(subtask.id),
-      color: isSubtaskCompleted ? Colors.greenAccent[100] : null,
-      margin: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Row(
-          children: [
-            Expanded(
-              child: subtask.isSearchMode
-                  ? _buildSearchField(index)
-                  : TextField(
-                      controller: subtask.controller,
-                      focusNode: subtask.focusNode,
-                      readOnly: subtask.isExisting,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(),
-                        hintText: 'Subtask ${index + 1}',
-                        fillColor: subtask.isExisting
-                            ? (isSubtaskCompleted
-                                  ? Colors.green[300]
-                                  : Colors.grey[400])
-                            : null,
-                        filled: subtask.isExisting,
-                      ),
-                      onChanged: (value) {
-                        setState(() {
-                          _dynamicTotalWidth = _stateManager
-                              .calculateDynamicWidth(widget.task.name);
-                          _dynamicSubtasksWidth = _stateManager
-                              .calculateDynamicSubtasksWidth();
-                        });
-                      },
-                    ),
-            ),
-
-            _buildSubtaskCountInfo(index),
-            _buildCompleteTaskButton(subtask),
-            _buildChangeDeadlineForTomorrowButton(subtask),
-            _buildToggleSearchButton(index, subtask),
-            _buildBreakdownSubtaskButton(index),
-            _buildRemoveSubtaskButton(index),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildToggleSearchButton(int index, SubtaskItem subtask) {
-    return subtask.isExisting
-        ? SizedBox.shrink()
-        : IconButton(
-            onPressed: () => _toggleSearchMode(index),
-            icon: Icon(Icons.search),
-          );
-  }
-
-  Widget _buildChangeDeadlineForTomorrowButton(SubtaskItem subtask) {
-    return !subtask.isExisting
-        ? SizedBox.shrink()
-        : IconButton(
-            onPressed: () async => await DeadlineService.moveTaskToTomorrow(
-              ref: ref,
-              context: context,
-              task: subtask.taskData!,
-            ),
-            icon: Icon(Icons.edit_calendar_rounded),
-          );
-  }
-
-  Widget _buildCompleteTaskButton(SubtaskItem subtask) {
-    return (!subtask.isExisting ||
-            subtask.taskData == null ||
-            subtask.taskData!.isCompleted)
-        ? SizedBox.shrink()
-        : IconButton(
-            onPressed: () async {
-              final task = await ref
-                  .read(projectTasksNotifier(widget.task.projectId).notifier)
-                  .getTask(subtask.savedId);
-              if (mounted) {
-                await showCompleteTaskDialog(context, task);
-                setState(() {
-                  isLoading = true;
-                });
-                _initializeSubtasks();
-              }
-            },
-            icon: Icon(Icons.task_alt_sharp),
-          );
-  }
-
   Widget _buildTaskBreakdownScreen(TaskData task) {
     return SizedBox(
       width: _dynamicTotalWidth,
@@ -473,69 +268,89 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            SizedBox(
-              width: TaskBreakdownConstants.mainTaskWidth,
-              child: Center(
-                child: Card(
-                  key: mainTaskKey,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxHeight: TaskBreakdownConstants.maxTaskHeight,
-                        minHeight: TaskBreakdownConstants.minTaskHeight,
-                      ),
-                      child: IntrinsicWidth(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (widget.task.parentTaskId != null)
-                              _buildGoToParentTaskButton(),
-                            Flexible(
-                              child: SingleChildScrollView(
-                                child: Text(
-                                  task.name,
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.headlineSmall,
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ),
-                          ],
+            _buildMainTaskCard(task),
+            SizedBox(width: TaskBreakdownConstants.spacing),
+            _buildSubtasksList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMainTaskCard(TaskData task) {
+    return SizedBox(
+      width: TaskBreakdownConstants.mainTaskWidth,
+      child: Center(
+        child: Card(
+          key: mainTaskKey,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxHeight: TaskBreakdownConstants.maxTaskHeight,
+                minHeight: TaskBreakdownConstants.minTaskHeight,
+              ),
+              child: IntrinsicWidth(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (widget.task.parentTaskId != null)
+                      GoToParentTaskButton(task: widget.task),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        child: Text(
+                          task.name,
+                          style: Theme.of(context).textTheme.headlineSmall,
+                          textAlign: TextAlign.center,
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ),
-            SizedBox(width: TaskBreakdownConstants.spacing),
-            SizedBox(
-              width: _dynamicSubtasksWidth,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Flexible(
-                    child: ReorderableListView.builder(
-                      shrinkWrap: true,
-                      itemCount: _stateManager.subtasks.length,
-                      itemBuilder: (context, index) {
-                        final subtask = _stateManager.getSubtask(index);
-                        return _buildSubtaskCard(subtask, index);
-                      },
-                      onReorder: (oldIndex, newIndex) {
-                        setState(() {
-                          _stateManager.reorderSubtasks(oldIndex, newIndex);
-                        });
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSubtasksList() {
+    return SizedBox(
+      width: _dynamicSubtasksWidth,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Flexible(
+            child: ReorderableListView.builder(
+              shrinkWrap: true,
+              itemCount: _stateManager.subtasks.length,
+              itemBuilder: (context, index) {
+                final subtask = _stateManager.getSubtask(index);
+                if (subtask == null) {
+                  return SizedBox.shrink(key: ValueKey('empty_$index'));
+                }
+                return SubtaskCard(
+                  key: Key(subtask.id),
+                  subtask: subtask,
+                  index: index,
+                  parentTask: widget.task,
+                  onToggleSearch: _toggleSearchMode,
+                  onSelectExistingTask: _selectExistingTask,
+                  onRemove: _removeSubtask,
+                  onSaveNeeded: _saveSubtasks,
+                  onComplete: _handleTaskCompletion,
+                  onTextChanged: _handleTextChanged,
+                );
+              },
+              onReorder: (oldIndex, newIndex) {
+                setState(() {
+                  _stateManager.reorderSubtasks(oldIndex, newIndex);
+                });
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -556,6 +371,30 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
           },
         ),
         const Icon(Icons.task_alt_rounded),
+      ],
+    );
+  }
+
+  Widget _buildFloatingActionButtons() {
+    if (isLoading) return const SizedBox.shrink();
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        FloatingActionButton(
+          heroTag: "add_subtask",
+          onPressed: _addSubtask,
+          child: const Icon(Icons.add),
+        ),
+        const SizedBox(width: 16),
+        FloatingActionButton(
+          heroTag: "save_subtasks",
+          onPressed: () async {
+            await _saveSubtasks();
+            setState(() {});
+          },
+          child: const Icon(Icons.save),
+        ),
       ],
     );
   }
@@ -583,27 +422,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
                 ),
               ),
             ),
-      floatingActionButton: isLoading
-          ? null
-          : Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                FloatingActionButton(
-                  heroTag: "add_subtask",
-                  onPressed: _addSubtask,
-                  child: const Icon(Icons.add),
-                ),
-                const SizedBox(width: 16),
-                FloatingActionButton(
-                  heroTag: "save_subtasks",
-                  onPressed: () async {
-                    await _saveSubtasks();
-                    setState(() {}); // update state
-                  },
-                  child: const Icon(Icons.save),
-                ),
-              ],
-            ),
+      floatingActionButton: _buildFloatingActionButtons(),
     );
   }
 }
