@@ -7,6 +7,9 @@ import 'package:potential_aid_app/services/sync_repository.dart';
 import 'package:potential_aid_app/services/sync_operations.dart';
 import 'package:potential_aid_app/services/sync_record_mapper.dart';
 
+// Re-export models for backward compatibility
+export 'package:potential_aid_app/models/sync_models.dart';
+
 /// SyncService handles bidirectional synchronization between local Drift database and Supabase
 ///
 /// Key Features:
