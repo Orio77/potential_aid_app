@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/models/sync_models.dart';
 import 'package:potential_aid_app/services/supabase_service.dart';
@@ -27,11 +28,7 @@ class SyncOperations {
     'settings': 'settings',
   };
 
-  SyncOperations(
-    this._repository,
-    this._supabaseService,
-    this._recordMapper,
-  );
+  SyncOperations(this._repository, this._supabaseService, this._recordMapper);
 
   /// Handle initial migration when local DB has existing data
   Future<SyncResult> performInitialMigration() async {
@@ -311,7 +308,9 @@ class SyncOperations {
         );
         break;
       case 'project_category':
-        await (db.update(db.projectCategory)..where((pc) => pc.id.equals(localId))).write(
+        await (db.update(
+          db.projectCategory,
+        )..where((pc) => pc.id.equals(localId))).write(
           ProjectCategoryCompanion(
             supabaseId: Value(supabaseId),
             needsSync: const Value(false),
@@ -329,7 +328,9 @@ class SyncOperations {
         );
         break;
       case 'task_completion':
-        await (db.update(db.taskCompletion)..where((tc) => tc.id.equals(localId))).write(
+        await (db.update(
+          db.taskCompletion,
+        )..where((tc) => tc.id.equals(localId))).write(
           TaskCompletionCompanion(
             supabaseId: Value(supabaseId),
             needsSync: const Value(false),
@@ -338,7 +339,9 @@ class SyncOperations {
         );
         break;
       case 'block_completion':
-        await (db.update(db.blockCompletion)..where((bc) => bc.id.equals(localId))).write(
+        await (db.update(
+          db.blockCompletion,
+        )..where((bc) => bc.id.equals(localId))).write(
           BlockCompletionCompanion(
             supabaseId: Value(supabaseId),
             needsSync: const Value(false),
@@ -347,7 +350,9 @@ class SyncOperations {
         );
         break;
       case 'settings':
-        await (db.update(db.settings)..where((s) => s.id.equals(localId))).write(
+        await (db.update(
+          db.settings,
+        )..where((s) => s.id.equals(localId))).write(
           SettingsCompanion(
             supabaseId: Value(supabaseId),
             needsSync: const Value(false),
@@ -368,8 +373,9 @@ class SyncOperations {
     final now = DateTime.now();
     final db = _repository.database;
 
-    await (db.update(db.blockTask)
-          ..where((bt) => bt.blockId.equals(blockId) & bt.taskId.equals(taskId)))
+    await (db.update(
+          db.blockTask,
+        )..where((bt) => bt.blockId.equals(blockId) & bt.taskId.equals(taskId)))
         .write(
           BlockTaskCompanion(
             supabaseId: Value(supabaseId),
@@ -393,11 +399,8 @@ class SyncOperations {
     for (final record in records) {
       final rawDeleted = SyncConverter.getField<dynamic>(record, 'isDeleted');
       final isDeleted = rawDeleted == true || rawDeleted == 1;
-      final hasSupabaseId = SyncConverter.getField<String>(
-            record,
-            'supabaseId',
-          ) !=
-          null;
+      final hasSupabaseId =
+          SyncConverter.getField<String>(record, 'supabaseId') != null;
 
       if (isDeleted) {
         deletes.add(record);

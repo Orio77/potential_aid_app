@@ -33,6 +33,8 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
     final query = _database.select(_database.settings);
     final settingsList = await query.get();
 
+    if (!mounted) return;
+
     if (settingsList.isNotEmpty) {
       final dbSettings = settingsList.first;
       state = AppSettings(
@@ -76,6 +78,8 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   }
 
   Future<void> _saveCurrentSettings() async {
+    if (!mounted) return;
+
     final settings = SettingsCompanion.insert(
       id: const Value(1),
       defaultStartTime: state.defaultStartTime,
@@ -84,8 +88,14 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
       lastModified: DateTime.now(),
     );
 
-    // Use insertOnConflictUpdate with proper conflict resolution
-    await _database.into(_database.settings).insertOnConflictUpdate(settings);
+    // Workaround for missing primary key in generated code causing insertOnConflictUpdate to fail
+    final existing = await (_database.select(_database.settings)..where((t) => t.id.equals(1))).getSingleOrNull();
+    
+    if (existing != null) {
+      await (_database.update(_database.settings)..where((t) => t.id.equals(1))).write(settings);
+    } else {
+      await _database.into(_database.settings).insert(settings);
+    }
   }
 }
 

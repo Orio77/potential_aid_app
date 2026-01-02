@@ -16,4 +16,7 @@ class Settings extends Table {
   BoolColumn get needsSync => boolean().withDefault(const Constant(false))();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
   IntColumn get version => integer().withDefault(const Constant(1))();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }
