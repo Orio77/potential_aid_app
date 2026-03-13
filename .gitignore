@@ -95,3 +95,5 @@ ehthumbs.db
 
 # Github Copilot
 .github/*.md
+
+todo.md

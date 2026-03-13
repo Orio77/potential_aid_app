@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/models/project_interval.dart';
+import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/widgets/timeline/isolated_project_interval.dart';
 import 'package:time_machine/time_machine.dart' hide Offset;
 
@@ -32,7 +33,22 @@ class ProjectIntervals extends ConsumerWidget {
     const spaceBetweenProjectIntervals = 8.0;
     const handleWidth = 20.0;
 
-    projectList.sort((a, b) => b.endDay.compareTo(a.endDay));
+    final today = ref.read(dateNotifierProvider);
+
+    final unfinishedProjects =
+        projectList.where((p) => p.endDay >= today).toList()..sort((a, b) {
+          final aDays = a.endDay.epochDay - today.epochDay;
+          final bDays = b.endDay.epochDay - today.epochDay;
+          return bDays.compareTo(aDays);
+        });
+    final finishedProjects = projectList.where((p) => p.endDay < today).toList()
+      ..sort((a, b) {
+        final aDays = (a.endDay.epochDay - today.epochDay).abs();
+        final bDays = (b.endDay.epochDay - today.epochDay).abs();
+        return bDays.compareTo(aDays);
+      });
+
+    projectList = [...finishedProjects, ...unfinishedProjects];
 
     return Column(
       mainAxisSize: MainAxisSize.min,
