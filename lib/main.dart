@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/config/supabase_config.dart';
-import 'package:potential_aid_app/screens/main_screen.dart';
+import 'package:potential_aid_app/schedule/screens/main_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:time_machine/time_machine.dart';
 

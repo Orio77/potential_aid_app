@@ -6,6 +6,7 @@ import 'package:potential_aid_app/providers/project_search_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/providers/settings_notifier.dart';
+import 'package:potential_aid_app/schedule/services/add_block_service.dart';
 import 'package:potential_aid_app/screens/project_screen.dart';
 import 'package:potential_aid_app/utils/time_utils.dart';
 import 'package:potential_aid_app/widgets/common/duration_picker_dialog.dart';
@@ -71,6 +72,17 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
     });
   }
 
+  Future<void> _initializeStartTime() async {
+    final calculatedTime = await AddBlockService.calculateNextAvailableTime(
+      ref,
+    );
+    if (mounted) {
+      setState(() {
+        _startTime = calculatedTime;
+      });
+    }
+  }
+
   @override
   void dispose() {
     _projectNameController.dispose();
@@ -79,53 +91,13 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
     super.dispose();
   }
 
-  Future<void> _initializeStartTime() async {
-    final calculatedTime = await _calculateNextAvailableTime();
-    if (mounted) {
-      setState(() {
-        _startTime = calculatedTime;
-      });
-    }
-  }
-
-  Future<TimeOfDay> _calculateNextAvailableTime() async {
-    final settings = ref.read(settingsNotifierProvider);
-    final schedule = ref.read(scheduleNotifierProvider);
-
-    if (schedule.isEmpty) {
-      final defaultMinutes = settings.defaultStartTime;
-      return TimeOfDay(hour: defaultMinutes ~/ 60, minute: defaultMinutes % 60);
-    }
-
-    final lastBlockId = schedule.last;
-    final lastBlock = await ref
-        .read(scheduleNotifierProvider.notifier)
-        .getBlockById(lastBlockId);
-    final lastEndMinutes =
-        lastBlock!.startMinuteOfDay + lastBlock.lengthMinutes;
-    final nextStartMinutes = lastEndMinutes + settings.defaultBreakTime;
-
-    return TimeOfDay(
-      hour: nextStartMinutes ~/ 60,
-      minute: nextStartMinutes % 60,
-    );
-  }
-
-  String? _validateProjectName(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Project name cannot be empty';
-    }
-
-    return null;
-  }
-
   void _onTasksChanged(List<TaskData> tasks) {
     setState(() {
       _selectedTasks = tasks;
     });
   }
 
-  Future<void> _saveBlock() async {
+  Future<void> saveBlock() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -162,7 +134,7 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
             _selectedProject!.id,
           );
       if (_selectedTasks.isNotEmpty) {
-        await _saveBlockTasks(blockId, _selectedTasks);
+        await saveBlockTasks(blockId, _selectedTasks);
       }
     } catch (e) {
       if (mounted) {
@@ -173,7 +145,7 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
     }
   }
 
-  Future<void> _saveBlockTasks(int blockId, List<TaskData> tasks) async {
+  Future<void> saveBlockTasks(int blockId, List<TaskData> tasks) async {
     await ref
         .read(scheduleNotifierProvider.notifier)
         .assignTasksToBlock(blockId, tasks.map((t) => t.id).toList());
@@ -199,7 +171,7 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
                       controller: _projectNameController,
                       focusNode: _focusNode,
                       labelText: 'Project name',
-                      validator: _validateProjectName,
+                      validator: AddBlockService.validateProjectName,
                       searchProvider: projectSearchProvider,
                       getDisplayText: (block) => block.name,
                       onItemSelected: (projectData) {
@@ -271,14 +243,14 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
                 leading: const Icon(Icons.access_time),
                 title: const Text('Start Time'),
                 subtitle: Text(_startTime.format(context)),
-                onTap: _pickStartTime,
+                onTap: pickStartTime,
               ),
 
               ListTile(
                 leading: const Icon(Icons.timer),
                 title: const Text('Duration'),
                 subtitle: Text('$_durationMinutes minutes'),
-                onTap: _pickDuration,
+                onTap: pickDuration,
               ),
 
               if (_errorMessage != null) ...[
@@ -324,7 +296,7 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
               ? null
               : () async {
                   final navigator = Navigator.of(context);
-                  await _saveBlock();
+                  await saveBlock();
                   if (mounted && _errorMessage == null) {
                     navigator.pop();
                   }
@@ -335,7 +307,7 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
     );
   }
 
-  Future<void> _pickStartTime() async {
+  Future<void> pickStartTime() async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: _startTime,
@@ -348,7 +320,7 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
     }
   }
 
-  Future<void> _pickDuration() async {
+  Future<void> pickDuration() async {
     final int? picked = await showDialog(
       context: context,
       builder: (context) =>
