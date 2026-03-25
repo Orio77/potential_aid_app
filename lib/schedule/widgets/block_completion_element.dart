@@ -5,6 +5,7 @@ import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/completion_notifier.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
+import 'package:potential_aid_app/schedule/services/completion_service.dart';
 
 class BlockCompletionElement extends ConsumerStatefulWidget {
   final BlockData block;
@@ -42,7 +43,9 @@ class BlockCompletionElementState
         const Icon(Icons.timer),
         const SizedBox(width: 16),
         ConstrainedBox(
-          constraints: BoxConstraints.tightFor(width: _fieldWidth(blockLength)),
+          constraints: BoxConstraints.tightFor(
+            width: CompletionService.fieldWidth(blockLength),
+          ),
           child: TextField(
             controller: _completionController,
             textAlign: TextAlign.center,
@@ -72,13 +75,6 @@ class BlockCompletionElementState
         ),
       ],
     );
-  }
-
-  double _fieldWidth(int max) {
-    const double base = 36;
-    const double perDigit = 12;
-    final int digits = max.toString().length.clamp(2, 3);
-    return base + perDigit * digits;
   }
 
   Future<int?> saveCompletion() async {

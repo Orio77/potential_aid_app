@@ -7,10 +7,12 @@ import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/project_search_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
+import 'package:potential_aid_app/schedule/services/add_block_service.dart';
+import 'package:potential_aid_app/schedule/services/edit_block_service.dart';
+import 'package:potential_aid_app/schedule/widgets/block_add_task_list.dart';
+import 'package:potential_aid_app/schedule/widgets/tasks_for_deadline_dialog.dart';
 import 'package:potential_aid_app/screens/project_screen.dart';
 import 'package:potential_aid_app/widgets/common/duration_picker_dialog.dart';
-import 'package:potential_aid_app/widgets/schedule/block_add_task_list.dart';
-import 'package:potential_aid_app/widgets/schedule/tasks_for_deadline_dialog.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
 import 'package:time_machine/time_machine.dart';
 
@@ -61,7 +63,9 @@ class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
     ProjectData project,
   ) {
     if (!_isInitialized) {
-      _startTime = _minutesToTimeOfDay(blockWithTasks.block.startMinuteOfDay);
+      _startTime = EditBlockService.minutesToTimeOfDay(
+        blockWithTasks.block.startMinuteOfDay,
+      );
       _duration = blockWithTasks.block.lengthMinutes;
 
       _selectedProject = project;
@@ -70,22 +74,6 @@ class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
 
       _isInitialized = true;
     }
-  }
-
-  String? _validateProjectName(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Project name cannot be empty';
-    }
-
-    return null;
-  }
-
-  TimeOfDay _minutesToTimeOfDay(int minutes) {
-    return TimeOfDay(hour: minutes ~/ 60, minute: minutes % 60);
-  }
-
-  int _timeOfDayToMinutes(TimeOfDay time) {
-    return time.hour * 60 + time.minute;
   }
 
   Future<void> _saveEditBlock(int blockId) async {
@@ -105,7 +93,7 @@ class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
           .read(scheduleNotifierProvider.notifier)
           .editBlock(
             blockId,
-            _timeOfDayToMinutes(_startTime!),
+            EditBlockService.timeOfDayToMinutes(_startTime!),
             _duration,
             _selectedProject?.id,
             _selectedTasks.map((t) => t.id).toList(),
@@ -170,7 +158,7 @@ class _EditTaskDialogState extends ConsumerState<EditBlockDialog> {
                     child: SearchTextField<ProjectData, ProjectSearchNotifier>(
                       controller: _projectNameController,
                       labelText: 'Project name',
-                      validator: _validateProjectName,
+                      validator: AddBlockService.validateProjectName,
                       searchProvider: projectSearchProvider,
                       getDisplayText: (block) => block.name,
                       onItemSelected: (projectData) {

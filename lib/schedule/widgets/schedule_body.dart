@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:potential_aid_app/widgets/schedule/date_header.dart';
+import 'package:potential_aid_app/schedule/widgets/date_header.dart';
 import 'package:potential_aid_app/schedule/widgets/schedule_list.dart';
 import 'package:potential_aid_app/schedule/widgets/schedule_progress_bar.dart';
 

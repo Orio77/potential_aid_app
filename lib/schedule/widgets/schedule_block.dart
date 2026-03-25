@@ -6,10 +6,11 @@ import 'package:potential_aid_app/providers/block_with_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/completion_notifier.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
+import 'package:potential_aid_app/schedule/services/schedule_block_service.dart';
+import 'package:potential_aid_app/schedule/widgets/blocks_task_list.dart';
+import 'package:potential_aid_app/schedule/widgets/complete_block_dialog.dart';
+import 'package:potential_aid_app/schedule/widgets/edit_block_dialog.dart';
 import 'package:potential_aid_app/utils/completion_utils.dart';
-import 'package:potential_aid_app/widgets/schedule/complete_block_dialog.dart';
-import 'package:potential_aid_app/widgets/schedule/edit_block_dialog.dart';
-import 'package:potential_aid_app/widgets/schedule/blocks_task_list.dart';
 import 'package:time_machine/time_machine.dart';
 
 class ScheduleBlock extends ConsumerWidget {
@@ -96,7 +97,8 @@ class ScheduleBlock extends ConsumerWidget {
   ) {
     final isCompleted = completionPercentage != null;
     final isBlockInTheFuture =
-        blockWithTasks != null && _isBlockInFuture(blockWithTasks, dateTime);
+        blockWithTasks != null &&
+        ScheduleBlockService.isBlockInFuture(blockWithTasks, dateTime);
 
     return Opacity(
       opacity: isCompleted ? 0.6 : 1.0,
@@ -264,16 +266,13 @@ class ScheduleBlock extends ConsumerWidget {
     bool isPreviousBlockCompleted,
   ) {
     final isCompleted = completionPercentage != null;
-    // Allow completion if: previous block is completed and it's on current day OR the block time has passed
-    final isBlockToday =
-        (blockWithTasks != null &&
-        blockWithTasks.block.dayLocal.day == dateTime.dayOfMonth &&
-        blockWithTasks.block.dayLocal.month == dateTime.monthOfYear &&
-        blockWithTasks.block.dayLocal.year == dateTime.yearOfEra);
     final canComplete =
         blockWithTasks != null &&
-        ((isPreviousBlockCompleted && isBlockToday) ||
-            _isBlockTimePasssed(blockWithTasks, dateTime));
+        ScheduleBlockService.canCompleteBlock(
+          blockWithTasks,
+          dateTime,
+          isPreviousBlockCompleted,
+        );
 
     return IconButton(
       onPressed: isCompleted || !canComplete
@@ -347,56 +346,5 @@ class ScheduleBlock extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  bool _isBlockTimePasssed(
-    BlockWithTasks blockWithTasks,
-    LocalDateTime currentTime,
-  ) {
-    final blockDate = blockWithTasks.block.dayLocal;
-    final currentDate = currentTime.toDateTimeLocal();
-
-    if (!_isSameDay(blockDate, currentDate)) {
-      return false;
-    }
-
-    final currentMinutes =
-        currentTime.hourOfDay * 60 + currentTime.minuteOfHour;
-    final blockStartMinutes = blockWithTasks.block.startMinuteOfDay;
-
-    return currentMinutes > blockStartMinutes;
-  }
-
-  bool _isSameDay(DateTime date1, DateTime date2) {
-    return date1.year == date2.year &&
-        date1.month == date2.month &&
-        date1.day == date2.day;
-  }
-
-  bool _isBlockInFuture(
-    BlockWithTasks blockWithTasks,
-    LocalDateTime currentDateTime,
-  ) {
-    final blockDate = blockWithTasks.block.dayLocal;
-    final currentDate = DateTime(
-      currentDateTime.yearOfEra,
-      currentDateTime.monthOfYear,
-      currentDateTime.dayOfMonth,
-    );
-
-    // Normalize both dates to midnight for proper day comparison
-    final blockDateNormalized = DateTime(
-      blockDate.year,
-      blockDate.month,
-      blockDate.day,
-    );
-    final currentDateNormalized = DateTime(
-      currentDate.year,
-      currentDate.month,
-      currentDate.day,
-    );
-
-    // Block should be editable only if it's in a future day
-    return blockDateNormalized.isAfter(currentDateNormalized);
   }
 }

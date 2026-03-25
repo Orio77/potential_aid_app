@@ -10,8 +10,8 @@ import 'package:potential_aid_app/schedule/services/add_block_service.dart';
 import 'package:potential_aid_app/screens/project_screen.dart';
 import 'package:potential_aid_app/utils/time_utils.dart';
 import 'package:potential_aid_app/widgets/common/duration_picker_dialog.dart';
-import 'package:potential_aid_app/widgets/schedule/block_add_task_list.dart';
-import 'package:potential_aid_app/widgets/schedule/tasks_for_deadline_dialog.dart';
+import 'package:potential_aid_app/schedule/widgets/block_add_task_list.dart';
+import 'package:potential_aid_app/schedule/widgets/tasks_for_deadline_dialog.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
 
 class AddBlockDialog extends ConsumerStatefulWidget {

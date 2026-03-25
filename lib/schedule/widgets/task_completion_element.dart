@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
+import 'package:potential_aid_app/schedule/services/completion_service.dart';
 
 class TaskCompletionElement extends ConsumerStatefulWidget {
   final TaskData task;
@@ -41,7 +42,9 @@ class TaskCompletionElementState extends ConsumerState<TaskCompletionElement> {
         const Icon(Icons.task_alt),
         const SizedBox(width: 16),
         ConstrainedBox(
-          constraints: BoxConstraints.tightFor(width: _fieldWidth(taskLength)),
+          constraints: BoxConstraints.tightFor(
+            width: CompletionService.fieldWidth(taskLength),
+          ),
           child: TextField(
             controller: _completionController,
             textAlign: TextAlign.center,
@@ -73,13 +76,6 @@ class TaskCompletionElementState extends ConsumerState<TaskCompletionElement> {
     );
   }
 
-  double _fieldWidth(int max) {
-    const double base = 36;
-    const double perDigit = 12;
-    final int digits = max.toString().length.clamp(2, 3);
-    return base + perDigit * digits;
-  }
-
   Future<int?> saveCompletion() async {
     final inputText = _completionController.text.trim();
     final completionCount = int.tryParse(inputText);
@@ -88,16 +84,19 @@ class TaskCompletionElementState extends ConsumerState<TaskCompletionElement> {
       return null;
     }
 
-    int realCompletion = completionCount - widget.task.current;
+    final delta = CompletionService.calculateTaskDelta(
+      completionCount,
+      widget.task.current,
+    );
 
-    if (realCompletion <= widget.task.current) {
+    if (delta == null) {
       return null;
     }
 
     try {
       final res = await ref
           .read(scheduleNotifierProvider.notifier)
-          .addTaskCompletion(widget.task.id, realCompletion);
+          .addTaskCompletion(widget.task.id, delta);
 
       widget.onTaskCompletion?.call(widget.task.id, completionCount);
 
