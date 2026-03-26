@@ -6,11 +6,11 @@ import 'package:potential_aid_app/providers/project_intervals_notifier.dart';
 import 'package:potential_aid_app/providers/task_cards_notifier.dart';
 import 'package:potential_aid_app/providers/timeline_date_notifier.dart';
 import 'package:potential_aid_app/projects/widgets/select_project_dialog.dart';
-import 'package:potential_aid_app/widgets/timeline/date_card_list.dart';
-import 'package:potential_aid_app/widgets/timeline/my_categories_picker_dialog.dart';
-import 'package:potential_aid_app/widgets/timeline/project_intervals.dart';
-import 'package:potential_aid_app/widgets/timeline/task_cards.dart';
-import 'package:potential_aid_app/widgets/timeline/task_depth_navigator.dart';
+import 'package:potential_aid_app/timeline/widgets/date_card_list.dart';
+import 'package:potential_aid_app/timeline/widgets/my_categories_picker_dialog.dart';
+import 'package:potential_aid_app/timeline/widgets/project_intervals.dart';
+import 'package:potential_aid_app/timeline/widgets/task_cards.dart';
+import 'package:potential_aid_app/timeline/widgets/task_depth_navigator.dart';
 import 'package:time_machine/time_machine.dart';
 
 class TimelineScreen extends ConsumerStatefulWidget {

@@ -7,8 +7,8 @@ import 'package:potential_aid_app/providers/task_cards_notifier.dart';
 import 'package:potential_aid_app/providers/tasks_notifier.dart';
 import 'package:potential_aid_app/providers/timeline_date_notifier.dart';
 import 'package:potential_aid_app/screens/task_breakdown_screen.dart';
-import 'package:potential_aid_app/widgets/timeline/task_card.dart';
-import 'package:potential_aid_app/widgets/timeline/auto_scroll_drag_handler.dart';
+import 'package:potential_aid_app/timeline/widgets/task_card.dart';
+import 'package:potential_aid_app/timeline/widgets/auto_scroll_drag_handler.dart';
 import 'package:time_machine/time_machine.dart' hide Offset;
 
 class TaskCards extends ConsumerStatefulWidget {

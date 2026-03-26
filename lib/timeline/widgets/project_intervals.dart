@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/models/project_interval.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
-import 'package:potential_aid_app/widgets/timeline/isolated_project_interval.dart';
+import 'package:potential_aid_app/timeline/widgets/isolated_project_interval.dart';
 import 'package:time_machine/time_machine.dart' hide Offset;
 
 class ProjectIntervals extends ConsumerWidget {

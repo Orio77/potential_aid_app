@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/models/project_interval.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/projects/screens/project_screen.dart';
-import 'package:potential_aid_app/widgets/timeline/auto_scroll_drag_handler.dart';
+import 'package:potential_aid_app/timeline/widgets/auto_scroll_drag_handler.dart';
 import 'package:time_machine/time_machine.dart' hide Offset;
 import 'package:potential_aid_app/utils/color_utils.dart';
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/providers/project_intervals_notifier.dart';
-import 'package:potential_aid_app/widgets/timeline/resizable_project_interval.dart';
+import 'package:potential_aid_app/timeline/widgets/resizable_project_interval.dart';
 import 'package:time_machine/time_machine.dart';
 
 class IsolatedProjectInterval extends ConsumerWidget {
