@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:potential_aid_app/screens/creation_stats_screen.dart';
-import 'package:potential_aid_app/widgets/stats/stat_list.dart';
+import 'package:potential_aid_app/stats/screens/creation_stats_screen.dart';
+import 'package:potential_aid_app/stats/widgets/stat_list.dart';
 
 class CompletionStatsScreen extends ConsumerWidget {
   const CompletionStatsScreen({super.key});

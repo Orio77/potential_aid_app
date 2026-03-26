@@ -11,7 +11,7 @@ import 'package:potential_aid_app/projects/widgets/project_info.dart';
 import 'package:potential_aid_app/projects/widgets/project_task_list.dart';
 import 'package:potential_aid_app/projects/widgets/project_title.dart';
 import 'package:potential_aid_app/projects/widgets/related_projects_list.dart';
-import 'package:potential_aid_app/widgets/stats/heatmap.dart';
+import 'package:potential_aid_app/stats/widgets/heatmap.dart';
 
 class ProjectScreen extends ConsumerStatefulWidget {
   final ProjectData data;

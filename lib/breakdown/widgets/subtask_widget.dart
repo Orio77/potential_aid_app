@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/task_search_notifier.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
-import '../../models/subtask_item.dart';
-import '../../constants/task_breakdown_constants.dart';
+import 'package:potential_aid_app/models/subtask_item.dart';
+import 'package:potential_aid_app/constants/task_breakdown_constants.dart';
 
 /// Widget representing a single subtask item in the breakdown
 class SubtaskWidget extends ConsumerWidget {

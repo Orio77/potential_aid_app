@@ -7,9 +7,9 @@ import 'package:potential_aid_app/managers/subtask_state_manager.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/task_cards_notifier.dart';
-import 'package:potential_aid_app/widgets/breakdown/arrow_painter.dart';
-import 'package:potential_aid_app/widgets/breakdown/subtask_card.dart';
-import 'package:potential_aid_app/widgets/breakdown/subtask_buttons.dart';
+import 'package:potential_aid_app/breakdown/widgets/arrow_painter.dart';
+import 'package:potential_aid_app/breakdown/widgets/subtask_card.dart';
+import 'package:potential_aid_app/breakdown/widgets/subtask_buttons.dart';
 
 class TaskBreakdownScreen extends ConsumerStatefulWidget {
   final TaskData task;

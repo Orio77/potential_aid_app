@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/utils/completion_utils.dart';
-import 'package:potential_aid_app/widgets/stats/progress_bar.dart';
+import 'package:potential_aid_app/stats/widgets/progress_bar.dart';
 
 class ProjectProgressInfo extends StatelessWidget {
   final ProjectData project;
