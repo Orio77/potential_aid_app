@@ -7,7 +7,7 @@ import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/providers/settings_notifier.dart';
 import 'package:potential_aid_app/schedule/services/add_block_service.dart';
-import 'package:potential_aid_app/screens/project_screen.dart';
+import 'package:potential_aid_app/projects/screens/project_screen.dart';
 import 'package:potential_aid_app/utils/time_utils.dart';
 import 'package:potential_aid_app/widgets/common/duration_picker_dialog.dart';
 import 'package:potential_aid_app/schedule/widgets/block_add_task_list.dart';

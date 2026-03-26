@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:potential_aid_app/screens/completion_stats_screen.dart';
-import 'package:potential_aid_app/screens/project_category_list_screen.dart';
+import 'package:potential_aid_app/projects/screens/project_category_list_screen.dart';
 import 'package:potential_aid_app/screens/timeline_screen.dart';
 import 'package:potential_aid_app/widgets/sync/sync_button.dart';
 

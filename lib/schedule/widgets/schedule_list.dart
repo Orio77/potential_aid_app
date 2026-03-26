@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/providers/block_with_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/completion_notifier.dart';
 import 'package:potential_aid_app/providers/schedule_notifier.dart';
-import 'package:potential_aid_app/widgets/projects/delete_task_dialog.dart';
+import 'package:potential_aid_app/schedule/widgets/delete_block_dialog.dart';
 import 'package:potential_aid_app/schedule/widgets/edit_block_dialog.dart';
 import 'package:potential_aid_app/schedule/widgets/schedule_block.dart';
 

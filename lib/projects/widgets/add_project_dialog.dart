@@ -7,6 +7,7 @@ import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/project_intervals_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/providers/stats_provider.dart';
+import 'package:potential_aid_app/projects/services/project_service.dart';
 import 'package:potential_aid_app/utils/time_utils.dart';
 import 'package:potential_aid_app/widgets/common/goal_progress_input.dart';
 
@@ -32,14 +33,12 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
   bool _isLoading = false;
   String? _errorMessage;
 
-  bool get _isFormValid {
-    return _projectNameController.text.trim().isNotEmpty &&
-        _currentController.text.trim().isNotEmpty &&
-        _endGoalController.text.trim().isNotEmpty &&
-        _unitController.text.trim().isNotEmpty &&
-        int.tryParse(_currentController.text) != null &&
-        int.tryParse(_endGoalController.text) != null;
-  }
+  bool get _isFormValid => ProjectService.isFormValid(
+    _projectNameController.text,
+    _currentController.text,
+    _endGoalController.text,
+    _unitController.text,
+  );
 
   @override
   void initState() {
@@ -110,7 +109,7 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
                   labelText: 'Project name',
                   border: OutlineInputBorder(),
                 ),
-                validator: _validateProjectName,
+                validator: ProjectService.validateName,
                 enabled: !_isLoading,
                 onFieldSubmitted: (_) {
                   _progressInputController.focusFirst();
@@ -218,14 +217,6 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
         ),
       ],
     );
-  }
-
-  String? _validateProjectName(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Task name cannot be empty';
-    }
-
-    return null;
   }
 
   void _updateButtonState() {

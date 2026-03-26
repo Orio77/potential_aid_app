@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/screens/task_breakdown_screen.dart';
 import 'package:potential_aid_app/services/deadline_service.dart';
-import 'package:potential_aid_app/widgets/projects/add_task_dialog.dart';
+import 'package:potential_aid_app/projects/widgets/add_task_dialog.dart';
 import 'package:potential_aid_app/widgets/stats/progress_bar.dart';
 import 'package:time_machine/time_machine.dart';
 

@@ -7,8 +7,8 @@ import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/providers/stats_provider.dart';
 import 'package:potential_aid_app/utils/color_utils.dart';
 import 'package:potential_aid_app/utils/time_utils.dart';
-import 'package:potential_aid_app/widgets/projects/add_project_dialog.dart';
-import 'package:potential_aid_app/widgets/projects/project_progress_info.dart';
+import 'package:potential_aid_app/projects/widgets/add_project_dialog.dart';
+import 'package:potential_aid_app/projects/widgets/project_progress_info.dart';
 import 'package:time_machine/time_machine.dart';
 
 class ProjectInfo extends ConsumerWidget {

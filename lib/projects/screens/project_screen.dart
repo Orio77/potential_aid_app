@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
-import 'package:potential_aid_app/widgets/projects/add_task_dialog.dart';
-import 'package:potential_aid_app/widgets/projects/assign_tasks_dialog.dart';
-import 'package:potential_aid_app/widgets/projects/categories/add_to_category_button.dart';
-import 'package:potential_aid_app/widgets/projects/delete_project.dart';
-import 'package:potential_aid_app/widgets/projects/go_to_parent_button.dart';
-import 'package:potential_aid_app/widgets/projects/link_project_dialog.dart';
-import 'package:potential_aid_app/widgets/projects/project_info.dart';
-import 'package:potential_aid_app/widgets/projects/project_task_list.dart';
-import 'package:potential_aid_app/widgets/projects/project_title.dart';
-import 'package:potential_aid_app/widgets/projects/related_projects_list.dart';
+import 'package:potential_aid_app/projects/widgets/add_task_dialog.dart';
+import 'package:potential_aid_app/projects/widgets/assign_tasks_dialog.dart';
+import 'package:potential_aid_app/projects/widgets/categories/add_to_category_button.dart';
+import 'package:potential_aid_app/projects/widgets/delete_project.dart';
+import 'package:potential_aid_app/projects/widgets/go_to_parent_button.dart';
+import 'package:potential_aid_app/projects/widgets/link_project_dialog.dart';
+import 'package:potential_aid_app/projects/widgets/project_info.dart';
+import 'package:potential_aid_app/projects/widgets/project_task_list.dart';
+import 'package:potential_aid_app/projects/widgets/project_title.dart';
+import 'package:potential_aid_app/projects/widgets/related_projects_list.dart';
 import 'package:potential_aid_app/widgets/stats/heatmap.dart';
 
 class ProjectScreen extends ConsumerStatefulWidget {

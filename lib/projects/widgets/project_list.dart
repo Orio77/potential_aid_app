@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
-import 'package:potential_aid_app/widgets/projects/project_card.dart';
+import 'package:potential_aid_app/projects/widgets/project_card.dart';
 
 class ProjectList extends ConsumerStatefulWidget {
   final String searchQuery;
@@ -63,7 +63,6 @@ class _ProjectListState extends ConsumerState<ProjectList> {
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              // Use ListView for mobile screens to avoid overflow issues
               if (constraints.maxWidth < 600) {
                 return ListView.builder(
                   physics: const BouncingScrollPhysics(
@@ -81,7 +80,6 @@ class _ProjectListState extends ConsumerState<ProjectList> {
                 );
               }
 
-              // Use GridView for larger screens
               int crossAxisCount;
               double childAspectRatio;
 
@@ -151,9 +149,3 @@ class _ProjectListState extends ConsumerState<ProjectList> {
         : _buildProjectList(projectsData);
   }
 }
-
-// add iconbutton next to trash inb project screen to add it to category
-// make category cards smaller and tappable -> moving to projectscreen with filters
-// add projectpicker inside of category
-// add separator under categories
-// add projects list under categories

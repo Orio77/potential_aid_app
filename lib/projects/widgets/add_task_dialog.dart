@@ -5,6 +5,7 @@ import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/task_search_notifier.dart';
+import 'package:potential_aid_app/projects/services/task_service.dart';
 import 'package:potential_aid_app/widgets/common/goal_progress_input.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
 import 'package:time_machine/time_machine.dart';
@@ -99,7 +100,7 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
                 controller: _taskNameController,
                 focusNode: _focusNode,
                 labelText: 'Task name',
-                validator: _validateTaskName,
+                validator: TaskService.validateName,
                 enabled: !_isLoading,
                 searchProvider: taskSearchProvider,
                 getDisplayText: (task) => task.name,
@@ -165,14 +166,6 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
         ),
       ],
     );
-  }
-
-  String? _validateTaskName(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Task name cannot be empty';
-    }
-
-    return null;
   }
 
   void _selectTask(TaskData task) {

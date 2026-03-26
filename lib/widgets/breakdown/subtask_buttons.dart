@@ -5,7 +5,7 @@ import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/models/subtask_item.dart';
 import 'package:potential_aid_app/screens/task_breakdown_screen.dart';
 import 'package:potential_aid_app/services/deadline_service.dart';
-import 'package:potential_aid_app/widgets/projects/complete_task_dialog.dart';
+import 'package:potential_aid_app/projects/widgets/complete_task_dialog.dart';
 import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
 
 /// Complete task button for subtasks

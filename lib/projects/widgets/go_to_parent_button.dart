@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
-import 'package:potential_aid_app/screens/project_screen.dart';
+import 'package:potential_aid_app/projects/screens/project_screen.dart';
 
 class GoToParentButton extends ConsumerWidget {
   final int parentId;

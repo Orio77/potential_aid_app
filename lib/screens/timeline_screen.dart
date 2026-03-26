@@ -5,7 +5,7 @@ import 'package:potential_aid_app/data/models/project_interval.dart';
 import 'package:potential_aid_app/providers/project_intervals_notifier.dart';
 import 'package:potential_aid_app/providers/task_cards_notifier.dart';
 import 'package:potential_aid_app/providers/timeline_date_notifier.dart';
-import 'package:potential_aid_app/screens/select_project_dialog.dart';
+import 'package:potential_aid_app/projects/widgets/select_project_dialog.dart';
 import 'package:potential_aid_app/widgets/timeline/date_card_list.dart';
 import 'package:potential_aid_app/widgets/timeline/my_categories_picker_dialog.dart';
 import 'package:potential_aid_app/widgets/timeline/project_intervals.dart';

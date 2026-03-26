@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart' hide SearchBar;
 import 'package:flutter/services.dart';
 import 'package:potential_aid_app/data/database.dart';
-import 'package:potential_aid_app/widgets/projects/project_task_list_data.dart';
-import 'package:potential_aid_app/widgets/projects/search_bar.dart';
+import 'package:potential_aid_app/projects/widgets/project_task_list_data.dart';
+import 'package:potential_aid_app/projects/widgets/search_bar.dart';
 
 class ProjectTaskList extends StatefulWidget {
   final int projectId;

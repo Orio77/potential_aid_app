@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart' hide SearchBar;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:potential_aid_app/widgets/projects/add_project_dialog.dart';
-import 'package:potential_aid_app/widgets/projects/project_list.dart';
-import 'package:potential_aid_app/widgets/projects/search_bar.dart';
+import 'package:potential_aid_app/projects/widgets/add_project_dialog.dart';
+import 'package:potential_aid_app/projects/widgets/project_list.dart';
+import 'package:potential_aid_app/projects/widgets/search_bar.dart';
 
 class ProjectListScreen extends ConsumerStatefulWidget {
   final int? categoryId;

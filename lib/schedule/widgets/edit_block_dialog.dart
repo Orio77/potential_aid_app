@@ -11,7 +11,7 @@ import 'package:potential_aid_app/schedule/services/add_block_service.dart';
 import 'package:potential_aid_app/schedule/services/edit_block_service.dart';
 import 'package:potential_aid_app/schedule/widgets/block_add_task_list.dart';
 import 'package:potential_aid_app/schedule/widgets/tasks_for_deadline_dialog.dart';
-import 'package:potential_aid_app/screens/project_screen.dart';
+import 'package:potential_aid_app/projects/screens/project_screen.dart';
 import 'package:potential_aid_app/widgets/common/duration_picker_dialog.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
 import 'package:time_machine/time_machine.dart';

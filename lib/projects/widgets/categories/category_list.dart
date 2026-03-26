@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/project_categories_notifier.dart';
-import 'package:potential_aid_app/screens/project_list_screen.dart';
+import 'package:potential_aid_app/projects/screens/project_list_screen.dart';
 import 'package:potential_aid_app/widgets/common/reorderable_grid.dart';
-import 'package:potential_aid_app/widgets/projects/categories/category_card.dart';
+import 'package:potential_aid_app/projects/widgets/categories/category_card.dart';
 
 class CategoryList extends ConsumerStatefulWidget {
   const CategoryList({super.key});
@@ -167,8 +167,7 @@ class _CategoryListState extends ConsumerState<CategoryList> {
 
         if (constraints.maxWidth < 900) {
           crossAxisCount = 2;
-          childAspectRatio =
-              0.9; // Slightly taller than wide for better text/icon layout
+          childAspectRatio = 0.9;
         } else {
           crossAxisCount = 3;
           childAspectRatio = 0.9;
@@ -187,7 +186,7 @@ class _CategoryListState extends ConsumerState<CategoryList> {
             }
           },
           onTap: _isEditMode
-              ? (context, category) {} // Disable tap in edit mode
+              ? (context, category) {}
               : (context, category) =>
                     _pushProjectListScreen(context, category.id),
           itemBuilder: (category) => _buildCategoryCardWithDelete(category),
@@ -250,7 +249,6 @@ class _CategoryListState extends ConsumerState<CategoryList> {
 
     return Column(
       children: [
-        // Edit mode header
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
           child: Row(

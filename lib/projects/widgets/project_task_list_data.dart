@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
-import 'package:potential_aid_app/widgets/projects/complete_task_dialog.dart';
-import 'package:potential_aid_app/widgets/projects/task_list_item.dart';
+import 'package:potential_aid_app/projects/widgets/complete_task_dialog.dart';
+import 'package:potential_aid_app/projects/widgets/task_list_item.dart';
 
 class ProjectTaskListData extends ConsumerStatefulWidget {
   final int projectId;
