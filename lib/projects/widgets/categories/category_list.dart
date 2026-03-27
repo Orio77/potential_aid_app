@@ -7,7 +7,9 @@ import 'package:potential_aid_app/widgets/common/reorderable_grid.dart';
 import 'package:potential_aid_app/projects/widgets/categories/category_card.dart';
 
 class CategoryList extends ConsumerStatefulWidget {
-  const CategoryList({super.key});
+  final String searchQuery;
+
+  const CategoryList({super.key, this.searchQuery = ''});
 
   @override
   ConsumerState<CategoryList> createState() => _CategoryListState();
@@ -241,7 +243,16 @@ class _CategoryListState extends ConsumerState<CategoryList> {
 
   @override
   Widget build(BuildContext context) {
-    final data = ref.watch(projectCategoriesProvider);
+    final allData = ref.watch(projectCategoriesProvider);
+    final data = widget.searchQuery.isEmpty
+        ? allData
+        : allData
+            .where(
+              (c) => (c.title ?? '')
+                  .toLowerCase()
+                  .contains(widget.searchQuery.toLowerCase()),
+            )
+            .toList();
 
     if (data.isEmpty) {
       return _buildEmptyListView();

@@ -22,13 +22,13 @@ class SearchAppBar extends StatefulWidget implements PreferredSizeWidget {
   });
 
   @override
-  State<SearchAppBar> createState() => _SearchAppBarState();
+  State<SearchAppBar> createState() => SearchAppBarState();
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }
 
-class _SearchAppBarState extends State<SearchAppBar> {
+class SearchAppBarState extends State<SearchAppBar> {
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
 
@@ -36,6 +36,12 @@ class _SearchAppBarState extends State<SearchAppBar> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void activateSearch() {
+    setState(() {
+      _isSearching = true;
+    });
   }
 
   void _toggleSearch() {

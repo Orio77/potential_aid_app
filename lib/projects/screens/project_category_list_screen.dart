@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/projects/widgets/add_project_dialog.dart';
 import 'package:potential_aid_app/projects/widgets/categories/add_category_dialog.dart';
@@ -7,7 +8,9 @@ import 'package:potential_aid_app/projects/widgets/project_list.dart';
 import 'package:potential_aid_app/projects/widgets/search_bar.dart';
 
 class ProjectCategoryListScreen extends ConsumerStatefulWidget {
-  const ProjectCategoryListScreen({super.key});
+  final bool initialShowCategories;
+
+  const ProjectCategoryListScreen({super.key, this.initialShowCategories = true});
 
   @override
   ConsumerState<ProjectCategoryListScreen> createState() =>
@@ -17,24 +20,60 @@ class ProjectCategoryListScreen extends ConsumerStatefulWidget {
 class _ProjectCategoryListScreenState
     extends ConsumerState<ProjectCategoryListScreen> {
   late bool showCategories;
-  String query = "";
+  String query = '';
+  String _categoryQuery = '';
+
+  final GlobalKey<SearchAppBarState> _categoriesSearchBarKey =
+      GlobalKey<SearchAppBarState>();
+  final GlobalKey<SearchAppBarState> _projectsSearchBarKey =
+      GlobalKey<SearchAppBarState>();
 
   @override
   void initState() {
     super.initState();
-    showCategories = true;
+    showCategories = widget.initialShowCategories;
+    HardwareKeyboard.instance.addHandler(_handleKeyEvent);
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
+    super.dispose();
+  }
+
+  bool _handleKeyEvent(KeyEvent event) {
+    if (!mounted) return false;
+    if (ModalRoute.of(context)?.isCurrent != true) return false;
+    if (event is KeyDownEvent && HardwareKeyboard.instance.isControlPressed) {
+      if (event.logicalKey == LogicalKeyboardKey.keyF) {
+        if (showCategories) {
+          _categoriesSearchBarKey.currentState?.activateSearch();
+        } else {
+          _projectsSearchBarKey.currentState?.activateSearch();
+        }
+        return true;
+      }
+      if (event.logicalKey == LogicalKeyboardKey.keyN) {
+        if (showCategories) {
+          showAddCategoryDialog(context);
+        } else {
+          showAddProjectDialog(context: context);
+        }
+        return true;
+      }
+    }
+    return false;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: showCategories
-          ? AppBar(
-              title: Text(
-                'Project Categories',
-                style: TextStyle(fontWeight: FontWeight.w400, fontSize: 35),
-              ),
-              centerTitle: true,
+          ? SearchAppBar(
+              key: _categoriesSearchBarKey,
+              normalTitle: 'Project Categories',
+              titleStyle: const TextStyle(fontWeight: FontWeight.w400, fontSize: 35),
+              onSearchChanged: _onCategorySearchChanged,
               leading: IconButton(
                 onPressed: () => Navigator.of(context).pop(),
                 icon: const Icon(Icons.arrow_back),
@@ -42,7 +81,8 @@ class _ProjectCategoryListScreenState
               backgroundColor: Theme.of(context).colorScheme.inversePrimary,
             )
           : SearchAppBar(
-              normalTitle: "Projects",
+              key: _projectsSearchBarKey,
+              normalTitle: 'Projects',
               onSearchChanged: _onSearchChanged,
             ),
 
@@ -60,7 +100,8 @@ class _ProjectCategoryListScreenState
                     onChanged: (value) {
                       setState(() {
                         showCategories = !showCategories;
-                        query = "";
+                        query = '';
+                        _categoryQuery = '';
                       });
                     },
                   ),
@@ -69,7 +110,7 @@ class _ProjectCategoryListScreenState
               ),
               Expanded(
                 child: showCategories
-                    ? CategoryList()
+                    ? CategoryList(searchQuery: _categoryQuery)
                     : ProjectList(searchQuery: query),
               ),
             ],
@@ -102,6 +143,12 @@ class _ProjectCategoryListScreenState
   void _onSearchChanged(String value) {
     setState(() {
       query = value.toLowerCase();
+    });
+  }
+
+  void _onCategorySearchChanged(String value) {
+    setState(() {
+      _categoryQuery = value;
     });
   }
 }

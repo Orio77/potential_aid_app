@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/breakdown/constants/task_breakdown_constants.dart';
 import 'package:potential_aid_app/data/database.dart';
@@ -39,12 +40,35 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     showCompleted = false;
     _stateManager = SubtaskStateManager();
     _initializeSubtasks();
+    HardwareKeyboard.instance.addHandler(_handleKeyEvent);
   }
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
     _stateManager.dispose();
     super.dispose();
+  }
+
+  bool _handleKeyEvent(KeyEvent event) {
+    if (!mounted) return false;
+    if (ModalRoute.of(context)?.isCurrent != true) return false;
+    if (event is! KeyDownEvent) return false;
+    if (!HardwareKeyboard.instance.isControlPressed) return false;
+
+    if (event.logicalKey == LogicalKeyboardKey.enter) {
+      _addSubtask();
+      return true;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.keyS) {
+      if (!isLoading) {
+        _saveSubtasks().then((_) {
+          if (mounted) setState(() {});
+        });
+      }
+      return true;
+    }
+    return false;
   }
 
   // Initialization and data loading
