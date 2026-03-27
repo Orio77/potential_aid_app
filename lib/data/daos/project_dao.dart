@@ -276,6 +276,16 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
     )..where((pc) => pc.id.equals(projectCategoryId))).getSingle();
   }
 
+  Future<ProjectCategoryData?> getProjectCategoryByIdOrNull(
+    int projectCategoryId,
+  ) async {
+    final row = await (select(projectCategory)
+          ..where((pc) => pc.id.equals(projectCategoryId)))
+        .getSingleOrNull();
+    if (row == null || row.isDeleted) return null;
+    return row;
+  }
+
   Future<ProjectCategoryData> getProjectCategoryByProjectId(
     int projectId,
   ) async {

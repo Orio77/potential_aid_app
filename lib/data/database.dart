@@ -32,7 +32,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 26;
+  int get schemaVersion => 28;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -40,6 +40,30 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
     },
     onUpgrade: (Migrator m, int from, int to) async {
+      if (from < 27) {
+        await customStatement(
+          'ALTER TABLE settings ADD COLUMN default_timeline_project_id INTEGER',
+        );
+        await customStatement(
+          'ALTER TABLE settings ADD COLUMN default_timeline_category_id INTEGER',
+        );
+        await customStatement(
+          'ALTER TABLE settings ADD COLUMN default_timeline_show_projects INTEGER NOT NULL DEFAULT 1',
+        );
+        await customStatement(
+          'ALTER TABLE settings ADD COLUMN default_timeline_uncompleted_only INTEGER NOT NULL DEFAULT 1',
+        );
+      }
+      if (from < 28) {
+        await customStatement('''
+          UPDATE settings SET default_timeline_show_projects = 1
+          WHERE default_timeline_show_projects IS NULL
+        ''');
+        await customStatement('''
+          UPDATE settings SET default_timeline_uncompleted_only = 1
+          WHERE default_timeline_uncompleted_only IS NULL
+        ''');
+      }
       if (from < 26) {
         // Add sync columns to all tables using custom SQL
         // Use static timestamp since strftime() functions aren't allowed in ALTER TABLE DEFAULT values

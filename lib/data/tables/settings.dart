@@ -10,6 +10,17 @@ class Settings extends Table {
   IntColumn get defaultTaskLength => integer()();
   IntColumn get defaultBreakTime => integer()();
 
+  /// When set, timeline opens filtered to this project; [defaultTimelineCategoryId] should be null.
+  IntColumn get defaultTimelineProjectId => integer().nullable()();
+
+  /// When no default project, optional category filter for the timeline.
+  IntColumn get defaultTimelineCategoryId => integer().nullable()();
+
+  /// Nullable so existing rows / partial reads never crash Drift's map(); treat null as true in app code.
+  BoolColumn get defaultTimelineShowProjects => boolean().nullable()();
+
+  BoolColumn get defaultTimelineUncompletedOnly => boolean().nullable()();
+
   // Sync Fields
   TextColumn get supabaseId => text().nullable()();
   DateTimeColumn get lastModified => dateTime()();

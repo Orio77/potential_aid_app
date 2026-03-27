@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/data/models/project_interval.dart';
 import 'package:potential_aid_app/providers/project_intervals_notifier.dart';
+import 'package:potential_aid_app/providers/settings_notifier.dart';
 import 'package:potential_aid_app/timeline/providers/task_cards_notifier.dart';
 import 'package:potential_aid_app/timeline/providers/timeline_date_notifier.dart';
 import 'package:potential_aid_app/projects/widgets/select_project_dialog.dart';
@@ -29,6 +31,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
   ProjectCategoryData? selectedCategory;
   ProjectData? selectedProject;
   bool _showOnlyUncompleted = true;
+  bool _timelineDefaultsResolved = false;
 
   @override
   void initState() {
@@ -38,18 +41,119 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
     _horizontalScrollController = ScrollController(
       initialScrollOffset: dayCardWidth * (DateTime.now().day - 1),
     );
+    HardwareKeyboard.instance.addHandler(_handleKeyEvent);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _resolveTimelineDefaults();
+    });
+  }
+
+  Future<void> _resolveTimelineDefaults() async {
+    final defaults = await ref
+        .read(settingsNotifierProvider.notifier)
+        .resolveTimelineDefaults();
+    if (!mounted) return;
+    setState(() {
+      showProjects = defaults.showProjects;
+      selectedProject = defaults.project;
+      selectedCategory = defaults.category;
+      _showOnlyUncompleted = defaults.showOnlyUncompleted;
+      _timelineDefaultsResolved = true;
+    });
+
+    final currentMonth = ref.read(timelineDateNotifierProvider);
+    await ref
+        .read(projectIntervalsNotifierProvider.notifier)
+        .loadProjectsForMonth(currentMonth);
+    if (!mounted) return;
+    if (!defaults.showProjects) {
+      await ref
+          .read(taskCardsNotifierProvider(depth).notifier)
+          .loadTasksForMonth(
+            monthDate: currentMonth,
+            depth: depth,
+            categoryId: defaults.category?.id,
+            projectId: defaults.project?.id,
+            showOnlyUncompleted: defaults.showOnlyUncompleted,
+          );
+    }
+  }
+
+  Future<void> _onTimelineMenuSelected(int value, BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    if (value == 0) {
+      await ref
+          .read(settingsNotifierProvider.notifier)
+          .saveCurrentTimelineAsDefault(
+            project: selectedProject,
+            category: selectedCategory,
+            showProjects: showProjects,
+            showOnlyUncompleted: _showOnlyUncompleted,
+          );
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Timeline default saved')),
+        );
+      }
+    } else if (value == 1) {
+      await ref.read(settingsNotifierProvider.notifier).clearTimelineDefaults();
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Timeline default cleared')),
+        );
+      }
+    }
   }
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
     _horizontalScrollController.dispose();
     super.dispose();
+  }
+
+  bool _handleKeyEvent(KeyEvent event) {
+    if (!mounted) return false;
+    if (ModalRoute.of(context)?.isCurrent != true) return false;
+    if (event is! KeyDownEvent) return false;
+    if (!HardwareKeyboard.instance.isControlPressed) return false;
+
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.arrowLeft) {
+      ref.read(timelineDateNotifierProvider.notifier).goToPreviousMonth();
+      return true;
+    }
+    if (key == LogicalKeyboardKey.arrowRight) {
+      ref.read(timelineDateNotifierProvider.notifier).goToNextMonth();
+      return true;
+    }
+    if (key == LogicalKeyboardKey.keyT) {
+      ref.read(timelineDateNotifierProvider.notifier).goToToday();
+      return true;
+    }
+    return false;
   }
 
   @override
   Widget build(BuildContext context) {
     final currentMonth = ref.watch(timelineDateNotifierProvider);
+
+    if (!_timelineDefaultsResolved) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(_formatMonthYear(currentMonth)),
+          centerTitle: true,
+          leading: IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.arrow_back_rounded),
+          ),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+        backgroundColor: Colors.white,
+      );
+    }
+
     final projectsMap = ref.watch(projectIntervalsNotifierProvider);
+    final appSettings = ref.watch(settingsNotifierProvider);
     final projects = projectsMap.values.toList();
 
     List<ProjectInterval> filteredProjects;
@@ -146,6 +250,21 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
           ],
         ),
         actions: [
+          PopupMenuButton<int>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) => _onTimelineMenuSelected(value, context),
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 0,
+                child: Text('Use current view as default'),
+              ),
+              PopupMenuItem(
+                value: 1,
+                enabled: appSettings.hasTimelineCustomization,
+                child: const Text('Clear saved timeline default'),
+              ),
+            ],
+          ),
           IconButton(
             onPressed: () => ref
                 .read(timelineDateNotifierProvider.notifier)

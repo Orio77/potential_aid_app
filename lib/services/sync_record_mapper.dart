@@ -433,6 +433,18 @@ class SyncRecordMapper {
             defaultStartTime: Value(remoteRecord['default_start_time'] as int),
             defaultTaskLength: Value(remoteRecord['default_task_length'] as int),
             defaultBreakTime: Value(remoteRecord['default_break_time'] as int),
+            defaultTimelineProjectId: Value(
+              remoteRecord['default_timeline_project_id'] as int?,
+            ),
+            defaultTimelineCategoryId: Value(
+              remoteRecord['default_timeline_category_id'] as int?,
+            ),
+            defaultTimelineShowProjects: Value(
+              remoteRecord['default_timeline_show_projects'] as bool? ?? true,
+            ),
+            defaultTimelineUncompletedOnly: Value(
+              remoteRecord['default_timeline_uncompleted_only'] as bool? ?? true,
+            ),
             supabaseId: Value(remoteRecord['supabase_id'] as String),
             lastModified: Value(SyncConverter.parseDateTime(remoteRecord['last_modified']) ?? now),
             needsSync: const Value(false),
@@ -634,6 +646,18 @@ class SyncRecordMapper {
             defaultStartTime: Value(remoteRecord['default_start_time'] as int),
             defaultTaskLength: Value(remoteRecord['default_task_length'] as int),
             defaultBreakTime: Value(remoteRecord['default_break_time'] as int),
+            defaultTimelineProjectId: Value(
+              remoteRecord['default_timeline_project_id'] as int?,
+            ),
+            defaultTimelineCategoryId: Value(
+              remoteRecord['default_timeline_category_id'] as int?,
+            ),
+            defaultTimelineShowProjects: Value(
+              remoteRecord['default_timeline_show_projects'] as bool? ?? true,
+            ),
+            defaultTimelineUncompletedOnly: Value(
+              remoteRecord['default_timeline_uncompleted_only'] as bool? ?? true,
+            ),
             lastModified: Value(SyncConverter.parseDateTime(remoteRecord['last_modified']) ?? now),
             needsSync: const Value(false),
             isDeleted: Value(remoteRecord['is_deleted'] as bool? ?? false),
