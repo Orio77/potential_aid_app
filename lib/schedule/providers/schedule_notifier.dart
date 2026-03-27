@@ -158,36 +158,37 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
 
   Future<void> reorderBlocks(int oldIndex, int newIndex) async {
     final blocks = await getBlocksWithTasks();
+    if (blocks.isEmpty) return;
 
-    // Check if any of the blocks are completed - prevent reordering if so
-    final first = blocks[oldIndex];
-    final firstCompletionPercentage = await _database.blockDao
-        .getBlockCompletionPercentage(first.block.id);
-    final second = blocks[newIndex];
-    final secondCompletionPercentage = await _database.blockDao
-        .getBlockCompletionPercentage(second.block.id);
-
-    if (firstCompletionPercentage != null ||
-        secondCompletionPercentage != null) {
+    // ReorderableListView: newIndex may be itemCount when dropping at the end.
+    if (oldIndex < 0 ||
+        oldIndex >= blocks.length ||
+        newIndex < 0 ||
+        newIndex > blocks.length) {
       return;
     }
+    if (oldIndex == newIndex) return;
 
-    // Adjust newIndex for the removal (same as working categories method)
+    // Reassigns start times for every block; block any reorder if any block is completed.
+    for (final b in blocks) {
+      final pct = await _database.blockDao.getBlockCompletionPercentage(
+        b.block.id,
+      );
+      if (pct != null) return;
+    }
+
     if (newIndex > oldIndex) {
       newIndex--;
     }
 
-    // Reorder the blocks list
     final reorderedBlocks = List<BlockWithTasks>.from(blocks);
     final movedBlock = reorderedBlocks.removeAt(oldIndex);
     reorderedBlocks.insert(newIndex, movedBlock);
 
-    // Update database with new start times based on reordered sequence
     try {
-      // Extract the original start times before reordering
+      // i-th row after reorder gets the i-th smallest current start minute (slot times).
       final originalStartTimes =
-          blocks.map((b) => b.block.startMinuteOfDay).toList()
-            ..sort(); // Sort to maintain chronological order
+          blocks.map((b) => b.block.startMinuteOfDay).toList()..sort();
 
       await _updateBlockTimesInDatabase(reorderedBlocks, originalStartTimes);
 

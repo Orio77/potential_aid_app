@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:potential_aid_app/schedule/providers/block_with_tasks_notifier.dart';
 import 'package:potential_aid_app/schedule/providers/completion_notifier.dart';
 import 'package:potential_aid_app/schedule/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/schedule/widgets/delete_block_dialog.dart';
@@ -58,8 +57,6 @@ class ScheduleList extends ConsumerWidget {
         await ref
             .read(scheduleNotifierProvider.notifier)
             .reorderBlocks(oldIndex, newIndex);
-        ref.invalidate(blockTasksNotifier(blockIds[oldIndex]));
-        ref.invalidate(blockTasksNotifier(blockIds[newIndex]));
       },
     );
   }
