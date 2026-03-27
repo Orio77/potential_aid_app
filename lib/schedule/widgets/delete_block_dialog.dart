@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:potential_aid_app/providers/schedule_notifier.dart';
+import 'package:potential_aid_app/schedule/providers/schedule_notifier.dart';
 
 class DeleteBlockDialog extends ConsumerStatefulWidget {
   final int blockId;

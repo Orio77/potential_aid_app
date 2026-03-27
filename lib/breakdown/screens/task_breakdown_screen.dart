@@ -1,12 +1,12 @@
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:potential_aid_app/constants/task_breakdown_constants.dart';
+import 'package:potential_aid_app/breakdown/constants/task_breakdown_constants.dart';
 import 'package:potential_aid_app/data/database.dart';
-import 'package:potential_aid_app/managers/subtask_state_manager.dart';
+import 'package:potential_aid_app/breakdown/managers/subtask_state_manager.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
-import 'package:potential_aid_app/providers/task_cards_notifier.dart';
+import 'package:potential_aid_app/timeline/providers/task_cards_notifier.dart';
 import 'package:potential_aid_app/breakdown/widgets/arrow_painter.dart';
 import 'package:potential_aid_app/breakdown/widgets/subtask_card.dart';
 import 'package:potential_aid_app/breakdown/widgets/subtask_buttons.dart';

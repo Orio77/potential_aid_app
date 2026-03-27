@@ -2,7 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
-import 'package:potential_aid_app/providers/stats_provider.dart';
+import 'package:potential_aid_app/stats/providers/stats_provider.dart';
 import 'package:potential_aid_app/utils/completion_utils.dart';
 import 'package:time_machine/time_machine.dart';
 

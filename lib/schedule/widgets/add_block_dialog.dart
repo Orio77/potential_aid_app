@@ -4,7 +4,7 @@ import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/project_search_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
-import 'package:potential_aid_app/providers/schedule_notifier.dart';
+import 'package:potential_aid_app/schedule/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/providers/settings_notifier.dart';
 import 'package:potential_aid_app/schedule/services/add_block_service.dart';
 import 'package:potential_aid_app/projects/screens/project_screen.dart';

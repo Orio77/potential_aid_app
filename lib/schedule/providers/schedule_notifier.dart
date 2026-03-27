@@ -2,13 +2,13 @@ import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/data/tables/block.dart';
-import 'package:potential_aid_app/providers/block_with_tasks_notifier.dart';
-import 'package:potential_aid_app/providers/completion_notifier.dart';
+import 'package:potential_aid_app/schedule/providers/block_with_tasks_notifier.dart';
+import 'package:potential_aid_app/schedule/providers/completion_notifier.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
-import 'package:potential_aid_app/providers/stats_provider.dart';
+import 'package:potential_aid_app/stats/providers/stats_provider.dart';
 import 'package:time_machine/time_machine.dart';
 
 class ScheduleNotifier extends StateNotifier<List<int>> {

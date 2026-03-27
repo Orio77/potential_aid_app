@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:potential_aid_app/constants/task_breakdown_constants.dart';
+import 'package:potential_aid_app/breakdown/constants/task_breakdown_constants.dart';
 import 'package:potential_aid_app/data/database.dart';
-import 'package:potential_aid_app/models/subtask_item.dart';
+import 'package:potential_aid_app/breakdown/models/subtask_item.dart';
 import 'package:potential_aid_app/breakdown/widgets/subtask_buttons.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
 import 'package:potential_aid_app/providers/task_search_notifier.dart';

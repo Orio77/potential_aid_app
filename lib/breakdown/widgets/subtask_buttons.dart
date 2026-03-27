@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:potential_aid_app/constants/task_breakdown_constants.dart';
+import 'package:potential_aid_app/breakdown/constants/task_breakdown_constants.dart';
 import 'package:potential_aid_app/data/database.dart';
-import 'package:potential_aid_app/models/subtask_item.dart';
+import 'package:potential_aid_app/breakdown/models/subtask_item.dart';
 import 'package:potential_aid_app/breakdown/screens/task_breakdown_screen.dart';
 import 'package:potential_aid_app/services/deadline_service.dart';
 import 'package:potential_aid_app/projects/widgets/complete_task_dialog.dart';

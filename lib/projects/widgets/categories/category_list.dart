@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
-import 'package:potential_aid_app/providers/project_categories_notifier.dart';
+import 'package:potential_aid_app/projects/providers/project_categories_notifier.dart';
 import 'package:potential_aid_app/projects/screens/project_list_screen.dart';
 import 'package:potential_aid_app/widgets/common/reorderable_grid.dart';
 import 'package:potential_aid_app/projects/widgets/categories/category_card.dart';

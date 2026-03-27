@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
-import 'package:potential_aid_app/providers/stats_provider.dart';
+import 'package:potential_aid_app/stats/providers/stats_provider.dart';
 import 'package:potential_aid_app/utils/color_utils.dart';
 import 'package:potential_aid_app/utils/time_utils.dart';
 import 'package:potential_aid_app/projects/widgets/add_project_dialog.dart';

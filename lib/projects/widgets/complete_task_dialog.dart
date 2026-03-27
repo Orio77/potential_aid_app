@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
-import 'package:potential_aid_app/providers/schedule_notifier.dart';
+import 'package:potential_aid_app/schedule/providers/schedule_notifier.dart';
 
 class CompleteTaskDialog extends ConsumerStatefulWidget {
   final TaskData task;

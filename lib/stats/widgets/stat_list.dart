@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:potential_aid_app/providers/stats_provider.dart';
+import 'package:potential_aid_app/stats/providers/stats_provider.dart';
 import 'package:potential_aid_app/stats/widgets/barmap.dart';
 import 'package:time_machine/time_machine.dart';
 

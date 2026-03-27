@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
-import 'package:potential_aid_app/providers/completion_notifier.dart';
+import 'package:potential_aid_app/schedule/providers/completion_notifier.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
-import 'package:potential_aid_app/providers/schedule_notifier.dart';
+import 'package:potential_aid_app/schedule/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/schedule/services/completion_service.dart';
 
 class BlockCompletionElement extends ConsumerStatefulWidget {

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_iconpicker/Models/configuration.dart';
 import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:potential_aid_app/providers/project_categories_notifier.dart';
+import 'package:potential_aid_app/projects/providers/project_categories_notifier.dart';
 
 class AddCategoryDialog extends ConsumerStatefulWidget {
   const AddCategoryDialog({super.key});

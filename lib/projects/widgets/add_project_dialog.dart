@@ -6,7 +6,7 @@ import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/project_intervals_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
-import 'package:potential_aid_app/providers/stats_provider.dart';
+import 'package:potential_aid_app/stats/providers/stats_provider.dart';
 import 'package:potential_aid_app/projects/services/project_service.dart';
 import 'package:potential_aid_app/utils/time_utils.dart';
 import 'package:potential_aid_app/widgets/common/goal_progress_input.dart';

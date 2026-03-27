@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:potential_aid_app/providers/completion_notifier.dart';
+import 'package:potential_aid_app/schedule/providers/completion_notifier.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/stats/widgets/progress_bar.dart';
 import 'package:time_machine/time_machine.dart';

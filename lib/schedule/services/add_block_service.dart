@@ -1,4 +1,4 @@
-import 'package:potential_aid_app/providers/schedule_notifier.dart';
+import 'package:potential_aid_app/schedule/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/providers/settings_notifier.dart';
 
 import 'package:flutter/material.dart';

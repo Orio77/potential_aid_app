@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
-import 'package:potential_aid_app/providers/block_with_tasks_notifier.dart';
+import 'package:potential_aid_app/schedule/providers/block_with_tasks_notifier.dart';
 import 'package:potential_aid_app/schedule/widgets/block_completion_element.dart';
 import 'package:potential_aid_app/schedule/widgets/task_completion_element.dart';
 

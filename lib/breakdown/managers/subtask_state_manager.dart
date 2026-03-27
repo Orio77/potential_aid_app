@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:uuid/uuid.dart';
-import '../models/subtask_item.dart';
-import '../constants/task_breakdown_constants.dart';
+import 'package:potential_aid_app/breakdown/models/subtask_item.dart';
+import 'package:potential_aid_app/breakdown/constants/task_breakdown_constants.dart';
 
 /// Manages the state of subtasks in the Task Breakdown Screen
 class SubtaskStateManager {

@@ -5,19 +5,19 @@ import 'package:potential_aid_app/services/supabase_service.dart';
 
 // Import other providers for invalidation (but not watch them to avoid cycles)
 import 'package:potential_aid_app/providers/projects_notifier.dart';
-import 'package:potential_aid_app/providers/project_categories_notifier.dart';
+import 'package:potential_aid_app/projects/providers/project_categories_notifier.dart';
 import 'package:potential_aid_app/providers/project_intervals_notifier.dart';
 import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/tasks_notifier.dart';
-import 'package:potential_aid_app/providers/task_cards_notifier.dart';
+import 'package:potential_aid_app/timeline/providers/task_cards_notifier.dart';
 import 'package:potential_aid_app/providers/task_search_notifier.dart';
-import 'package:potential_aid_app/providers/block_with_tasks_notifier.dart';
-import 'package:potential_aid_app/providers/schedule_notifier.dart';
-import 'package:potential_aid_app/providers/completion_notifier.dart';
+import 'package:potential_aid_app/schedule/providers/block_with_tasks_notifier.dart';
+import 'package:potential_aid_app/schedule/providers/schedule_notifier.dart';
+import 'package:potential_aid_app/schedule/providers/completion_notifier.dart';
 import 'package:potential_aid_app/providers/settings_notifier.dart';
-import 'package:potential_aid_app/providers/stats_provider.dart';
+import 'package:potential_aid_app/stats/providers/stats_provider.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
-import 'package:potential_aid_app/providers/timeline_date_notifier.dart';
+import 'package:potential_aid_app/timeline/providers/timeline_date_notifier.dart';
 
 // Sync Service Provider
 final syncServiceProvider = Provider<SyncService>((ref) {
