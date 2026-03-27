@@ -28,6 +28,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
   late ScrollController _horizontalScrollController;
   ProjectCategoryData? selectedCategory;
   ProjectData? selectedProject;
+  bool _showOnlyUncompleted = true;
 
   @override
   void initState() {
@@ -69,6 +70,12 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
           .toList();
     }
 
+    if (_showOnlyUncompleted) {
+      filteredProjects = filteredProjects
+          .where((p) => (p.progress ?? 0) < 1.0)
+          .toList();
+    }
+
     ref.listen(timelineDateNotifierProvider, (previous, next) {
       if (previous != next) {
         ref
@@ -84,6 +91,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                 depth: depth,
                 categoryId: selectedCategory?.id,
                 projectId: selectedProject?.id,
+                showOnlyUncompleted: _showOnlyUncompleted,
               );
         }
       }
@@ -129,6 +137,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                           depth: depth,
                           categoryId: selectedCategory?.id,
                           projectId: selectedProject?.id,
+                          showOnlyUncompleted: _showOnlyUncompleted,
                         );
                   }
                 },
@@ -184,6 +193,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                         categoryId: category?.id,
                         projectId:
                             null, // Clear project filter when category changes
+                        showOnlyUncompleted: _showOnlyUncompleted,
                       );
                 }
               },
@@ -194,6 +204,16 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                         selectedCategory!.iconCodePoint ?? 0,
                         fontFamily: 'MaterialIcons',
                       ),
+              ),
+            ),
+            IconButton(
+              onPressed: () => setState(
+                () => _showOnlyUncompleted = !_showOnlyUncompleted,
+              ),
+              icon: Icon(
+                _showOnlyUncompleted
+                    ? Icons.check_circle_outline
+                    : Icons.checklist,
               ),
             ),
             if (!showProjects) ...[
@@ -224,6 +244,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                         depth: depth,
                         categoryId: selectedCategory?.id,
                         projectId: projectData?.id,
+                        showOnlyUncompleted: _showOnlyUncompleted,
                       );
                 }
               },
@@ -285,6 +306,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                           dayCardWidth: dayCardWidth,
                           scrollController: _horizontalScrollController,
                           projectId: selectedProject?.id,
+                          showOnlyUncompleted: _showOnlyUncompleted,
                         ),
                 ),
               ),

@@ -15,6 +15,7 @@ class TaskCardsNotifier extends StateNotifier<Map<LocalDate, List<TaskData>>> {
     required int depth,
     int? categoryId,
     int? projectId,
+    bool showOnlyUncompleted = true,
   }) async {
     final monthStart = LocalDate(monthDate.yearOfEra, monthDate.monthOfYear, 1);
     final monthEnd = monthStart.addMonths(1).subtractDays(1);
@@ -27,7 +28,7 @@ class TaskCardsNotifier extends StateNotifier<Map<LocalDate, List<TaskData>>> {
         monthStart.toDateTimeUnspecified(),
         monthEnd.toDateTimeUnspecified().add(Duration(hours: 23, minutes: 59)),
       ),
-      (task) => task.isCompleted.equals(false),
+      if (showOnlyUncompleted) (task) => task.isCompleted.equals(false),
     ]);
 
     if (categoryId != null) {

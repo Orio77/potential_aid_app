@@ -18,6 +18,7 @@ class TaskCards extends ConsumerStatefulWidget {
   final LocalDate timelineStart;
   final ScrollController? scrollController;
   final int? projectId;
+  final bool showOnlyUncompleted;
 
   const TaskCards({
     super.key,
@@ -27,6 +28,7 @@ class TaskCards extends ConsumerStatefulWidget {
     this.categoryId,
     this.scrollController,
     this.projectId,
+    this.showOnlyUncompleted = true,
   });
 
   @override
@@ -58,11 +60,12 @@ class _TaskCardsState extends ConsumerState<TaskCards> with AutoScrollMixin {
   @override
   void didUpdateWidget(TaskCards oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.depth != widget.depth) {
+    if (oldWidget.depth != widget.depth ||
+        oldWidget.showOnlyUncompleted != widget.showOnlyUncompleted) {
       setState(() {
         depth = widget.depth ?? 0;
       });
-      // Reload tasks with new depth
+      // Reload tasks with new depth or completion filter
       final currentMonth = ref.read(timelineDateNotifierProvider);
       ref
           .read(taskCardsNotifierProvider(depth).notifier)
@@ -71,6 +74,7 @@ class _TaskCardsState extends ConsumerState<TaskCards> with AutoScrollMixin {
             depth: depth,
             categoryId: widget.categoryId,
             projectId: widget.projectId,
+            showOnlyUncompleted: widget.showOnlyUncompleted,
           );
     }
   }
@@ -111,6 +115,7 @@ class _TaskCardsState extends ConsumerState<TaskCards> with AutoScrollMixin {
               depth: depth,
               categoryId: widget.categoryId,
               projectId: widget.projectId,
+              showOnlyUncompleted: widget.showOnlyUncompleted,
             );
       }
     });
@@ -124,6 +129,7 @@ class _TaskCardsState extends ConsumerState<TaskCards> with AutoScrollMixin {
               depth: depth,
               categoryId: widget.categoryId,
               projectId: widget.projectId,
+              showOnlyUncompleted: widget.showOnlyUncompleted,
             );
       });
     }
@@ -321,6 +327,7 @@ class _TaskCardsState extends ConsumerState<TaskCards> with AutoScrollMixin {
             depth: depth,
             categoryId: widget.categoryId,
             projectId: widget.projectId,
+            showOnlyUncompleted: widget.showOnlyUncompleted,
           );
 
       // Refresh affected subtask depths
@@ -333,6 +340,7 @@ class _TaskCardsState extends ConsumerState<TaskCards> with AutoScrollMixin {
               depth: d,
               categoryId: widget.categoryId,
               projectId: widget.projectId,
+              showOnlyUncompleted: widget.showOnlyUncompleted,
             );
       }
 
