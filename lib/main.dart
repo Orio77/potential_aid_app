@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/config/supabase_config.dart';
 import 'package:potential_aid_app/schedule/screens/main_screen.dart';
+import 'package:potential_aid_app/widgets/common/global_search_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:time_machine/time_machine.dart';
 
@@ -32,7 +33,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const MainScreen(),
+      home: const GlobalSearchLauncher(child: MainScreen()),
     );
   }
 }
