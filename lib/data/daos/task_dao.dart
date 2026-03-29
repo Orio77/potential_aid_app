@@ -130,6 +130,19 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
     return await query.get();
   }
 
+  /// All non-deleted tasks for a project — completed and uncompleted —
+  /// sorted uncompleted first, then by orderIndex.
+  Future<List<TaskData>> getAllTasksByProject(int projectId) async {
+    final query = select(task)
+      ..where((t) => t.projectId.equals(projectId))
+      ..where((t) => t.isDeleted.equals(false))
+      ..orderBy([
+        (t) => OrderingTerm(expression: t.isCompleted), // false(0) before true(1)
+        (t) => OrderingTerm(expression: t.orderIndex),
+      ]);
+    return await query.get();
+  }
+
   Future<int> completeTask(int taskId, int count, DateTime completedAt) async {
     if (count < 0) throw ArgumentError('Count must not be negative');
 
@@ -241,6 +254,41 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
     query.orderBy([(t) => OrderingTerm.asc(t.orderIndex)]);
 
     return await query.get();
+  }
+
+  Future<List<TaskData>> getFirstDepthTasksForProject(int projectId) async {
+    final query = select(task)
+      ..where((t) => t.projectId.equals(projectId))
+      ..where((t) => t.parentTaskId.isNull())
+      ..where((t) => t.isDeleted.equals(false))
+      ..orderBy([(t) => OrderingTerm.asc(t.orderIndex)]);
+    return query.get();
+  }
+
+  Future<void> updateTaskProgress(int taskId, int newCurrent) async {
+    return transaction(() async {
+      final taskData = await getTaskById(taskId);
+      final bool nowComplete = newCurrent >= taskData.endGoal;
+      final actualCurrent = nowComplete ? taskData.endGoal : newCurrent;
+
+      if (nowComplete && !taskData.isCompleted) {
+        await _completeAllSubtasks(taskId, DateTime.now());
+      }
+
+      await (update(task)..where((t) => t.id.equals(taskId))).write(
+        _withSyncFields(
+          TaskCompanion(
+            current: Value(actualCurrent),
+            isCompleted: Value(nowComplete || taskData.isCompleted),
+            completedAt: Value(
+              nowComplete && taskData.completedAt == null
+                  ? DateTime.now()
+                  : taskData.completedAt,
+            ),
+          ),
+        ),
+      );
+    });
   }
 
   // Recursive retrieval of all descendant tasks

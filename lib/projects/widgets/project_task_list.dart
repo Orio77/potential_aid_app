@@ -25,6 +25,7 @@ class ProjectTaskList extends StatefulWidget {
 class _ProjectTaskListState extends State<ProjectTaskList> {
   late bool unwinded;
   late bool editMode;
+  bool _showCompleted = false;
   String? curQuery;
   int? curDepth;
   late TextEditingController _controller;
@@ -59,7 +60,7 @@ class _ProjectTaskListState extends State<ProjectTaskList> {
     return Column(
       children: [
         Container(
-          padding: EdgeInsets.all(8.0),
+          padding: const EdgeInsets.all(8.0),
           child: unwinded ? _buildUnwindedView() : _buildWindedView(),
         ),
         ProjectTaskListData(
@@ -68,12 +69,65 @@ class _ProjectTaskListState extends State<ProjectTaskList> {
           query: curQuery,
           depthLevel: curDepth,
           editMode: editMode,
+          showCompleted: _showCompleted,
           onSelectionChanged: (tasks) => setState(() {
             selectedTasks = tasks;
             widget.onSelectionChanged(selectedTasks);
           }),
         ),
       ],
+    );
+  }
+
+  Widget _buildWindedView() {
+    return Container(
+      height: 28.0,
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8.0),
+      ),
+      child: Row(
+        children: [
+          // Expand toolbar
+          Expanded(
+            child: InkWell(
+              borderRadius: const BorderRadius.horizontal(
+                left: Radius.circular(8),
+              ),
+              onTap: () => setState(() => unwinded = true),
+              child: Center(
+                child: Icon(
+                  Icons.expand_more_rounded,
+                  color: Colors.grey.shade600,
+                  size: 18,
+                ),
+              ),
+            ),
+          ),
+          Container(width: 1, color: Colors.grey.shade300),
+          // Show/hide completed — always accessible
+          SizedBox(
+            width: 40,
+            height: 28,
+            child: IconButton(
+              icon: Icon(
+                _showCompleted
+                    ? Icons.visibility_rounded
+                    : Icons.visibility_off_rounded,
+                size: 15,
+                color: _showCompleted
+                    ? Theme.of(context).colorScheme.primary
+                    : Colors.grey.shade500,
+              ),
+              onPressed: () =>
+                  setState(() => _showCompleted = !_showCompleted),
+              tooltip:
+                  _showCompleted ? 'Hide completed' : 'Show completed',
+              padding: EdgeInsets.zero,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -86,7 +140,7 @@ class _ProjectTaskListState extends State<ProjectTaskList> {
           child: SizedBox(
             width: 300,
             child: SearchBar(
-              normalTitle: "Search tasks",
+              normalTitle: 'Search tasks',
               onSearchChanged: (query) {
                 setState(() {
                   curQuery = query;
@@ -102,9 +156,12 @@ class _ProjectTaskListState extends State<ProjectTaskList> {
             controller: _controller,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: const InputDecoration(
-              labelText: "Depth",
+              labelText: 'Depth',
               border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 8,
+              ),
             ),
             onChanged: (value) {
               setState(() {
@@ -117,6 +174,22 @@ class _ProjectTaskListState extends State<ProjectTaskList> {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
+            // Show/hide completed
+            IconButton(
+              padding: EdgeInsets.zero,
+              icon: Icon(
+                _showCompleted
+                    ? Icons.visibility_rounded
+                    : Icons.visibility_off_rounded,
+                color: _showCompleted
+                    ? Theme.of(context).colorScheme.primary
+                    : null,
+              ),
+              onPressed: () =>
+                  setState(() => _showCompleted = !_showCompleted),
+              tooltip:
+                  _showCompleted ? 'Hide completed' : 'Show completed',
+            ),
             IconButton(
               padding: EdgeInsets.zero,
               onPressed: () {
@@ -135,7 +208,7 @@ class _ProjectTaskListState extends State<ProjectTaskList> {
                   selectedTasks.clear();
                   widget.onSelectionChanged(selectedTasks);
                 }),
-                icon: Icon(Icons.clear),
+                icon: const Icon(Icons.clear),
               ),
             IconButton(
               padding: EdgeInsets.zero,
@@ -147,34 +220,11 @@ class _ProjectTaskListState extends State<ProjectTaskList> {
                   unwinded = !unwinded;
                 });
               },
-              icon: Icon(Icons.expand_less_rounded),
+              icon: const Icon(Icons.expand_less_rounded),
             ),
           ],
         ),
       ],
-    );
-  }
-
-  Widget _buildWindedView() {
-    return InkWell(
-      onTap: () {
-        setState(() {
-          unwinded = true;
-        });
-      },
-      child: Container(
-        height: 20.0,
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
-          borderRadius: BorderRadius.circular(8.0),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.expand_more_rounded, color: Colors.grey.shade600),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -8,7 +8,7 @@ import 'package:potential_aid_app/stats/providers/stats_provider.dart';
 import 'package:potential_aid_app/utils/color_utils.dart';
 import 'package:potential_aid_app/utils/time_utils.dart';
 import 'package:potential_aid_app/projects/widgets/add_project_dialog.dart';
-import 'package:potential_aid_app/projects/widgets/project_progress_info.dart';
+import 'package:potential_aid_app/projects/widgets/project_task_progress.dart';
 import 'package:time_machine/time_machine.dart';
 
 class ProjectInfo extends ConsumerWidget {
@@ -106,7 +106,7 @@ class ProjectInfo extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Progress Section
-            ProjectProgressInfo(project: project),
+            ProjectTaskProgress(project: project),
 
             const SizedBox(height: 20),
 

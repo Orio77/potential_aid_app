@@ -14,7 +14,7 @@ class ProjectTasksNotifier extends StateNotifier<AsyncValue<List<TaskData>>> {
 
   Future<void> _loadTasks() async {
     try {
-      final tasks = await _database.taskDao.getTasksByProject(projectId);
+      final tasks = await _database.taskDao.getAllTasksByProject(projectId);
       if (mounted) {
         state = AsyncValue.data(tasks);
       }
