@@ -35,21 +35,31 @@ class ProjectTaskProgress extends ConsumerWidget {
   }
 }
 
-class _MultiBarProgress extends StatelessWidget {
+class _MultiBarProgress extends StatefulWidget {
   final ProjectData project;
   final List<TaskData> tasks;
 
   const _MultiBarProgress({required this.project, required this.tasks});
 
   @override
+  State<_MultiBarProgress> createState() => _MultiBarProgressState();
+}
+
+class _MultiBarProgressState extends State<_MultiBarProgress> {
+  static const _initialCount = 3;
+  bool _showAll = false;
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tasks = widget.tasks;
 
-    // Global average of each task's completion ratio
+    // Global average includes ALL tasks (completed count toward 100%)
     final avgCompletion = tasks.fold(
           0.0,
           (sum, t) =>
-              sum + (t.endGoal > 0 ? (t.current / t.endGoal).clamp(0.0, 1.0) : 0.0),
+              sum +
+              (t.endGoal > 0 ? (t.current / t.endGoal).clamp(0.0, 1.0) : 0.0),
         ) /
         tasks.length;
     final globalPct = avgCompletion * 100;
@@ -57,6 +67,13 @@ class _MultiBarProgress extends StatelessWidget {
       globalPct,
       theme.colorScheme,
     );
+
+    // Only show uncompleted tasks in the header rows — completed ones are
+    // visible via the task list's "Show completed" toggle below.
+    final uncompleted = tasks.where((t) => !t.isCompleted).toList();
+    final hasMore = uncompleted.length > _initialCount;
+    final visible =
+        _showAll ? uncompleted : uncompleted.take(_initialCount).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,9 +107,37 @@ class _MultiBarProgress extends StatelessWidget {
         const SizedBox(height: 8),
         ProgressBar(completionValue: avgCompletion),
 
-        // ── Per-task rows ────────────────────────────────────────────────
-        const SizedBox(height: 12),
-        ...tasks.map((task) => _TaskProgressRow(task: task)),
+        // ── Per-task rows (uncompleted only, first 3 by default) ─────────
+        if (uncompleted.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          ...visible.map((task) => _TaskProgressRow(task: task)),
+          if (hasMore) ...[
+            const SizedBox(height: 2),
+            Center(
+              child: TextButton.icon(
+                onPressed: () => setState(() => _showAll = !_showAll),
+                icon: Icon(
+                  _showAll
+                      ? Icons.expand_less_rounded
+                      : Icons.expand_more_rounded,
+                  size: 16,
+                ),
+                label: Text(
+                  _showAll
+                      ? 'Show less'
+                      : '${uncompleted.length - _initialCount} more',
+                  style: const TextStyle(fontSize: 12),
+                ),
+                style: TextButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ),
+          ],
+        ],
       ],
     );
   }
