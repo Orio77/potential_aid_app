@@ -126,7 +126,8 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
     return await (select(project)..where(
           (p) =>
               p.startDate.isSmallerOrEqualValue(end) &
-              p.deadline.isBiggerOrEqualValue(start),
+              p.deadline.isBiggerOrEqualValue(start) &
+              p.isDeleted.equals(false),
         ))
         .get();
   }
@@ -138,15 +139,19 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
     return await (select(project)..where(
           (p) =>
               p.deadline.isSmallerOrEqualValue(end) &
-              p.deadline.isBiggerOrEqualValue(start),
+              p.deadline.isBiggerOrEqualValue(start) &
+              p.isDeleted.equals(false),
         ))
         .get();
   }
 
   Future<List<ProjectData>> getProjectsInProgress(DateTime curDate) async {
-    return await (select(
-      project,
-    )..where((p) => p.deadline.isBiggerOrEqualValue(curDate))).get();
+    return await (select(project)..where(
+          (p) =>
+              p.deadline.isBiggerOrEqualValue(curDate) &
+              p.isDeleted.equals(false),
+        ))
+        .get();
   }
 
   Future<List<ProjectData>> getProjectsInProgressInDateRange(
@@ -157,7 +162,8 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
         await (select(project)..where(
               (p) =>
                   p.deadline.isBiggerOrEqualValue(start) &
-                  p.startDate.isSmallerOrEqualValue(end),
+                  p.startDate.isSmallerOrEqualValue(end) &
+                  p.isDeleted.equals(false),
             ))
             .get();
 
@@ -190,7 +196,9 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
     if (q.isEmpty) return [];
 
     final selectQuery = select(project)
-      ..where((p) => p.name.lower().contains('${q.toLowerCase()}%'));
+      ..where((p) =>
+          p.name.lower().contains('${q.toLowerCase()}%') &
+          p.isDeleted.equals(false));
 
     if (limit != null) {
       selectQuery.limit(limit);
@@ -216,9 +224,11 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
   }
 
   Future<List<ProjectData>> getChildProjects(int parentId) async {
-    return await (select(
-      project,
-    )..where((p) => p.parentProjectId.equals(parentId))).get();
+    return await (select(project)..where(
+          (p) =>
+              p.parentProjectId.equals(parentId) & p.isDeleted.equals(false),
+        ))
+        .get();
   }
 
   Future<ProjectData?> getParentProject(int projectId) async {
@@ -299,9 +309,10 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
   }
 
   Future<List<ProjectCategoryData>> getAllProjectCategories() async {
-    return await (select(
-      projectCategory,
-    )..orderBy([(pc) => OrderingTerm.asc(pc.orderIndex)])).get();
+    return await (select(projectCategory)
+          ..where((pc) => pc.isDeleted.equals(false))
+          ..orderBy([(pc) => OrderingTerm.asc(pc.orderIndex)]))
+        .get();
   }
 
   Future<int> updateProjectCategory(
@@ -325,8 +336,9 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
   }
 
   Future<List<ProjectData>> getProjectsByCategory(int categoryId) async {
-    return await (select(
-      project,
-    )..where((p) => p.category.equals(categoryId))).get();
+    return await (select(project)..where(
+          (p) => p.category.equals(categoryId) & p.isDeleted.equals(false),
+        ))
+        .get();
   }
 }

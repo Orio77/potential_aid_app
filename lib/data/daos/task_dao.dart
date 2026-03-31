@@ -61,7 +61,9 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
     if (q.isEmpty) return [];
 
     final selectQuery = select(task)
-      ..where((t) => t.name.lower().contains('${q.toLowerCase()}%'));
+      ..where((t) =>
+          t.name.lower().contains('${q.toLowerCase()}%') &
+          t.isDeleted.equals(false));
 
     if (limit != null) {
       selectQuery.limit(limit);
@@ -122,6 +124,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
     final query = select(task)
       ..where((task) => task.projectId.equals(projectId))
       ..where((task) => task.isCompleted.equals(false))
+      ..where((task) => task.isDeleted.equals(false))
       ..orderBy([
         (task) => OrderingTerm(expression: task.depth),
         (task) => OrderingTerm(expression: task.orderIndex),

@@ -84,7 +84,7 @@ class SupabaseService {
 
     // Add timestamp filter for incremental sync
     if (lastSyncTime != null) {
-      query = query.gte('last_modified', lastSyncTime.toIso8601String());
+      query = query.gte('last_modified', lastSyncTime.toUtc().toIso8601String());
     }
 
     final response = await query;
@@ -132,8 +132,7 @@ class SupabaseService {
   Future<void> deleteRecords(String tableName, List<String> supabaseIds) async {
     if (supabaseIds.isEmpty) return;
 
-    // Adjusting for timezone differences by adding 1 hour
-    final now = DateTime.now().toIso8601String();
+    final now = DateTime.now().toUtc().toIso8601String();
 
     await client
         .from(tableName)

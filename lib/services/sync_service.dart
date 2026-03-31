@@ -143,7 +143,7 @@ class SyncService {
       }
 
       // Save sync timestamp
-      final now = DateTime.now();
+      final now = DateTime.now().toUtc();
       await _saveLastSyncTime(now);
       _lastSyncTime = now;
 

@@ -428,6 +428,14 @@ class SyncRepository {
     )..where((bt) => bt.supabaseId.equals(supabaseId))).go();
   }
 
+  /// Delete BlockTask by composite key (blockId + taskId)
+  Future<void> deleteBlockTaskByCompositeKey(int blockId, int taskId) async {
+    await (_database.delete(
+      _database.blockTask,
+    )..where((bt) => bt.blockId.equals(blockId) & bt.taskId.equals(taskId)))
+        .go();
+  }
+
   /// Mark records as synced (batch operation)
   /// 
   /// Uses Drift's batch API for efficient bulk updates. If batch operation fails
@@ -446,6 +454,21 @@ class SyncRepository {
     try {
       await _database.batch((batch) {
         for (final record in records) {
+          if (tableName == 'block_task') {
+            // block_task uses composite PK (blockId + taskId), no standalone id
+            final blockId = SyncConverter.getField<int>(record, 'blockId');
+            final taskId = SyncConverter.getField<int>(record, 'taskId');
+            if (blockId != null && taskId != null) {
+              batch.update(
+                _database.blockTask,
+                const BlockTaskCompanion(needsSync: Value(false)),
+                where: (bt) =>
+                    bt.blockId.equals(blockId) & bt.taskId.equals(taskId),
+              );
+            }
+            continue;
+          }
+
           final recordId = SyncConverter.getField<int>(record, 'id');
           if (recordId != null) {
             switch (tableName) {
@@ -490,18 +513,6 @@ class SyncRepository {
                   const BlockCompletionCompanion(needsSync: Value(false)),
                   where: (bc) => bc.id.equals(recordId),
                 );
-                break;
-              case 'block_task':
-                final blockId = SyncConverter.getField<int>(record, 'blockId');
-                final taskId = SyncConverter.getField<int>(record, 'taskId');
-                if (blockId != null && taskId != null) {
-                  batch.update(
-                    _database.blockTask,
-                    const BlockTaskCompanion(needsSync: Value(false)),
-                    where: (bt) =>
-                        bt.blockId.equals(blockId) & bt.taskId.equals(taskId),
-                  );
-                }
                 break;
               case 'settings':
                 batch.update(

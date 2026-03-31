@@ -200,7 +200,11 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
   Future<List<TaskData>> getTasksForBlock(int blockId) async {
     final query = select(task).join([
       innerJoin(blockTask, blockTask.taskId.equalsExp(task.id)),
-    ])..where(blockTask.blockId.equals(blockId));
+    ])..where(
+      blockTask.blockId.equals(blockId) &
+      blockTask.isDeleted.equals(false) &
+      task.isDeleted.equals(false),
+    );
 
     final rows = await query.get();
     return rows.map((row) => row.readTable(task)).toList();
@@ -209,7 +213,11 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
   Future<List<BlockData>> getBlocksForTask(int taskId) async {
     final query = select(block).join([
       innerJoin(blockTask, blockTask.blockId.equalsExp(block.id)),
-    ])..where(blockTask.taskId.equals(taskId));
+    ])..where(
+      blockTask.taskId.equals(taskId) &
+      blockTask.isDeleted.equals(false) &
+      block.isDeleted.equals(false),
+    );
 
     final rows = await query.get();
     return rows.map((row) => row.readTable(block)).toList();
@@ -229,7 +237,8 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
   }
 
   Future<List<BlockTaskData>> getBlockTasksForBlock(int blockId) async {
-    final query = select(blockTask)..where((bt) => bt.blockId.equals(blockId));
+    final query = select(blockTask)
+      ..where((bt) => bt.blockId.equals(blockId) & bt.isDeleted.equals(false));
 
     return await query.get();
   }
@@ -241,12 +250,17 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
 
     final query =
         select(block).join([
-            leftOuterJoin(blockTask, blockTask.blockId.equalsExp(block.id)),
+            leftOuterJoin(
+              blockTask,
+              blockTask.blockId.equalsExp(block.id) &
+                  blockTask.isDeleted.equals(false),
+            ),
             leftOuterJoin(task, task.id.equalsExp(blockTask.taskId)),
           ])
           ..where(
             block.dayLocal.isBiggerOrEqualValue(startOfDay) &
-                block.dayLocal.isSmallerThanValue(endOfDay),
+                block.dayLocal.isSmallerThanValue(endOfDay) &
+                block.isDeleted.equals(false),
           )
           ..orderBy([OrderingTerm.asc(block.startMinuteOfDay)]);
 
@@ -263,7 +277,7 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
         () => BlockWithTasks(block: blockData, tasks: []),
       );
 
-      if (taskData != null) {
+      if (taskData != null && !taskData.isDeleted) {
         blockWithTasks.tasks!.add(taskData);
       }
     }
@@ -288,7 +302,7 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
 
     for (final row in rows) {
       final taskData = row.readTableOrNull(task);
-      if (taskData != null) {
+      if (taskData != null && !taskData.isDeleted) {
         tasks.add(taskData);
       }
     }

@@ -131,17 +131,34 @@ class SyncOperations {
                 .map((r) => SyncConverter.getField<String>(r, 'supabaseId'))
                 .whereType<String>()
                 .toList();
-            final ids = deletes
-                .map((r) => SyncConverter.getField<int>(r, 'id'))
-                .whereType<int>()
-                .toList();
 
             if (supabaseIds.isNotEmpty) {
               await _supabaseService.deleteRecords(remoteTable, supabaseIds);
             }
 
             await _markRecordsAsSynced(localTable, deletes, []);
-            await _repository.deleteLocalRecordsByIds(localTable, ids);
+
+            if (localTable == 'block_task') {
+              // block_task has no integer id — delete by supabaseId or composite key
+              for (final record in deletes) {
+                final sid = SyncConverter.getField<String>(record, 'supabaseId');
+                if (sid != null) {
+                  await _repository.deleteBlockTaskBySupabaseId(sid);
+                } else {
+                  final blockId = SyncConverter.getField<int>(record, 'blockId');
+                  final taskId = SyncConverter.getField<int>(record, 'taskId');
+                  if (blockId != null && taskId != null) {
+                    await _repository.deleteBlockTaskByCompositeKey(blockId, taskId);
+                  }
+                }
+              }
+            } else {
+              final ids = deletes
+                  .map((r) => SyncConverter.getField<int>(r, 'id'))
+                  .whereType<int>()
+                  .toList();
+              await _repository.deleteLocalRecordsByIds(localTable, ids);
+            }
           }
 
           tableStats[localTable] = recordsToSync.length;

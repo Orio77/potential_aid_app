@@ -210,6 +210,14 @@ class SyncRecordMapper {
       if (localNeedsSync) {
         // Local has pending changes - use version-based resolution
         if (remoteVersion > localVersion) {
+          // Remote has higher version — apply unconditionally (version is authoritative)
+          await _updateLocalWithRemote(
+            tableName,
+            tableName == 'block_task' ? 0 : localId!,
+            remoteRecord,
+          );
+        } else if (remoteVersion == localVersion) {
+          // Same version — use timestamp as tiebreaker
           if (remoteModified != null && localModified != null) {
             if (remoteModified.isAfter(localModified)) {
               await _updateLocalWithRemote(
@@ -219,6 +227,7 @@ class SyncRecordMapper {
               );
             }
           } else {
+            // Can't compare timestamps — apply remote
             await _updateLocalWithRemote(
               tableName,
               tableName == 'block_task' ? 0 : localId!,
@@ -226,6 +235,7 @@ class SyncRecordMapper {
             );
           }
         }
+        // remoteVersion < localVersion: keep local (do nothing)
       } else {
         // No local pending changes - safe to apply remote
         await _updateLocalWithRemote(
