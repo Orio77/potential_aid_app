@@ -9,6 +9,8 @@ import 'package:potential_aid_app/timeline/providers/task_cards_notifier.dart';
 import 'package:potential_aid_app/timeline/providers/timeline_date_notifier.dart';
 import 'package:potential_aid_app/projects/widgets/select_project_dialog.dart';
 import 'package:potential_aid_app/timeline/widgets/date_card_list.dart';
+import 'package:potential_aid_app/timeline/widgets/mobile_project_list.dart';
+import 'package:potential_aid_app/timeline/widgets/mobile_task_agenda.dart';
 import 'package:potential_aid_app/timeline/widgets/my_categories_picker_dialog.dart';
 import 'package:potential_aid_app/timeline/widgets/project_intervals.dart';
 import 'package:potential_aid_app/timeline/widgets/task_cards.dart';
@@ -377,13 +379,22 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
         ),
       ),
       body: projects.isEmpty
-          ? const CircularProgressIndicator()
-          : _buildTimeline(context, filteredProjects),
+          ? const Center(child: CircularProgressIndicator())
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < 600) {
+                  return showProjects
+                      ? MobileProjectList(projects: filteredProjects)
+                      : MobileTaskAgenda(depth: depth);
+                }
+                return _buildDesktopTimeline(context, filteredProjects);
+              },
+            ),
       backgroundColor: Colors.white,
     );
   }
 
-  Widget _buildTimeline(BuildContext context, List<ProjectInterval> projects) {
+  Widget _buildDesktopTimeline(BuildContext context, List<ProjectInterval> projects) {
     final screenHeight =
         MediaQuery.of(context).size.height - kToolbarHeight - 4;
 
