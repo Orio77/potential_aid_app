@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
@@ -13,8 +15,10 @@ class Heatmap extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // [C] Use completed tasks (isCompleted=true + completedAt) instead of raw
+    // task_completion events, so each day reflects tasks actually finished.
     final completions = ref.watch(
-      taskCompletionMonthlyNotifier(
+      completedTasksByMonthProvider(
         TaskCompletionParams(
           monthYearDate: LocalDate.today(),
           projectId: projectId,
@@ -36,7 +40,7 @@ class Heatmap extends ConsumerWidget {
 
   Widget _buildHeatMapLayout(
     BuildContext context,
-    List<TaskCompletionData> completions,
+    List<TaskData> completions,
     LocalDate startOfMonth,
     LocalDate endOfMonth,
   ) {
@@ -55,12 +59,17 @@ class Heatmap extends ConsumerWidget {
   }
 
   Widget _buildHeatMap(
-    List<TaskCompletionData> completions,
+    List<TaskData> completions,
     LocalDate fromDate,
     LocalDate toDate,
   ) {
     final weeks = _getWeeksInRange(fromDate, toDate);
     final completionMap = _buildCompletionMap(completions, fromDate, toDate);
+
+    // [D] Scale colour relative to the busiest day in the month (like GitHub).
+    final maxActivity = completionMap.values.isEmpty
+        ? 1
+        : completionMap.values.reduce(max);
 
     return Card(
       child: Container(
@@ -70,7 +79,7 @@ class Heatmap extends ConsumerWidget {
             Column(
               mainAxisSize: MainAxisSize.min,
               children: weeks
-                  .map((week) => _buildWeekRow(week, completionMap))
+                  .map((week) => _buildWeekRow(week, completionMap, maxActivity))
                   .toList(),
             ),
           ],
@@ -82,17 +91,24 @@ class Heatmap extends ConsumerWidget {
   Widget _buildWeekRow(
     List<LocalDate?> week,
     Map<LocalDate, int> completionMap,
+    int maxActivity,
   ) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: week.map((date) => _buildDayTile(date, completionMap)).toList(),
+      children: week
+          .map((date) => _buildDayTile(date, completionMap, maxActivity))
+          .toList(),
     );
   }
 
-  Widget _buildDayTile(LocalDate? date, Map<LocalDate, int> completionMap) {
-    final completion = date != null ? (completionMap[date] ?? 0) : 0;
-    final color = _getColorForActivity(completion);
-    final cellSize = 20.0;
+  Widget _buildDayTile(
+    LocalDate? date,
+    Map<LocalDate, int> completionMap,
+    int maxActivity,
+  ) {
+    final count = date != null ? (completionMap[date] ?? 0) : 0;
+    final color = _getColorForActivity(count, maxActivity);
+    const cellSize = 20.0;
 
     return Container(
       margin: const EdgeInsets.all(1.0),
@@ -109,17 +125,19 @@ class Heatmap extends ConsumerWidget {
           ? Tooltip(
               enableTapToDismiss: true,
               triggerMode: TooltipTriggerMode.tap,
-              message: '${date.toString()}: $completion completions',
+              message: '${date.toString()}: $count ${count == 1 ? "task" : "tasks"} completed',
               child: Container(),
             )
           : Container(),
     );
   }
 
-  Color _getColorForActivity(int activity) {
-    switch (activity) {
-      case 0:
-        return Colors.grey.shade200;
+  /// [D] Maps a raw count to a colour level scaled against the month's max.
+  Color _getColorForActivity(int count, int maxActivity) {
+    if (count == 0 || maxActivity == 0) return Colors.grey.shade200;
+    // Scale 1..maxActivity → level 1..4
+    final level = ((count / maxActivity) * 4).ceil().clamp(1, 4);
+    switch (level) {
       case 1:
         return Colors.deepPurpleAccent.shade100;
       case 2:
@@ -163,21 +181,19 @@ class Heatmap extends ConsumerWidget {
     return weeks;
   }
 
+  /// [C] Build a per-day map from completed tasks using their completedAt field.
   Map<LocalDate, int> _buildCompletionMap(
-    List<TaskCompletionData> completions,
+    List<TaskData> completions,
     LocalDate fromDate,
     LocalDate toDate,
   ) {
     final Map<LocalDate, int> completionMap = {};
 
-    for (final completion in completions) {
-      final date = LocalDate(
-        completion.completedAt.year,
-        completion.completedAt.month,
-        completion.completedAt.day,
-      );
+    for (final task in completions) {
+      if (task.completedAt == null) continue;
+      final dt = task.completedAt!;
+      final date = LocalDate(dt.year, dt.month, dt.day);
 
-      // Only include dates within our range
       if (date.compareTo(fromDate) >= 0 && date.compareTo(toDate) <= 0) {
         completionMap[date] = (completionMap[date] ?? 0) + 1;
       }
