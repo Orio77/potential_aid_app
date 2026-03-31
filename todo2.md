@@ -1,0 +1,1 @@
+mobile screen today's schedule widget for the whole height and width so that no app can be on the screen at the same time. And available alert dialog for block completion - because I know it is possible without entering the app.

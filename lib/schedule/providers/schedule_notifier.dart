@@ -8,6 +8,7 @@ import 'package:potential_aid_app/providers/database_provider.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
+import 'package:potential_aid_app/widget/widget_update_service.dart';
 import 'package:potential_aid_app/stats/providers/stats_provider.dart';
 import 'package:time_machine/time_machine.dart';
 
@@ -27,6 +28,10 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
   void dispose() {
     _dateSubscription.close();
     super.dispose();
+  }
+
+  void _refreshWidget() {
+    WidgetUpdateService.updateToday(_database);
   }
 
   Future<void> _loadScheduleForCurrentDate() async {
@@ -111,6 +116,7 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
 
     _ref.invalidate(blockTasksNotifier(blockId));
     await _loadScheduleForCurrentDate();
+    _refreshWidget();
   }
 
   Future<void> editTask(int taskId, String? taskName) async {
@@ -145,6 +151,7 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
     final blockId = await _database.blockDao.addBlock(block);
 
     await _loadScheduleForCurrentDate();
+    _refreshWidget();
     return blockId;
   }
 
@@ -154,6 +161,7 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
     _ref.invalidate(blockCompletionPercentageProvider(blockId));
 
     await _loadScheduleForCurrentDate();
+    _refreshWidget();
   }
 
   Future<void> reorderBlocks(int oldIndex, int newIndex) async {
@@ -262,6 +270,7 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
     }
 
     _ref.invalidate(projectTasksNotifier(task.projectId));
+    _refreshWidget();
 
     return result;
   }
@@ -294,6 +303,7 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
         ),
       ),
     );
+    _refreshWidget();
 
     return completionId;
   }
