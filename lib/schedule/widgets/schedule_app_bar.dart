@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:potential_aid_app/claude/screens/claude_suggestions_screen.dart';
 import 'package:potential_aid_app/stats/screens/completion_stats_screen.dart';
 import 'package:potential_aid_app/projects/screens/project_category_list_screen.dart';
 import 'package:potential_aid_app/timeline/screens/timeline_screen.dart';
@@ -44,10 +45,21 @@ class ScheduleAppBar extends StatelessWidget implements PreferredSizeWidget {
         IconButton(
           onPressed: () {
             Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const ClaudeSuggestionsScreen(),
+              ),
+            );
+          },
+          icon: const Icon(Icons.auto_fix_high_outlined),
+          tooltip: 'Claude suggestions',
+        ),
+        IconButton(
+          onPressed: () {
+            Navigator.of(context).push(
               MaterialPageRoute(builder: (context) => const TimelineScreen()),
             );
           },
-          icon: Icon(Icons.timeline_outlined),
+          icon: const Icon(Icons.timeline_outlined),
         ),
         IconButton(
           onPressed: () {
