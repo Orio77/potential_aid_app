@@ -26,7 +26,7 @@ android {
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         // super_native_extensions requires minSdk 23
         // Override Flutter's default minSdk to ensure compatibility
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

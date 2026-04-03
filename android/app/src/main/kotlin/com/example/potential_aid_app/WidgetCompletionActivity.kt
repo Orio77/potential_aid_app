@@ -5,6 +5,7 @@ import android.os.Bundle
 import es.antonborri.home_widget.HomeWidgetPlugin
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugins.GeneratedPluginRegistrant
 
 /**
  * Transparent activity launched when the user taps "Complete" on a block in
@@ -33,7 +34,7 @@ class WidgetCompletionActivity : FlutterActivity() {
     override fun getDartEntrypointFunctionName(): String = "widgetCompletionMain"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
-        super.configureFlutterEngine(flutterEngine)
-        HomeWidgetPlugin.registerWith(flutterEngine.dartExecutor.binaryMessenger, this)
+        GeneratedPluginRegistrant.registerWith(flutterEngine)
+        flutterEngine.plugins.add(HomeWidgetPlugin())
     }
 }

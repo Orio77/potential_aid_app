@@ -8,7 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.RemoteViews
-import es.antonborri.home_widget.HomeWidgetPlugin
+import es.antonborri.home_widget.HomeWidgetBackgroundReceiver
 
 class ScheduleWidget : AppWidgetProvider() {
 
@@ -43,20 +43,20 @@ class ScheduleWidget : AppWidgetProvider() {
         super.onReceive(context, intent)
         when (intent.action) {
             ACTION_DATE_PREV -> {
-                val uri = Uri.parse("schedulewidget://date_prev")
-                HomeWidgetPlugin.getInstance().onReceive(context,
+                context.sendBroadcast(
                     Intent(context, HomeWidgetBackgroundReceiver::class.java).apply {
                         action = "es.antonborri.home_widget.action.BACKGROUND"
-                        data = uri
-                    })
+                        data = Uri.parse("schedulewidget://date_prev")
+                    }
+                )
             }
             ACTION_DATE_NEXT -> {
-                val uri = Uri.parse("schedulewidget://date_next")
-                HomeWidgetPlugin.getInstance().onReceive(context,
+                context.sendBroadcast(
                     Intent(context, HomeWidgetBackgroundReceiver::class.java).apply {
                         action = "es.antonborri.home_widget.action.BACKGROUND"
-                        data = uri
-                    })
+                        data = Uri.parse("schedulewidget://date_next")
+                    }
+                )
             }
         }
     }
