@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:potential_aid_app/timeline/providers/timeline_range_provider.dart';
 import 'package:time_machine/time_machine.dart';
 
 class TimelineDateNotifier extends StateNotifier<LocalDate> {
@@ -50,6 +51,47 @@ class TimelineDateNotifier extends StateNotifier<LocalDate> {
       current = current.addDays(1);
     }
     return days;
+  }
+
+  List<LocalDate> getDaysInRange(TimelineRange range) {
+    switch (range) {
+      case TimelineRange.week:
+        return List.generate(7, (i) => state.addDays(i));
+      case TimelineRange.month:
+        return getAllDaysInMonth();
+      case TimelineRange.quarter:
+        final start = getMonthStart();
+        final end = start.addMonths(3).subtractDays(1);
+        final days = <LocalDate>[];
+        var current = start;
+        while (current <= end) {
+          days.add(current);
+          current = current.addDays(1);
+        }
+        return days;
+    }
+  }
+
+  void goToPreviousRange(TimelineRange range) {
+    switch (range) {
+      case TimelineRange.week:
+        state = state.subtractDays(7);
+      case TimelineRange.month:
+        goToPreviousMonth();
+      case TimelineRange.quarter:
+        state = getMonthStart().subtractMonths(3);
+    }
+  }
+
+  void goToNextRange(TimelineRange range) {
+    switch (range) {
+      case TimelineRange.week:
+        state = state.addDays(7);
+      case TimelineRange.month:
+        goToNextMonth();
+      case TimelineRange.quarter:
+        state = getMonthStart().addMonths(3);
+    }
   }
 }
 

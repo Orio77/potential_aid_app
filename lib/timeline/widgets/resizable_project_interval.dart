@@ -13,6 +13,7 @@ class ResizableProjectInterval extends ConsumerStatefulWidget {
   final double projectBarHeight;
   final double handleWidth;
   final LocalDate timelineStart;
+  final LocalDate timelineEnd;
   final ScrollController? scrollController;
   final Function(ProjectInterval updatedProject) onProjectUpdated;
 
@@ -22,6 +23,7 @@ class ResizableProjectInterval extends ConsumerStatefulWidget {
     required this.projectBarHeight,
     required this.handleWidth,
     required this.timelineStart,
+    required this.timelineEnd,
     required this.onProjectUpdated,
     this.scrollController,
     super.key,
@@ -57,6 +59,17 @@ class _ResizableProjectIntervalState
     }
   }
 
+  Color _urgencyColor(Color base) {
+    final progress = widget.project.progress ?? 0.0;
+    if (progress >= 1.0) return base;
+    final daysLeft =
+        widget.project.endDay.epochDay - LocalDate.today().epochDay;
+    if (daysLeft < 0) return Color.lerp(base, Colors.red, 0.55)!;
+    if (daysLeft < 7) return Color.lerp(base, Colors.red, 0.40)!;
+    if (daysLeft < 14) return Color.lerp(base, Colors.red, 0.22)!;
+    return base;
+  }
+
   @override
   Widget build(BuildContext context) {
     final startPosition = _getDatePosition(
@@ -82,13 +95,7 @@ class _ResizableProjectIntervalState
       double.infinity,
     ); // Minimum width of 40px
 
-    final monthEnd = LocalDate(
-      widget.timelineStart.yearOfEra,
-      widget.timelineStart.monthOfYear,
-      1,
-    ).addMonths(1).subtractDays(1);
-
-    final extendsToNextMonth = widget.project.endDay > monthEnd;
+    final extendsToNextMonth = widget.project.endDay > widget.timelineEnd;
     final startsBeforeMonth = widget.project.startDay < widget.timelineStart;
 
     return Row(
@@ -104,7 +111,7 @@ class _ResizableProjectIntervalState
                 gradient: widget.project.color == null
                     ? null
                     : ColorUtils.createNorthernLightsGradient(
-                        baseColor: widget.project.color!,
+                        baseColor: _urgencyColor(widget.project.color!),
                         stopAt: 0.7,
                       ),
                 border: widget.project.progress != null
@@ -143,7 +150,7 @@ class _ResizableProjectIntervalState
                           gradient: widget.project.color == null
                               ? null
                               : ColorUtils.createNorthernLightsGradient(
-                                  baseColor: widget.project.color!,
+                                  baseColor: _urgencyColor(widget.project.color!),
                                 ),
                           borderRadius: BorderRadius.circular(6),
                         ),
@@ -319,15 +326,7 @@ class _ResizableProjectIntervalState
 
   int _getDatePosition(LocalDate date, LocalDate timelineStart) {
     if (date < timelineStart) return 0;
-
-    final monthEnd = LocalDate(
-      timelineStart.yearOfEra,
-      timelineStart.monthOfYear,
-      timelineStart.dayOfMonth,
-    ).addMonths(1).subtractDays(1);
-
-    // Clamp the date to the current month
-    final clampedDate = date <= monthEnd ? date : monthEnd;
+    final clampedDate = date <= widget.timelineEnd ? date : widget.timelineEnd;
     return clampedDate.periodSince(timelineStart).days;
   }
 

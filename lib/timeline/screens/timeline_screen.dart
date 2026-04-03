@@ -7,6 +7,8 @@ import 'package:potential_aid_app/providers/project_intervals_notifier.dart';
 import 'package:potential_aid_app/providers/settings_notifier.dart';
 import 'package:potential_aid_app/timeline/providers/task_cards_notifier.dart';
 import 'package:potential_aid_app/timeline/providers/timeline_date_notifier.dart';
+import 'package:potential_aid_app/timeline/providers/timeline_density_provider.dart';
+import 'package:potential_aid_app/timeline/providers/timeline_range_provider.dart';
 import 'package:potential_aid_app/projects/widgets/select_project_dialog.dart';
 import 'package:potential_aid_app/timeline/widgets/date_card_list.dart';
 import 'package:potential_aid_app/timeline/widgets/mobile_project_list.dart';
@@ -15,6 +17,8 @@ import 'package:potential_aid_app/timeline/widgets/my_categories_picker_dialog.d
 import 'package:potential_aid_app/timeline/widgets/project_intervals.dart';
 import 'package:potential_aid_app/timeline/widgets/task_cards.dart';
 import 'package:potential_aid_app/timeline/widgets/task_depth_navigator.dart';
+import 'package:potential_aid_app/timeline/widgets/task_swim_lanes.dart';
+import 'package:potential_aid_app/timeline/widgets/timeline_minimap.dart';
 import 'package:time_machine/time_machine.dart';
 
 class TimelineScreen extends ConsumerStatefulWidget {
@@ -25,7 +29,7 @@ class TimelineScreen extends ConsumerStatefulWidget {
 }
 
 class _TimelineScreenState extends ConsumerState<TimelineScreen> {
-  static const double dayCardWidth = 250;
+  static const double _defaultDayCardWidth = 250.0; // matches normal density
   static const double timelineOuterSpacing = 2;
   late bool showProjects;
   late int depth;
@@ -34,6 +38,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
   ProjectData? selectedProject;
   bool _showOnlyUncompleted = true;
   bool _timelineDefaultsResolved = false;
+  bool _swimLaneMode = false;
 
   @override
   void initState() {
@@ -41,7 +46,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
     showProjects = true;
     depth = 0;
     _horizontalScrollController = ScrollController(
-      initialScrollOffset: dayCardWidth * (DateTime.now().day - 1),
+      initialScrollOffset: _defaultDayCardWidth * (DateTime.now().day - 1),
     );
     HardwareKeyboard.instance.addHandler(_handleKeyEvent);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -119,13 +124,16 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
     if (event is! KeyDownEvent) return false;
     if (!HardwareKeyboard.instance.isControlPressed) return false;
 
+    final range = ref.read(timelineRangeProvider);
     final key = event.logicalKey;
     if (key == LogicalKeyboardKey.arrowLeft) {
-      ref.read(timelineDateNotifierProvider.notifier).goToPreviousMonth();
+      ref
+          .read(timelineDateNotifierProvider.notifier)
+          .goToPreviousRange(range);
       return true;
     }
     if (key == LogicalKeyboardKey.arrowRight) {
-      ref.read(timelineDateNotifierProvider.notifier).goToNextMonth();
+      ref.read(timelineDateNotifierProvider.notifier).goToNextRange(range);
       return true;
     }
     if (key == LogicalKeyboardKey.keyT) {
@@ -135,14 +143,48 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
     return false;
   }
 
+  void _onModeSwitch(bool value) {
+    setState(() => showProjects = value);
+    if (!value) {
+      final currentMonth = ref.read(timelineDateNotifierProvider);
+      ref.read(taskCardsNotifierProvider(depth).notifier).loadTasksForMonth(
+            monthDate: currentMonth,
+            depth: depth,
+            categoryId: selectedCategory?.id,
+            projectId: selectedProject?.id,
+            showOnlyUncompleted: _showOnlyUncompleted,
+          );
+    }
+  }
+
+  void _scrollToToday(double dayCardWidth) {
+    if (!_horizontalScrollController.hasClients) return;
+    final offset = dayCardWidth * (DateTime.now().day - 1);
+    _horizontalScrollController.animateTo(
+      offset,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentMonth = ref.watch(timelineDateNotifierProvider);
+    final range = ref.watch(timelineRangeProvider);
+    final density = ref.watch(timelineDensityProvider);
+    final dayCardWidth = density.cardWidth;
+
+    // Scroll to today when density changes
+    ref.listen(timelineDensityProvider, (_, _) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _scrollToToday(dayCardWidth),
+      );
+    });
 
     if (!_timelineDefaultsResolved) {
       return Scaffold(
         appBar: AppBar(
-          title: Text(_formatMonthYear(currentMonth)),
+          title: Text(_formatRangeTitle(currentMonth, range)),
           centerTitle: true,
           leading: IconButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -166,7 +208,6 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
           .mapProjectsToIntervals([selectedProject!])
           .toList();
     } else {
-      // Apply category filter if no specific project is selected
       filteredProjects = projects
           .where(
             (p) => (selectedCategory == null
@@ -177,9 +218,8 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
     }
 
     if (_showOnlyUncompleted) {
-      filteredProjects = filteredProjects
-          .where((p) => (p.progress ?? 0) < 1.0)
-          .toList();
+      filteredProjects =
+          filteredProjects.where((p) => (p.progress ?? 0) < 1.0).toList();
     }
 
     ref.listen(timelineDateNotifierProvider, (previous, next) {
@@ -188,7 +228,6 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
             .read(projectIntervalsNotifierProvider.notifier)
             .loadProjectsForMonth(next);
 
-        // Also reload tasks for the new month if we're showing tasks
         if (!showProjects) {
           ref
               .read(taskCardsNotifierProvider(depth).notifier)
@@ -211,47 +250,57 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
       });
     }
 
+    final isNarrow = MediaQuery.of(context).size.width < 600;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(_formatMonthYear(currentMonth)),
+        title: Text(_formatRangeTitle(currentMonth, range, compact: isNarrow)),
         centerTitle: true,
-        leadingWidth: 100,
-        leading: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.arrow_back_rounded),
-              padding: EdgeInsets.zero,
-            ),
-            Transform.scale(
-              scale: 0.6,
-              child: Switch(
-                value: showProjects,
-                onChanged: (value) {
-                  setState(() {
-                    showProjects = value;
-                  });
-
-                  // Reload tasks when switching to task view with category filter
-                  if (!value && selectedCategory != null) {
-                    final currentMonth = ref.read(timelineDateNotifierProvider);
-                    ref
-                        .read(taskCardsNotifierProvider(depth).notifier)
-                        .loadTasksForMonth(
-                          monthDate: currentMonth,
-                          depth: depth,
-                          categoryId: selectedCategory?.id,
-                          projectId: selectedProject?.id,
-                          showOnlyUncompleted: _showOnlyUncompleted,
-                        );
-                  }
-                },
+        // Wide: back + mode switch in leading.
+        // Narrow: back button only; mode switch moves to bottom bar.
+        leadingWidth: isNarrow ? kToolbarHeight : 100,
+        leading: isNarrow
+            ? IconButton(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.arrow_back_rounded),
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    padding: EdgeInsets.zero,
+                  ),
+                  Transform.scale(
+                    scale: 0.6,
+                    child: Switch(
+                      value: showProjects,
+                      onChanged: (value) => _onModeSwitch(value),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
         actions: [
+          // Density + Range toggles only on wide (desktop timeline) screens.
+          if (!isNarrow) ...[
+            _DensityToggle(
+              current: density,
+              onChanged: (d) =>
+                  ref.read(timelineDensityProvider.notifier).state = d,
+            ),
+            const SizedBox(width: 4),
+            _RangeToggle(
+              current: range,
+              onChanged: (r) {
+                ref.read(timelineRangeProvider.notifier).state = r;
+                WidgetsBinding.instance.addPostFrameCallback(
+                  (_) => _scrollToToday(dayCardWidth),
+                );
+              },
+            ),
+            const SizedBox(width: 4),
+          ],
           PopupMenuButton<int>(
             icon: const Icon(Icons.more_vert),
             onSelected: (value) => _onTimelineMenuSelected(value, context),
@@ -270,18 +319,23 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
           IconButton(
             onPressed: () => ref
                 .read(timelineDateNotifierProvider.notifier)
-                .goToPreviousMonth(),
-            icon: Icon(Icons.chevron_left),
+                .goToPreviousRange(range),
+            icon: const Icon(Icons.chevron_left),
           ),
           IconButton(
-            onPressed: () =>
-                ref.read(timelineDateNotifierProvider.notifier).goToToday(),
-            icon: Icon(Icons.today),
+            onPressed: () {
+              ref.read(timelineDateNotifierProvider.notifier).goToToday();
+              WidgetsBinding.instance.addPostFrameCallback(
+                (_) => _scrollToToday(dayCardWidth),
+              );
+            },
+            icon: const Icon(Icons.today),
           ),
           IconButton(
-            onPressed: () =>
-                ref.read(timelineDateNotifierProvider.notifier).goToNextMonth(),
-            icon: Icon(Icons.chevron_right_rounded),
+            onPressed: () => ref
+                .read(timelineDateNotifierProvider.notifier)
+                .goToNextRange(range),
+            icon: const Icon(Icons.chevron_right_rounded),
           ),
         ],
       ),
@@ -291,19 +345,26 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
+            // Mode switch visible in bottom bar only on narrow screens.
+            if (isNarrow)
+              Transform.scale(
+                scale: 0.7,
+                child: Switch(
+                  value: showProjects,
+                  onChanged: (value) => _onModeSwitch(value),
+                ),
+              ),
             IconButton(
               onPressed: () async {
                 final category = await showMyCategoriesPickerDialog(context);
                 final previousCategory = selectedCategory;
                 setState(() {
                   selectedCategory = category;
-                  // Clear project selection when changing category to avoid conflicts
                   if (category?.id != previousCategory?.id) {
                     selectedProject = null;
                   }
                 });
 
-                // Reload tasks if we're showing tasks and category changed
                 if (!showProjects && category?.id != previousCategory?.id) {
                   final currentMonth = ref.read(timelineDateNotifierProvider);
                   ref
@@ -312,8 +373,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                         monthDate: currentMonth,
                         depth: depth,
                         categoryId: category?.id,
-                        projectId:
-                            null, // Clear project filter when category changes
+                        projectId: null,
                         showOnlyUncompleted: _showOnlyUncompleted,
                       );
                 }
@@ -344,6 +404,17 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                   depth = value;
                 }),
               ),
+              // Swim-lane toggle only makes sense on desktop timeline.
+              if (!isNarrow)
+                IconButton(
+                  onPressed: () =>
+                      setState(() => _swimLaneMode = !_swimLaneMode),
+                  icon: Icon(
+                    _swimLaneMode ? Icons.view_week : Icons.table_rows,
+                    size: 20,
+                  ),
+                  tooltip: _swimLaneMode ? 'Column view' : 'Swim-lane view',
+                ),
             ],
             IconButton(
               onPressed: () async {
@@ -355,7 +426,6 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                   selectedProject = projectData;
                 });
 
-                // Reload tasks if we're showing tasks and project changed
                 if (!showProjects && projectData?.id != previousProject?.id) {
                   final currentMonth = ref.read(timelineDateNotifierProvider);
                   ref
@@ -387,82 +457,233 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                       ? MobileProjectList(projects: filteredProjects)
                       : MobileTaskAgenda(depth: depth);
                 }
-                return _buildDesktopTimeline(context, filteredProjects);
+                return _buildDesktopTimeline(
+                  context,
+                  filteredProjects,
+                  dayCardWidth,
+                  range,
+                );
               },
             ),
       backgroundColor: Colors.white,
     );
   }
 
-  Widget _buildDesktopTimeline(BuildContext context, List<ProjectInterval> projects) {
+  Widget _buildDesktopTimeline(
+    BuildContext context,
+    List<ProjectInterval> projects,
+    double dayCardWidth,
+    TimelineRange range,
+  ) {
     final screenHeight =
         MediaQuery.of(context).size.height - kToolbarHeight - 4;
 
-    final datesInMonth = ref
+    final datesInRange = ref
         .read(timelineDateNotifierProvider.notifier)
-        .getAllDaysInMonth();
+        .getDaysInRange(range);
 
-    final double totalTimelineWidth = dayCardWidth * datesInMonth.length;
+    final double totalTimelineWidth = dayCardWidth * datesInRange.length;
 
-    return Padding(
-      padding: const EdgeInsets.all(timelineOuterSpacing),
-      child: SingleChildScrollView(
-        controller: _horizontalScrollController,
-        scrollDirection: Axis.horizontal,
-        physics: BouncingScrollPhysics(),
-        child: SizedBox(
-          width: totalTimelineWidth,
-          height: screenHeight,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.vertical,
-                  physics: BouncingScrollPhysics(),
-                  reverse: true,
-                  child: showProjects
-                      ? ProjectIntervals(
-                          projects: projects,
-                          dayCardWidth: dayCardWidth,
-                          timelineStart: datesInMonth.first,
-                          scrollController: _horizontalScrollController,
-                        )
-                      : TaskCards(
-                          key: ValueKey('tasks_depth_$depth'),
-                          depth: depth,
-                          categoryId: selectedCategory?.id,
-                          timelineStart: datesInMonth.first,
-                          dayCardWidth: dayCardWidth,
-                          scrollController: _horizontalScrollController,
-                          projectId: selectedProject?.id,
-                          showOnlyUncompleted: _showOnlyUncompleted,
+    // Today line position
+    final today = LocalDate.today();
+    final todayIndex = datesInRange.indexWhere((d) => d == today);
+
+    return Column(
+      children: [
+        // Mini-map scrubber (only in month/quarter range)
+        if (range != TimelineRange.week) const TimelineMinimap(),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(timelineOuterSpacing),
+            child: SingleChildScrollView(
+              controller: _horizontalScrollController,
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: SizedBox(
+                width: totalTimelineWidth,
+                height: range == TimelineRange.week
+                    ? screenHeight
+                    : screenHeight - 28, // subtract minimap height
+                child: Stack(
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.vertical,
+                            physics: const BouncingScrollPhysics(),
+                            reverse: true,
+                            child: showProjects
+                                ? ProjectIntervals(
+                                    projects: projects,
+                                    dayCardWidth: dayCardWidth,
+                                    timelineStart: datesInRange.first,
+                                    timelineEnd: datesInRange.last,
+                                    scrollController:
+                                        _horizontalScrollController,
+                                  )
+                                : _swimLaneMode
+                                    ? TaskSwimLanes(
+                                        key: ValueKey(
+                                          'swimlanes_depth_$depth',
+                                        ),
+                                        depth: depth,
+                                        dayCardWidth: dayCardWidth,
+                                        timelineStart: datesInRange.first,
+                                        datesInRange: datesInRange,
+                                      )
+                                    : TaskCards(
+                                        key: ValueKey('tasks_depth_$depth'),
+                                        depth: depth,
+                                        categoryId: selectedCategory?.id,
+                                        timelineStart: datesInRange.first,
+                                        dayCardWidth: dayCardWidth,
+                                        scrollController:
+                                            _horizontalScrollController,
+                                        projectId: selectedProject?.id,
+                                        showOnlyUncompleted:
+                                            _showOnlyUncompleted,
+                                      ),
+                          ),
                         ),
+                        DateCardList(
+                          dayCardWidth: dayCardWidth,
+                          dates: datesInRange,
+                        ),
+                      ],
+                    ),
+                    // Today vertical indicator line
+                    if (todayIndex >= 0)
+                      Positioned(
+                        left: todayIndex * dayCardWidth +
+                            dayCardWidth / 2 -
+                            1,
+                        top: 0,
+                        bottom: 0,
+                        width: 2,
+                        child: IgnorePointer(
+                          child: Container(
+                            color: Colors.blue.withValues(alpha: 0.45),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              DateCardList(dayCardWidth: dayCardWidth, dates: datesInMonth),
-            ],
+            ),
           ),
         ),
-      ),
+      ],
     );
   }
 
-  String _formatMonthYear(LocalDate date) {
-    const monthNames = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
+  String _formatRangeTitle(LocalDate date, TimelineRange range,
+      {bool compact = false}) {
+    const full = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
     ];
-    return '${monthNames[date.monthOfYear - 1]} ${date.yearOfEra}';
+    const abbr = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    final m = compact ? abbr : full;
+
+    switch (range) {
+      case TimelineRange.week:
+        final end = date.addDays(6);
+        return '${date.dayOfMonth} ${abbr[date.monthOfYear - 1]}'
+            ' – ${end.dayOfMonth} ${abbr[end.monthOfYear - 1]} ${end.yearOfEra}';
+      case TimelineRange.month:
+        return '${m[date.monthOfYear - 1]} ${date.yearOfEra}';
+      case TimelineRange.quarter:
+        final qEndMonth = ((date.monthOfYear - 1 + 2) % 12) + 1;
+        return '${abbr[date.monthOfYear - 1]} – ${abbr[qEndMonth - 1]} ${date.yearOfEra}';
+    }
+  }
+}
+
+// ── Density toggle (C / N / W) ────────────────────────────────────────────────
+
+class _DensityToggle extends StatelessWidget {
+  final TimelineDensity current;
+  final ValueChanged<TimelineDensity> onChanged;
+
+  const _DensityToggle({required this.current, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: TimelineDensity.values.map((d) {
+        final selected = d == current;
+        return GestureDetector(
+          onTap: () => onChanged(d),
+          child: Container(
+            width: 22,
+            height: 22,
+            margin: const EdgeInsets.symmetric(horizontal: 1),
+            decoration: BoxDecoration(
+              color: selected
+                  ? Theme.of(context).colorScheme.primary
+                  : Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              d.label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: selected ? Colors.white : Colors.grey.shade600,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+// ── Range toggle (W / M / Q) ──────────────────────────────────────────────────
+
+class _RangeToggle extends StatelessWidget {
+  final TimelineRange current;
+  final ValueChanged<TimelineRange> onChanged;
+
+  const _RangeToggle({required this.current, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: TimelineRange.values.map((r) {
+        final selected = r == current;
+        return GestureDetector(
+          onTap: () => onChanged(r),
+          child: Container(
+            width: 22,
+            height: 22,
+            margin: const EdgeInsets.symmetric(horizontal: 1),
+            decoration: BoxDecoration(
+              color: selected
+                  ? Theme.of(context).colorScheme.secondary
+                  : Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              r.label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: selected ? Colors.white : Colors.grey.shade600,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
   }
 }
