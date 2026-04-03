@@ -232,11 +232,30 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
   }
 
   Future<void> _pickDeadline(DateTime today) async {
+    // Cap at parent's deadline if this task has a parent.
+    DateTime lastDate = today.add(const Duration(days: 365));
+    final parentId = widget.taskData?.parentTaskId;
+    if (parentId != null) {
+      final parent = await ref
+          .read(projectTasksNotifier(widget.projectId).notifier)
+          .getTask(parentId);
+      if (parent.deadline != null && parent.deadline!.isBefore(lastDate)) {
+        lastDate = parent.deadline!;
+      }
+    }
+
+    if (!mounted) return;
+
+    // Open the picker on the task's current deadline, not on today.
+    final initial = _deadline.isBefore(today)
+        ? today
+        : (_deadline.isAfter(lastDate) ? lastDate : _deadline);
+
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: today,
+      initialDate: initial,
       firstDate: today,
-      lastDate: today.add(Duration(days: 365)),
+      lastDate: lastDate,
     );
 
     if (picked != null) {

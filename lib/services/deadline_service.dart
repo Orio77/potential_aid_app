@@ -13,7 +13,19 @@ class DeadlineService {
     bool updateNestedSubtasks = true,
   }) async {
     final today = ref.read(dateNotifierProvider.notifier).getTodaysDate();
-    final tomorrow = today.addDays(1).toDateTimeUnspecified();
+    DateTime tomorrow = today.addDays(1).toDateTimeUnspecified();
+
+    // Cap at parent's deadline when this is a subtask.
+    if (task.parentTaskId != null) {
+      final parent = await ref
+          .read(projectTasksNotifier(task.projectId).notifier)
+          .getParent(task.id);
+      if (parent?.deadline != null && tomorrow.isAfter(parent!.deadline!)) {
+        tomorrow = parent.deadline!;
+      }
+    }
+
+    if (!context.mounted) return;
 
     await updateTaskDeadline(
       ref: ref,

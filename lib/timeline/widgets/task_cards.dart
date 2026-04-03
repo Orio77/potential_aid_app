@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/timeline/providers/task_cards_notifier.dart';
+import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/tasks_notifier.dart';
 import 'package:potential_aid_app/timeline/providers/timeline_date_notifier.dart';
 import 'package:potential_aid_app/breakdown/screens/task_breakdown_screen.dart';
@@ -291,29 +292,47 @@ class _TaskCardsState extends ConsumerState<TaskCards> with AutoScrollMixin {
 
   Future<void> _updateTaskDeadline(TaskData task, LocalDate newDate) async {
     try {
-      final newDeadline = newDate.toDateTimeUnspecified();
-      // update tasks deadline
-      var taskProvider = ref.read(tasksNotifierProvider(null).notifier);
+      final taskProvider = ref.read(tasksNotifierProvider(null).notifier);
+
+      // Cap at parent's deadline if this task is a subtask.
+      LocalDate finalDate = newDate;
+      if (task.parentTaskId != null) {
+        final parent = await ref
+            .read(projectTasksNotifier(task.projectId).notifier)
+            .getParent(task.id);
+        if (parent?.deadline != null) {
+          final parentDeadline = LocalDate.dateTime(parent!.deadline!);
+          if (finalDate > parentDeadline) finalDate = parentDeadline;
+        }
+      }
+
+      // Calculate how many days the task moved (for relative subtask shift).
+      final oldDeadline = task.deadline != null
+          ? LocalDate.dateTime(task.deadline!)
+          : finalDate;
+      final daysDelta = finalDate.epochDay - oldDeadline.epochDay;
+
       await taskProvider.updateTask(
         task.id,
-        TaskCompanion(deadline: Value(newDeadline)),
+        TaskCompanion(deadline: Value(finalDate.toDateTimeUnspecified())),
       );
 
-      // update deadline of all subtasks
-      final subtasks = await ref
-          .read(tasksNotifierProvider(null).notifier)
-          .getAllSubtasks(task.id);
-
-      print("SUbtasks: ${subtasks.length}");
+      // Shift subtasks by the same delta; cap each at the task's new deadline.
+      final subtasks = await taskProvider.getAllSubtasks(task.id);
 
       final affectedDepths = <int>{};
-      for (var sbt in subtasks) {
+      final today = LocalDate.today();
+      for (final sbt in subtasks) {
+        if (sbt.deadline == null) continue;
+        final sbtOld = LocalDate.dateTime(sbt.deadline!);
+        var sbtNew = sbtOld.addDays(daysDelta);
+        if (sbtNew < today) sbtNew = today;
+        if (sbtNew > finalDate) sbtNew = finalDate;
         await taskProvider.updateTask(
           sbt.id,
-          TaskCompanion(deadline: Value(newDeadline)),
+          TaskCompanion(deadline: Value(sbtNew.toDateTimeUnspecified())),
         );
         affectedDepths.add(sbt.depth);
-        print("updated");
       }
 
       // refresh timeline
