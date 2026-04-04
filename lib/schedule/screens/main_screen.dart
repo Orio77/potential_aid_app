@@ -52,7 +52,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   @override
   Widget build(BuildContext context) {
     final currentDate = ref.watch(dateNotifierProvider);
-    final isPast = currentDate.compareTo(LocalDate.today()) < 0;
+    final isPast = currentDate.compareTo(LocalDate.today()) <= 0;
 
     return Scaffold(
       appBar: const ScheduleAppBar(),
