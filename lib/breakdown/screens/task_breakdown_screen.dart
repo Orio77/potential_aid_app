@@ -7,6 +7,9 @@ import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/breakdown/managers/subtask_state_manager.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
+import 'package:potential_aid_app/providers/projects_notifier.dart';
+import 'package:potential_aid_app/projects/screens/project_screen.dart';
+import 'package:potential_aid_app/projects/widgets/add_task_dialog.dart';
 import 'package:potential_aid_app/timeline/providers/task_cards_notifier.dart';
 import 'package:potential_aid_app/breakdown/widgets/arrow_painter.dart';
 import 'package:potential_aid_app/breakdown/widgets/subtask_card.dart';
@@ -27,12 +30,14 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
   late bool showCompleted;
   final GlobalKey mainTaskKey = GlobalKey();
   bool isLoading = true;
+  bool _reparentMode = false;
   double _dynamicTotalWidth =
       TaskBreakdownConstants.mainTaskWidth +
       TaskBreakdownConstants.subtasksWidth +
       TaskBreakdownConstants.spacing +
       TaskBreakdownConstants.padding;
   double _dynamicSubtasksWidth = TaskBreakdownConstants.subtasksWidth;
+
 
   @override
   void initState() {
@@ -71,7 +76,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     return false;
   }
 
-  // Initialization and data loading
+  // ── Initialization ──────────────────────────────────────────────────────────
 
   void _initializeSubtasks() async {
     final notCompletedFilter = <Expression<bool> Function($TaskTable)>[
@@ -108,7 +113,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     });
   }
 
-  // User actions
+  // ── User actions ────────────────────────────────────────────────────────────
 
   void _addSubtask() {
     final newSubtask = _stateManager.addSubtask();
@@ -267,20 +272,86 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     });
   }
 
-  // Build methods
+  // ── Drag-to-reparent ────────────────────────────────────────────────────────
+
+  /// When a subtask is dropped onto another subtask, reparent it under that
+  /// target (the target becomes the new parent).
+  Future<void> _reparentSubtask(int dragIndex, int targetIndex) async {
+    final dragged = _stateManager.getSubtask(dragIndex);
+    final target = _stateManager.getSubtask(targetIndex);
+    if (dragged == null || target == null) return;
+    if (!dragged.isExisting || !target.isExisting) return;
+    // Don't reparent onto yourself
+    if (dragIndex == targetIndex) return;
+
+    final notifier =
+        ref.read(projectTasksNotifier(widget.task.projectId).notifier);
+
+    // Set the dragged task's parent to the target task
+    await notifier.updateTask(
+      dragged.savedId,
+      TaskCompanion(
+        parentTaskId: Value(target.savedId),
+        depth: Value(widget.task.depth + 2),
+      ),
+    );
+
+    // Also reparent all of dragged task's descendants (bump depth)
+    final descendants = await notifier.getAllDescendants(dragged.savedId);
+    for (final desc in descendants) {
+      await notifier.updateTask(
+        desc.id,
+        TaskCompanion(depth: Value(desc.depth + 1)),
+      );
+    }
+
+    // Refresh
+    setState(() {
+      isLoading = true;
+    });
+    _initializeSubtasks();
+  }
+
+  // ── Navigation helpers ──────────────────────────────────────────────────────
+
+  Future<void> _navigateToProject() async {
+    final projectData = await ref
+        .read(projectsNotifierProvider.notifier)
+        .getProjectById(widget.task.projectId);
+    if (projectData != null && mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => ProjectScreen(data: projectData),
+        ),
+      );
+    }
+  }
+
+  void _editTask(TaskData task) {
+    showAddTaskDialog(
+      context: context,
+      projectId: task.projectId,
+      taskData: task,
+    ).then((_) {
+      // Reload after edit
+      setState(() => isLoading = true);
+      _initializeSubtasks();
+    });
+  }
+
+  // ── Build methods ───────────────────────────────────────────────────────────
 
   Widget _buildArrows() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return CustomPaint(
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: CustomPaint(
           painter: ArrowPainter(
             mainTaskKey: mainTaskKey,
             subtaskKeys: _stateManager.subtasks.map((s) => s.key).toList(),
             stackContext: context,
           ),
-          size: Size(_dynamicTotalWidth, double.infinity),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -292,7 +363,9 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            _buildMainTaskCard(task),
+            _reparentMode
+                ? _buildMainTaskCardAsDropTarget(task)
+                : _buildMainTaskCard(task),
             SizedBox(width: TaskBreakdownConstants.spacing),
             _buildSubtasksList(),
           ],
@@ -329,6 +402,27 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, size: 18),
+                          tooltip: 'Edit task',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () => _editTask(widget.task),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.folder_open, size: 18),
+                          tooltip: 'Go to project',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: _navigateToProject,
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -339,6 +433,67 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     );
   }
 
+  /// Main task card wrapped as a DragTarget in reparent mode.
+  /// Dropping a subtask here sets its parent to widget.task.id — same level
+  /// as its current siblings (depth unchanged relative to this screen).
+  Widget _buildMainTaskCardAsDropTarget(TaskData task) {
+    return DragTarget<int>(
+      onWillAcceptWithDetails: (_) => true,
+      onAcceptWithDetails: (details) =>
+          _promoteToSibling(details.data),
+      builder: (context, candidateData, _) {
+        final hovered = candidateData.isNotEmpty;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          decoration: hovered
+              ? BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.deepPurple, width: 2),
+                  color: Colors.deepPurple.withValues(alpha: 0.06),
+                )
+              : null,
+          child: _buildMainTaskCard(task),
+        );
+      },
+    );
+  }
+
+  /// Reparents subtask at [dragIndex] back to widget.task.id (promotes it to
+  /// sibling level — it was already a child, so this is a no-op only if it is
+  /// already at depth+1; still useful when it was nested deeper).
+  Future<void> _promoteToSibling(int dragIndex) async {
+    final dragged = _stateManager.getSubtask(dragIndex);
+    if (dragged == null || !dragged.isExisting) return;
+
+    final notifier =
+        ref.read(projectTasksNotifier(widget.task.projectId).notifier);
+
+    await notifier.updateTask(
+      dragged.savedId,
+      TaskCompanion(
+        parentTaskId: Value(widget.task.id),
+        depth: Value(widget.task.depth + 1),
+      ),
+    );
+
+    // Fix descendants' depths too
+    final descendants = await notifier.getAllDescendants(dragged.savedId);
+    final draggedTask = await notifier.getTask(dragged.savedId);
+    final newBaseDepth = widget.task.depth + 1;
+    final depthDelta = newBaseDepth - draggedTask.depth;
+    if (depthDelta != 0) {
+      for (final desc in descendants) {
+        await notifier.updateTask(
+          desc.id,
+          TaskCompanion(depth: Value(desc.depth + depthDelta)),
+        );
+      }
+    }
+
+    setState(() => isLoading = true);
+    _initializeSubtasks();
+  }
+
   Widget _buildSubtasksList() {
     return SizedBox(
       width: _dynamicSubtasksWidth,
@@ -346,37 +501,147 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Flexible(
-            child: ReorderableListView.builder(
-              shrinkWrap: true,
-              itemCount: _stateManager.subtasks.length,
-              itemBuilder: (context, index) {
-                final subtask = _stateManager.getSubtask(index);
-                if (subtask == null) {
-                  return SizedBox.shrink(key: ValueKey('empty_$index'));
-                }
-                return SubtaskCard(
-                  key: Key(subtask.id),
-                  subtask: subtask,
-                  index: index,
-                  parentTask: widget.task,
-                  onToggleSearch: _toggleSearchMode,
-                  onSelectExistingTask: _selectExistingTask,
-                  onRemove: _removeSubtask,
-                  onSaveNeeded: _saveSubtasks,
-                  onComplete: _handleTaskCompletion,
-                  onTextChanged: _handleTextChanged,
-                );
-              },
-              onReorder: (oldIndex, newIndex) {
-                setState(() {
-                  _stateManager.reorderSubtasks(oldIndex, newIndex);
-                });
-              },
-            ),
+            child: _reparentMode
+                ? _buildReparentList()
+                : _buildReorderList(),
           ),
         ],
       ),
     );
+  }
+
+  // ── Reorder mode (default) ──────────────────────────────────────────────────
+
+  Widget _buildReorderList() {
+    return ReorderableListView.builder(
+      shrinkWrap: true,
+      buildDefaultDragHandles: false,
+      itemCount: _stateManager.subtasks.length,
+      itemBuilder: (context, index) {
+        final subtask = _stateManager.getSubtask(index);
+        if (subtask == null) {
+          return SizedBox.shrink(key: ValueKey('empty_$index'));
+        }
+        return Row(
+          key: Key(subtask.id),
+          children: [
+            ReorderableDragStartListener(
+              index: index,
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4),
+                child: Icon(Icons.drag_indicator, color: Colors.grey, size: 20),
+              ),
+            ),
+            Expanded(
+              child: SubtaskCard(
+                subtask: subtask,
+                index: index,
+                parentTask: widget.task,
+                onToggleSearch: _toggleSearchMode,
+                onSelectExistingTask: _selectExistingTask,
+                onRemove: _removeSubtask,
+                onSaveNeeded: _saveSubtasks,
+                onComplete: _handleTaskCompletion,
+                onTextChanged: _handleTextChanged,
+                onEdit: _editSubtask,
+              ),
+            ),
+          ],
+        );
+      },
+      onReorder: (oldIndex, newIndex) {
+        setState(() => _stateManager.reorderSubtasks(oldIndex, newIndex));
+      },
+    );
+  }
+
+  // ── Reparent mode ───────────────────────────────────────────────────────────
+
+  Widget _buildReparentList() {
+    final subtasks = _stateManager.subtasks;
+    return ListView.builder(
+      shrinkWrap: true,
+      itemCount: subtasks.length,
+      itemBuilder: (context, index) {
+        final subtask = _stateManager.getSubtask(index);
+        if (subtask == null) return const SizedBox.shrink();
+
+        final card = SubtaskCard(
+          subtask: subtask,
+          index: index,
+          parentTask: widget.task,
+          onToggleSearch: _toggleSearchMode,
+          onSelectExistingTask: _selectExistingTask,
+          onRemove: _removeSubtask,
+          onSaveNeeded: _saveSubtasks,
+          onComplete: _handleTaskCompletion,
+          onTextChanged: _handleTextChanged,
+          onEdit: _editSubtask,
+        );
+
+        return DragTarget<int>(
+          key: Key(subtask.id),
+          onWillAcceptWithDetails: (d) => d.data != index && subtask.isExisting,
+          onAcceptWithDetails: (d) => _reparentSubtask(d.data, index),
+          builder: (context, candidateData, _) {
+            final hovered = candidateData.isNotEmpty;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 120),
+              decoration: hovered
+                  ? BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.deepPurple, width: 2),
+                      color: Colors.deepPurple.withValues(alpha: 0.06),
+                    )
+                  : null,
+              child: LongPressDraggable<int>(
+                data: index,
+                delay: const Duration(milliseconds: 300),
+                feedback: Material(
+                  elevation: 6,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    width: _dynamicSubtasksWidth * 0.85,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.deepPurple.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.deepPurple),
+                    ),
+                    child: Text(
+                      subtask.controller.text,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+                childWhenDragging: Opacity(opacity: 0.3, child: card),
+                child: card,
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _editSubtask(int index) async {
+    final subtask = _stateManager.getSubtask(index);
+    if (subtask == null || !subtask.isExisting) return;
+
+    final task = await ref
+        .read(projectTasksNotifier(widget.task.projectId).notifier)
+        .getTask(subtask.savedId);
+    if (!mounted) return;
+
+    await showAddTaskDialog(
+      context: context,
+      projectId: task.projectId,
+      taskData: task,
+    );
+
+    // Reload
+    setState(() => isLoading = true);
+    _initializeSubtasks();
   }
 
   Widget _buildShowCompletedSwitch() {
@@ -430,7 +695,19 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text('Depth: ${widget.task.depth}'),
         centerTitle: true,
-        actions: [_buildShowCompletedSwitch()],
+        actions: [
+          Tooltip(
+            message: _reparentMode ? 'Switch to reorder mode' : 'Switch to reparent mode',
+            child: IconButton(
+              icon: Icon(
+                _reparentMode ? Icons.reorder : Icons.account_tree_outlined,
+                color: _reparentMode ? Colors.deepPurple : null,
+              ),
+              onPressed: () => setState(() => _reparentMode = !_reparentMode),
+            ),
+          ),
+          _buildShowCompletedSwitch(),
+        ],
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -441,7 +718,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
                 child: Stack(
                   children: [
                     _buildTaskBreakdownScreen(widget.task),
-                    if (!isLoading) IgnorePointer(child: _buildArrows()),
+                    if (!isLoading) _buildArrows(),
                   ],
                 ),
               ),

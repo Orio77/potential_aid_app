@@ -17,6 +17,7 @@ class SubtaskCard extends StatelessWidget {
   final VoidCallback onSaveNeeded;
   final VoidCallback onComplete;
   final Function(String value) onTextChanged;
+  final Function(int index)? onEdit;
 
   const SubtaskCard({
     super.key,
@@ -29,6 +30,7 @@ class SubtaskCard extends StatelessWidget {
     required this.onSaveNeeded,
     required this.onComplete,
     required this.onTextChanged,
+    this.onEdit,
   });
 
   @override
@@ -56,6 +58,12 @@ class SubtaskCard extends StatelessWidget {
               onComplete: onComplete,
             ),
             ChangeDeadlineForTomorrowButton(subtask: subtask),
+            if (onEdit != null && subtask.isExisting)
+              IconButton(
+                icon: const Icon(Icons.edit, size: 18),
+                tooltip: 'Edit subtask',
+                onPressed: () => onEdit!(index),
+              ),
             ToggleSearchButton(
               subtask: subtask,
               onToggle: () => onToggleSearch(index),
