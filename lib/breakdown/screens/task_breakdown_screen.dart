@@ -219,6 +219,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
           subtask.savedId,
           TaskCompanion(
             parentTaskId: Value(widget.task.id),
+            depth: Value(taskDepth),
             orderIndex: Value(i),
           ),
         );
@@ -251,7 +252,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
           .read(projectTasksNotifier(widget.task.projectId).notifier)
           .updateTask(
             subtask.savedId,
-            TaskCompanion(parentTaskId: Value(null)),
+            TaskCompanion(parentTaskId: Value(null), depth: Value(0)),
           );
     }
   }
@@ -287,28 +288,35 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     final notifier =
         ref.read(projectTasksNotifier(widget.task.projectId).notifier);
 
+    // Fetch current depths from DB — state manager values may be stale
+    final targetTask = await notifier.getTask(target.savedId);
+    final draggedTask = await notifier.getTask(dragged.savedId);
+    final newDepth = targetTask.depth + 1;
+    final depthDelta = newDepth - draggedTask.depth;
+
     // Set the dragged task's parent to the target task
-    await notifier.updateTask(
+    await notifier.updateTaskSilent(
       dragged.savedId,
       TaskCompanion(
         parentTaskId: Value(target.savedId),
-        depth: Value(widget.task.depth + 2),
+        depth: Value(newDepth),
       ),
     );
 
-    // Also reparent all of dragged task's descendants (bump depth)
-    final descendants = await notifier.getAllDescendants(dragged.savedId);
-    for (final desc in descendants) {
-      await notifier.updateTask(
-        desc.id,
-        TaskCompanion(depth: Value(desc.depth + 1)),
-      );
+    // Shift entire subtree by the same delta
+    if (depthDelta != 0) {
+      final descendants = await notifier.getAllDescendants(dragged.savedId);
+      for (final desc in descendants) {
+        await notifier.updateTaskSilent(
+          desc.id,
+          TaskCompanion(depth: Value(desc.depth + depthDelta)),
+        );
+      }
     }
 
-    // Refresh
-    setState(() {
-      isLoading = true;
-    });
+    // Single refresh after all writes
+    await notifier.refresh();
+    setState(() => isLoading = true);
     _initializeSubtasks();
   }
 
@@ -458,38 +466,61 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     );
   }
 
-  /// Reparents subtask at [dragIndex] back to widget.task.id (promotes it to
-  /// sibling level — it was already a child, so this is a no-op only if it is
-  /// already at depth+1; still useful when it was nested deeper).
+  /// Promotes the subtask at [dragIndex] to be a sibling of widget.task —
+  /// i.e. parentTaskId = widget.task.parentTaskId, depth = widget.task.depth.
+  /// If widget.task is already depth 0 this is the same as _promoteToRoot.
   Future<void> _promoteToSibling(int dragIndex) async {
+    if (widget.task.depth == 0) {
+      await _promoteToRoot(dragIndex);
+      return;
+    }
+    await _moveToParent(
+      dragIndex,
+      newParentId: widget.task.parentTaskId,
+      newDepth: widget.task.depth,
+    );
+  }
+
+  /// Detaches the subtask from all parents — becomes a root task in the project
+  /// (parentTaskId = null, depth = 0).
+  Future<void> _promoteToRoot(int dragIndex) async {
+    await _moveToParent(dragIndex, newParentId: null, newDepth: 0);
+  }
+
+  Future<void> _moveToParent(
+    int dragIndex, {
+    required int? newParentId,
+    required int newDepth,
+  }) async {
     final dragged = _stateManager.getSubtask(dragIndex);
     if (dragged == null || !dragged.isExisting) return;
 
     final notifier =
         ref.read(projectTasksNotifier(widget.task.projectId).notifier);
 
-    await notifier.updateTask(
+    final draggedTask = await notifier.getTask(dragged.savedId);
+    final depthDelta = newDepth - draggedTask.depth;
+
+    await notifier.updateTaskSilent(
       dragged.savedId,
       TaskCompanion(
-        parentTaskId: Value(widget.task.id),
-        depth: Value(widget.task.depth + 1),
+        parentTaskId: Value(newParentId),
+        depth: Value(newDepth),
       ),
     );
 
-    // Fix descendants' depths too
-    final descendants = await notifier.getAllDescendants(dragged.savedId);
-    final draggedTask = await notifier.getTask(dragged.savedId);
-    final newBaseDepth = widget.task.depth + 1;
-    final depthDelta = newBaseDepth - draggedTask.depth;
     if (depthDelta != 0) {
+      final descendants = await notifier.getAllDescendants(dragged.savedId);
       for (final desc in descendants) {
-        await notifier.updateTask(
+        await notifier.updateTaskSilent(
           desc.id,
           TaskCompanion(depth: Value(desc.depth + depthDelta)),
         );
       }
     }
 
+    // Single refresh after all writes
+    await notifier.refresh();
     setState(() => isLoading = true);
     _initializeSubtasks();
   }
@@ -557,18 +588,66 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
 
   // ── Reparent mode ───────────────────────────────────────────────────────────
 
+  Widget _buildProjectRootDropZone() {
+    return DragTarget<int>(
+      key: const ValueKey('project_root_drop'),
+      onWillAcceptWithDetails: (_) => true,
+      onAcceptWithDetails: (d) => _promoteToRoot(d.data),
+      builder: (context, candidateData, _) {
+        final hovered = candidateData.isNotEmpty;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: hovered ? Colors.orange : Colors.grey.shade400,
+              width: hovered ? 2 : 1,
+            ),
+            color: hovered
+                ? Colors.orange.withValues(alpha: 0.10)
+                : Colors.grey.shade100,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.drive_file_move_outline,
+                size: 18,
+                color: hovered ? Colors.orange : Colors.grey,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Move to project root (depth 0)',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: hovered ? Colors.orange.shade800 : Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildReparentList() {
     final subtasks = _stateManager.subtasks;
     return ListView.builder(
       shrinkWrap: true,
-      itemCount: subtasks.length,
+      // +1 for the project-root drop zone at index 0
+      itemCount: subtasks.length + 1,
       itemBuilder: (context, index) {
-        final subtask = _stateManager.getSubtask(index);
+        // Index 0 is the project-root drop zone
+        if (index == 0) return _buildProjectRootDropZone();
+
+        final realIndex = index - 1;
+        final subtask = _stateManager.getSubtask(realIndex);
         if (subtask == null) return const SizedBox.shrink();
 
         final card = SubtaskCard(
           subtask: subtask,
-          index: index,
+          index: realIndex,
           parentTask: widget.task,
           onToggleSearch: _toggleSearchMode,
           onSelectExistingTask: _selectExistingTask,
@@ -581,8 +660,8 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
 
         return DragTarget<int>(
           key: Key(subtask.id),
-          onWillAcceptWithDetails: (d) => d.data != index && subtask.isExisting,
-          onAcceptWithDetails: (d) => _reparentSubtask(d.data, index),
+          onWillAcceptWithDetails: (d) => d.data != realIndex && subtask.isExisting,
+          onAcceptWithDetails: (d) => _reparentSubtask(d.data, realIndex),
           builder: (context, candidateData, _) {
             final hovered = candidateData.isNotEmpty;
             return AnimatedContainer(
@@ -595,7 +674,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
                     )
                   : null,
               child: LongPressDraggable<int>(
-                data: index,
+                data: realIndex,
                 delay: const Duration(milliseconds: 300),
                 feedback: Material(
                   elevation: 6,

@@ -55,7 +55,8 @@ class _MultiBarProgressState extends State<_MultiBarProgress> {
     final tasks = widget.tasks;
 
     // Global average includes ALL tasks (completed count toward 100%)
-    final avgCompletion = tasks.fold(
+    final avgCompletion =
+        tasks.fold(
           0.0,
           (sum, t) =>
               sum +
@@ -70,10 +71,13 @@ class _MultiBarProgressState extends State<_MultiBarProgress> {
 
     // Only show uncompleted tasks in the header rows — completed ones are
     // visible via the task list's "Show completed" toggle below.
-    final uncompleted = tasks.where((t) => !t.isCompleted).toList();
+    final uncompleted = tasks
+        .where((t) => !t.isCompleted && t.depth == 0)
+        .toList();
     final hasMore = uncompleted.length > _initialCount;
-    final visible =
-        _showAll ? uncompleted : uncompleted.take(_initialCount).toList();
+    final visible = _showAll
+        ? uncompleted
+        : uncompleted.take(_initialCount).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,8 +133,10 @@ class _MultiBarProgressState extends State<_MultiBarProgress> {
                   style: const TextStyle(fontSize: 12),
                 ),
                 style: TextButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
@@ -151,8 +157,9 @@ class _TaskProgressRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final progress =
-        task.endGoal > 0 ? (task.current / task.endGoal).clamp(0.0, 1.0) : 0.0;
+    final progress = task.endGoal > 0
+        ? (task.current / task.endGoal).clamp(0.0, 1.0)
+        : 0.0;
     final pct = progress * 100;
     final color = CompletionUtils.getCompletionColorM3(pct, theme.colorScheme);
     final unit = task.unit ?? '';

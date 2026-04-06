@@ -69,11 +69,20 @@ class ProjectTasksNotifier extends StateNotifier<AsyncValue<List<TaskData>>> {
   }
 
   Future<int> updateTask(int taskId, TaskCompanion updates) async {
+    final result = await _database.taskDao.updateTask(taskId, updates);
+    await refresh();
+    return result;
+  }
+
+  /// Updates the task without triggering a state refresh.
+  /// Use this inside batch loops; call [refresh] once when the batch is done.
+  Future<int> updateTaskSilent(int taskId, TaskCompanion updates) async {
     return await _database.taskDao.updateTask(taskId, updates);
   }
 
   Future<void> deleteTask(int taskId) async {
     await _database.taskDao.deleteTask(taskId);
+    await refresh();
   }
 
   Future<List<TaskData>> getSubtasks(

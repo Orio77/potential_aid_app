@@ -299,13 +299,14 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
     final query = '''
       WITH RECURSIVE task_descendants AS (
         -- Base case: direct children of the given task
-        SELECT * FROM task WHERE parent_task_id = ?
-        
+        SELECT * FROM task WHERE parent_task_id = ? AND is_deleted = 0
+
         UNION ALL
-        
+
         -- Recursive case: children of children
         SELECT t.* FROM task t
         INNER JOIN task_descendants td ON t.parent_task_id = td.id
+        WHERE t.is_deleted = 0
       )
       SELECT * FROM task_descendants
       ORDER BY depth, order_index
