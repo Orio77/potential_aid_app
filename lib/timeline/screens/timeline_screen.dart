@@ -17,6 +17,8 @@ import 'package:potential_aid_app/timeline/widgets/my_categories_picker_dialog.d
 import 'package:potential_aid_app/timeline/widgets/project_intervals.dart';
 import 'package:potential_aid_app/timeline/widgets/task_cards.dart';
 import 'package:potential_aid_app/timeline/widgets/task_depth_navigator.dart';
+import 'package:potential_aid_app/timeline/widgets/density_toggle.dart';
+import 'package:potential_aid_app/timeline/widgets/range_toggle.dart';
 import 'package:potential_aid_app/timeline/widgets/task_swim_lanes.dart';
 import 'package:potential_aid_app/timeline/widgets/timeline_minimap.dart';
 import 'package:time_machine/time_machine.dart';
@@ -284,13 +286,13 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
         actions: [
           // Density + Range toggles only on wide (desktop timeline) screens.
           if (!isNarrow) ...[
-            _DensityToggle(
+            DensityToggle(
               current: density,
               onChanged: (d) =>
                   ref.read(timelineDensityProvider.notifier).state = d,
             ),
             const SizedBox(width: 4),
-            _RangeToggle(
+            RangeToggle(
               current: range,
               onChanged: (r) {
                 ref.read(timelineRangeProvider.notifier).state = r;
@@ -604,86 +606,3 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
   }
 }
 
-// ── Density toggle (C / N / W) ────────────────────────────────────────────────
-
-class _DensityToggle extends StatelessWidget {
-  final TimelineDensity current;
-  final ValueChanged<TimelineDensity> onChanged;
-
-  const _DensityToggle({required this.current, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: TimelineDensity.values.map((d) {
-        final selected = d == current;
-        return GestureDetector(
-          onTap: () => onChanged(d),
-          child: Container(
-            width: 22,
-            height: 22,
-            margin: const EdgeInsets.symmetric(horizontal: 1),
-            decoration: BoxDecoration(
-              color: selected
-                  ? Theme.of(context).colorScheme.primary
-                  : Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              d.label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: selected ? Colors.white : Colors.grey.shade600,
-              ),
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-}
-
-// ── Range toggle (W / M / Q) ──────────────────────────────────────────────────
-
-class _RangeToggle extends StatelessWidget {
-  final TimelineRange current;
-  final ValueChanged<TimelineRange> onChanged;
-
-  const _RangeToggle({required this.current, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: TimelineRange.values.map((r) {
-        final selected = r == current;
-        return GestureDetector(
-          onTap: () => onChanged(r),
-          child: Container(
-            width: 22,
-            height: 22,
-            margin: const EdgeInsets.symmetric(horizontal: 1),
-            decoration: BoxDecoration(
-              color: selected
-                  ? Theme.of(context).colorScheme.secondary
-                  : Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              r.label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: selected ? Colors.white : Colors.grey.shade600,
-              ),
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-}

@@ -12,8 +12,9 @@ import 'package:potential_aid_app/projects/screens/project_screen.dart';
 import 'package:potential_aid_app/projects/widgets/add_task_dialog.dart';
 import 'package:potential_aid_app/timeline/providers/task_cards_notifier.dart';
 import 'package:potential_aid_app/breakdown/widgets/arrow_painter.dart';
-import 'package:potential_aid_app/breakdown/widgets/subtask_card.dart';
-import 'package:potential_aid_app/breakdown/widgets/subtask_buttons.dart';
+import 'package:potential_aid_app/breakdown/widgets/main_task_card.dart';
+import 'package:potential_aid_app/breakdown/widgets/reorder_subtask_list.dart';
+import 'package:potential_aid_app/breakdown/widgets/reparent_subtask_list.dart';
 
 class TaskBreakdownScreen extends ConsumerStatefulWidget {
   final TaskData task;
@@ -371,98 +372,18 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            _reparentMode
-                ? _buildMainTaskCardAsDropTarget(task)
-                : _buildMainTaskCard(task),
+            MainTaskCard(
+              task: task,
+              cardKey: mainTaskKey,
+              onEdit: () => _editTask(widget.task),
+              onNavigateToProject: _navigateToProject,
+              onDrop: _reparentMode ? _promoteToSibling : null,
+            ),
             SizedBox(width: TaskBreakdownConstants.spacing),
             _buildSubtasksList(),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildMainTaskCard(TaskData task) {
-    return SizedBox(
-      width: TaskBreakdownConstants.mainTaskWidth,
-      child: Center(
-        child: Card(
-          key: mainTaskKey,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxHeight: TaskBreakdownConstants.maxTaskHeight,
-                minHeight: TaskBreakdownConstants.minTaskHeight,
-              ),
-              child: IntrinsicWidth(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (widget.task.parentTaskId != null)
-                      GoToParentTaskButton(task: widget.task),
-                    Flexible(
-                      child: SingleChildScrollView(
-                        child: Text(
-                          task.name,
-                          style: Theme.of(context).textTheme.headlineSmall,
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit, size: 18),
-                          tooltip: 'Edit task',
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: () => _editTask(widget.task),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.folder_open, size: 18),
-                          tooltip: 'Go to project',
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: _navigateToProject,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Main task card wrapped as a DragTarget in reparent mode.
-  /// Dropping a subtask here sets its parent to widget.task.id — same level
-  /// as its current siblings (depth unchanged relative to this screen).
-  Widget _buildMainTaskCardAsDropTarget(TaskData task) {
-    return DragTarget<int>(
-      onWillAcceptWithDetails: (_) => true,
-      onAcceptWithDetails: (details) =>
-          _promoteToSibling(details.data),
-      builder: (context, candidateData, _) {
-        final hovered = candidateData.isNotEmpty;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          decoration: hovered
-              ? BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.deepPurple, width: 2),
-                  color: Colors.deepPurple.withValues(alpha: 0.06),
-                )
-              : null,
-          child: _buildMainTaskCard(task),
-        );
-      },
     );
   }
 
@@ -526,6 +447,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
   }
 
   Widget _buildSubtasksList() {
+    final subtasks = _stateManager.subtasks;
     return SizedBox(
       width: _dynamicSubtasksWidth,
       child: Column(
@@ -533,173 +455,38 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
         children: [
           Flexible(
             child: _reparentMode
-                ? _buildReparentList()
-                : _buildReorderList(),
+                ? ReparentSubtaskList(
+                    subtasks: subtasks,
+                    parentTask: widget.task,
+                    subtasksWidth: _dynamicSubtasksWidth,
+                    onReparent: _reparentSubtask,
+                    onPromoteToRoot: _promoteToRoot,
+                    onToggleSearch: _toggleSearchMode,
+                    onSelectExistingTask: _selectExistingTask,
+                    onRemove: _removeSubtask,
+                    onSaveNeeded: _saveSubtasks,
+                    onComplete: _handleTaskCompletion,
+                    onTextChanged: _handleTextChanged,
+                    onEdit: _editSubtask,
+                  )
+                : ReorderSubtaskList(
+                    subtasks: subtasks,
+                    parentTask: widget.task,
+                    onReorder: (oldIndex, newIndex) {
+                      setState(() =>
+                          _stateManager.reorderSubtasks(oldIndex, newIndex));
+                    },
+                    onToggleSearch: _toggleSearchMode,
+                    onSelectExistingTask: _selectExistingTask,
+                    onRemove: _removeSubtask,
+                    onSaveNeeded: _saveSubtasks,
+                    onComplete: _handleTaskCompletion,
+                    onTextChanged: _handleTextChanged,
+                    onEdit: _editSubtask,
+                  ),
           ),
         ],
       ),
-    );
-  }
-
-  // ── Reorder mode (default) ──────────────────────────────────────────────────
-
-  Widget _buildReorderList() {
-    return ReorderableListView.builder(
-      shrinkWrap: true,
-      buildDefaultDragHandles: false,
-      itemCount: _stateManager.subtasks.length,
-      itemBuilder: (context, index) {
-        final subtask = _stateManager.getSubtask(index);
-        if (subtask == null) {
-          return SizedBox.shrink(key: ValueKey('empty_$index'));
-        }
-        return Row(
-          key: Key(subtask.id),
-          children: [
-            ReorderableDragStartListener(
-              index: index,
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Icon(Icons.drag_indicator, color: Colors.grey, size: 20),
-              ),
-            ),
-            Expanded(
-              child: SubtaskCard(
-                subtask: subtask,
-                index: index,
-                parentTask: widget.task,
-                onToggleSearch: _toggleSearchMode,
-                onSelectExistingTask: _selectExistingTask,
-                onRemove: _removeSubtask,
-                onSaveNeeded: _saveSubtasks,
-                onComplete: _handleTaskCompletion,
-                onTextChanged: _handleTextChanged,
-                onEdit: _editSubtask,
-              ),
-            ),
-          ],
-        );
-      },
-      onReorder: (oldIndex, newIndex) {
-        setState(() => _stateManager.reorderSubtasks(oldIndex, newIndex));
-      },
-    );
-  }
-
-  // ── Reparent mode ───────────────────────────────────────────────────────────
-
-  Widget _buildProjectRootDropZone() {
-    return DragTarget<int>(
-      key: const ValueKey('project_root_drop'),
-      onWillAcceptWithDetails: (_) => true,
-      onAcceptWithDetails: (d) => _promoteToRoot(d.data),
-      builder: (context, candidateData, _) {
-        final hovered = candidateData.isNotEmpty;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: hovered ? Colors.orange : Colors.grey.shade400,
-              width: hovered ? 2 : 1,
-            ),
-            color: hovered
-                ? Colors.orange.withValues(alpha: 0.10)
-                : Colors.grey.shade100,
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.drive_file_move_outline,
-                size: 18,
-                color: hovered ? Colors.orange : Colors.grey,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Move to project root (depth 0)',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: hovered ? Colors.orange.shade800 : Colors.grey,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildReparentList() {
-    final subtasks = _stateManager.subtasks;
-    return ListView.builder(
-      shrinkWrap: true,
-      // +1 for the project-root drop zone at index 0
-      itemCount: subtasks.length + 1,
-      itemBuilder: (context, index) {
-        // Index 0 is the project-root drop zone
-        if (index == 0) return _buildProjectRootDropZone();
-
-        final realIndex = index - 1;
-        final subtask = _stateManager.getSubtask(realIndex);
-        if (subtask == null) return const SizedBox.shrink();
-
-        final card = SubtaskCard(
-          subtask: subtask,
-          index: realIndex,
-          parentTask: widget.task,
-          onToggleSearch: _toggleSearchMode,
-          onSelectExistingTask: _selectExistingTask,
-          onRemove: _removeSubtask,
-          onSaveNeeded: _saveSubtasks,
-          onComplete: _handleTaskCompletion,
-          onTextChanged: _handleTextChanged,
-          onEdit: _editSubtask,
-        );
-
-        return DragTarget<int>(
-          key: Key(subtask.id),
-          onWillAcceptWithDetails: (d) => d.data != realIndex && subtask.isExisting,
-          onAcceptWithDetails: (d) => _reparentSubtask(d.data, realIndex),
-          builder: (context, candidateData, _) {
-            final hovered = candidateData.isNotEmpty;
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 120),
-              decoration: hovered
-                  ? BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.deepPurple, width: 2),
-                      color: Colors.deepPurple.withValues(alpha: 0.06),
-                    )
-                  : null,
-              child: LongPressDraggable<int>(
-                data: realIndex,
-                delay: const Duration(milliseconds: 300),
-                feedback: Material(
-                  elevation: 6,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    width: _dynamicSubtasksWidth * 0.85,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.deepPurple.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.deepPurple),
-                    ),
-                    child: Text(
-                      subtask.controller.text,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-                childWhenDragging: Opacity(opacity: 0.3, child: card),
-                child: card,
-              ),
-            );
-          },
-        );
-      },
     );
   }
 
