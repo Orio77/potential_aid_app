@@ -124,6 +124,26 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
     )..where((t) => t.id.equals(taskId))).write(deleteCompanion);
   }
 
+  /// Soft-deletes all non-deleted tasks belonging to [projectId].
+  /// Called as part of project deletion to prevent orphaned tasks.
+  Future<void> softDeleteTasksByProject(int projectId) async {
+    final tasks = await (select(task)
+      ..where((t) => t.projectId.equals(projectId) & t.isDeleted.equals(false)))
+        .get();
+
+    if (tasks.isEmpty) return;
+
+    await batch((b) {
+      for (final t in tasks) {
+        b.update(
+          task,
+          _markForDeletion(t.version),
+          where: (row) => row.id.equals(t.id),
+        );
+      }
+    });
+  }
+
   Future<List<TaskData>> getTasksByProject(int projectId) async {
     final query = select(task)
       ..where((task) => task.projectId.equals(projectId))

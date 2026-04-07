@@ -171,14 +171,15 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
   }
 
   Future<void> deleteProject(int projectId) async {
-    // Get current version for soft delete
     final currentProject = await getProjectById(projectId);
-    if (currentProject != null) {
-      final deleteCompanion = _markProjectForDeletion(currentProject.version);
-      await (update(
-        project,
-      )..where((p) => p.id.equals(projectId))).write(deleteCompanion);
-    }
+    if (currentProject == null) return;
+
+    await attachedDatabase.taskDao.softDeleteTasksByProject(projectId);
+
+    final deleteCompanion = _markProjectForDeletion(currentProject.version);
+    await (update(
+      project,
+    )..where((p) => p.id.equals(projectId))).write(deleteCompanion);
   }
 
   Future<int> updateProject(int projectId, ProjectCompanion updates) async {
