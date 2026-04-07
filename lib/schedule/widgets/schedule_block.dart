@@ -9,6 +9,7 @@ import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/schedule/services/schedule_block_service.dart';
 import 'package:potential_aid_app/schedule/widgets/blocks_task_list.dart';
 import 'package:potential_aid_app/schedule/widgets/complete_block_dialog.dart';
+import 'package:potential_aid_app/schedule/widgets/block_info_dialog.dart';
 import 'package:potential_aid_app/schedule/widgets/edit_block_dialog.dart';
 import 'package:potential_aid_app/utils/completion_utils.dart';
 import 'package:time_machine/time_machine.dart';
@@ -106,7 +107,7 @@ class ScheduleBlock extends ConsumerWidget {
         color: _getCardColor(theme, completionPercentage),
         child: InkWell(
           onTap: isCompleted || !isBlockInTheFuture
-              ? null
+              ? () => showBlockInfoDialog(context, blockId)
               : () => showEditBlockDialog(context, blockId: blockId),
           onLongPress: isCompleted ? null : onLongPress,
           child: Padding(
