@@ -29,6 +29,9 @@ class SyncRecordMapper {
       if (key == 'id') {
         return; // never sync local primary keys
       }
+      if (key == 'needsSync') {
+        return; // local-only flag, must never be pushed to remote
+      }
 
       final remoteKey = SyncConverter.getColumnName(tableName, key);
       remoteRecord[remoteKey] = SyncConverter.normalizeValue(
