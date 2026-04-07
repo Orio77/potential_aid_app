@@ -12,10 +12,14 @@ class WidgetUpdateService {
 
   /// Update widget for today, ignoring the stored date offset.
   static Future<void> updateToday(AppDatabase db) async {
-    final offset =
-        (await HomeWidget.getWidgetData<int>('date_offset')) ?? 0;
-    final date = LocalDate.today().addDays(offset);
-    await update(db, date);
+    try {
+      final offset =
+          (await HomeWidget.getWidgetData<int>('date_offset')) ?? 0;
+      final date = LocalDate.today().addDays(offset);
+      await update(db, date);
+    } catch (_) {
+      // Best-effort: never crash the caller.
+    }
   }
 
   /// Serialise all blocks for [date] and push them to the widget.

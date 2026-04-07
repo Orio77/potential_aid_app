@@ -14,11 +14,13 @@ class SubtaskStateManager {
   bool get isEmpty => _subtasks.isEmpty;
   int get length => _subtasks.length;
 
-  /// Initialize with empty subtask if no existing subtasks
+  /// Initialize with a single blank placeholder subtask, clearing any stale state.
   void initializeEmpty() {
-    if (_subtasks.isEmpty) {
-      _subtasks.add(SubtaskItem.empty(_uuid.v4()));
+    for (final subtask in _subtasks) {
+      subtask.dispose();
     }
+    _subtasks.clear();
+    _subtasks.add(SubtaskItem.empty(_uuid.v4()));
   }
 
   /// Initialize with existing subtasks data
