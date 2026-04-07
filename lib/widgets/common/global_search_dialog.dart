@@ -30,16 +30,16 @@ class _GlobalSearchDialogState extends ConsumerState<GlobalSearchDialog> {
 
   void _openProject(ProjectData project) {
     Navigator.of(context).pop();
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => ProjectScreen(data: project)),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => ProjectScreen(data: project)));
   }
 
   void _openTask(TaskData task) {
     Navigator.of(context).pop();
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => TaskBreakdownScreen(task: task)),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => TaskBreakdownScreen(task: task)));
   }
 
   @override
@@ -114,12 +114,35 @@ class _GlobalSearchDialogState extends ConsumerState<GlobalSearchDialog> {
             (t) => ListTile(
               dense: true,
               leading: const Icon(Icons.task_alt_outlined),
-              title: Text(t.name),
+              title: Text(t.name, overflow: TextOverflow.ellipsis),
+              trailing: t.depth > 0 ? _DepthBadge(depth: t.depth) : null,
               onTap: () => _openTask(t),
             ),
           ),
         ],
       ],
+    );
+  }
+}
+
+class _DepthBadge extends StatelessWidget {
+  final int depth;
+  const _DepthBadge({required this.depth});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        'L$depth',
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
     );
   }
 }
