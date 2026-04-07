@@ -21,6 +21,7 @@ class ProjectSearchNotifier extends StateNotifier<List<ProjectData>> {
 
     predicates ??= [];
     predicates.add((ProjectData p) => p.isDeleted == false);
+    predicates.add((ProjectData p) => p.current < p.goal);
 
     List<ProjectData> base = await _database.projectDao.searchProjects(
       query: query,

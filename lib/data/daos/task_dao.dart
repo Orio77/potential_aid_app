@@ -61,9 +61,13 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
     if (q.isEmpty) return [];
 
     final selectQuery = select(task)
-      ..where((t) =>
-          t.name.lower().contains('${q.toLowerCase()}%') &
-          t.isDeleted.equals(false));
+      ..where(
+        (t) =>
+            t.name.lower().contains('${q.toLowerCase()}%') &
+            t.isDeleted.equals(false) &
+            t.isCompleted.equals(false),
+      )
+      ..orderBy([(t) => OrderingTerm.asc(t.depth)]);
 
     if (limit != null) {
       selectQuery.limit(limit);
@@ -140,7 +144,8 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
       ..where((t) => t.projectId.equals(projectId))
       ..where((t) => t.isDeleted.equals(false))
       ..orderBy([
-        (t) => OrderingTerm(expression: t.isCompleted), // false(0) before true(1)
+        (t) =>
+            OrderingTerm(expression: t.isCompleted), // false(0) before true(1)
         (t) => OrderingTerm(expression: t.orderIndex),
       ]);
     return await query.get();
