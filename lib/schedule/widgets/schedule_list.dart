@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/schedule/providers/completion_notifier.dart';
 import 'package:potential_aid_app/schedule/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/schedule/widgets/delete_block_dialog.dart';
 import 'package:potential_aid_app/schedule/widgets/edit_block_dialog.dart';
 import 'package:potential_aid_app/schedule/widgets/schedule_block.dart';
+import 'package:time_machine/time_machine.dart';
 
 class ScheduleList extends ConsumerWidget {
   const ScheduleList({super.key});
@@ -36,7 +38,11 @@ class ScheduleList extends ConsumerWidget {
     );
   }
 
-  Widget _buildScheduleList(List<int> blockIds, WidgetRef ref) {
+  Widget _buildScheduleList(
+    List<int> blockIds,
+    WidgetRef ref,
+    bool canDelete,
+  ) {
     return ReorderableListView.builder(
       shrinkWrap: true,
       physics: ClampingScrollPhysics(),
@@ -51,6 +57,7 @@ class ScheduleList extends ConsumerWidget {
           previousBlockId,
           blockId,
           index,
+          canDelete,
         );
       },
       onReorder: (int oldIndex, int newIndex) async {
@@ -67,6 +74,7 @@ class ScheduleList extends ConsumerWidget {
     int? previousBlockId,
     int blockId,
     int index,
+    bool canDelete,
   ) {
     final completionAsync = ref.watch(
       blockCompletionPercentageProvider(blockId),
@@ -83,7 +91,7 @@ class ScheduleList extends ConsumerWidget {
             final isPreviousCompleted =
                 previousData != null || previousBlockId == null;
 
-            if (isCompleted) {
+            if (isCompleted || !canDelete) {
               return Padding(
                 key: ValueKey(blockId),
                 padding: const EdgeInsets.symmetric(vertical: 4),
@@ -161,9 +169,11 @@ class ScheduleList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheduleData = ref.watch(scheduleNotifierProvider);
+    final viewedDate = ref.watch(dateNotifierProvider);
+    final canDelete = viewedDate > LocalDate.today();
 
     return scheduleData.isEmpty
         ? _buildEmptyState(context)
-        : _buildScheduleList(scheduleData, ref);
+        : _buildScheduleList(scheduleData, ref, canDelete);
   }
 }
