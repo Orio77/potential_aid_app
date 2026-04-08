@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/projects/providers/project_categories_notifier.dart';
+import 'package:potential_aid_app/projects/screens/batch_category_projects_screen.dart';
 import 'package:potential_aid_app/projects/screens/project_list_screen.dart';
+import 'package:potential_aid_app/projects/widgets/categories/category_picker_dialog.dart';
+import 'package:potential_aid_app/projects/widgets/categories/edit_category_dialog.dart';
 import 'package:potential_aid_app/widgets/common/reorderable_grid.dart';
 import 'package:potential_aid_app/projects/widgets/categories/category_card.dart';
 
@@ -121,43 +124,68 @@ class _CategoryListState extends ConsumerState<CategoryList> {
               return Padding(
                 key: Key(category.id.toString()),
                 padding: const EdgeInsets.only(bottom: 8.0),
-                child: Stack(
-                  children: [
-                    InkWell(
-                      onTap: _isEditMode
-                          ? null
-                          : () => _pushProjectListScreen(context, category.id),
-                      child: CategoryCard(data: category),
-                    ),
-                    if (_isEditMode)
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.error,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.2),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: IconButton(
-                            icon: const Icon(Icons.remove, color: Colors.white),
-                            iconSize: 18,
-                            padding: const EdgeInsets.all(6),
-                            constraints: const BoxConstraints(
-                              minWidth: 30,
-                              minHeight: 30,
-                            ),
-                            onPressed: () => _showDeleteConfirmation(category),
-                          ),
+                child: SizedBox(
+                  height: 120,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned.fill(
+                        child: InkWell(
+                          onTap: _isEditMode
+                              ? null
+                              : () => _pushProjectListScreen(
+                                    context,
+                                    category.id,
+                                  ),
+                          child: CategoryCard(data: category),
                         ),
                       ),
-                  ],
+                      if (_isEditMode) ...[
+                        Positioned(
+                          top: 8,
+                          left: 8,
+                          child: Material(
+                            color: Theme.of(context).colorScheme.primary,
+                            shape: const CircleBorder(),
+                            elevation: 2,
+                            child: IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.white),
+                              iconSize: 18,
+                              padding: const EdgeInsets.all(6),
+                              constraints: const BoxConstraints(
+                                minWidth: 30,
+                                minHeight: 30,
+                              ),
+                              onPressed: () =>
+                                  showEditCategoryDialog(context, category),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Material(
+                            color: Theme.of(context).colorScheme.error,
+                            shape: const CircleBorder(),
+                            elevation: 2,
+                            child: IconButton(
+                              icon:
+                                  const Icon(Icons.remove, color: Colors.white),
+                              iconSize: 18,
+                              padding: const EdgeInsets.all(6),
+                              constraints: const BoxConstraints(
+                                minWidth: 30,
+                                minHeight: 30,
+                              ),
+                              onPressed: () =>
+                                  _showDeleteConfirmation(category),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               );
             },
@@ -200,23 +228,33 @@ class _CategoryListState extends ConsumerState<CategoryList> {
   Widget _buildCategoryCardWithDelete(ProjectCategoryData category) {
     if (_isEditMode) {
       return Stack(
+        fit: StackFit.expand,
+        clipBehavior: Clip.none,
         children: [
-          CategoryCard(data: category),
+          Positioned.fill(child: CategoryCard(data: category)),
+          Positioned(
+            top: 8,
+            left: 8,
+            child: Material(
+              color: Theme.of(context).colorScheme.primary,
+              shape: const CircleBorder(),
+              elevation: 2,
+              child: IconButton(
+                icon: const Icon(Icons.edit, color: Colors.white),
+                iconSize: 18,
+                padding: const EdgeInsets.all(6),
+                constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                onPressed: () => showEditCategoryDialog(context, category),
+              ),
+            ),
+          ),
           Positioned(
             top: 8,
             right: 8,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.error,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
+            child: Material(
+              color: Theme.of(context).colorScheme.error,
+              shape: const CircleBorder(),
+              elevation: 2,
               child: IconButton(
                 icon: const Icon(Icons.remove, color: Colors.white),
                 iconSize: 18,
@@ -228,15 +266,53 @@ class _CategoryListState extends ConsumerState<CategoryList> {
           ),
         ],
       );
-    } else {
-      return CategoryCard(data: category);
     }
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Positioned.fill(child: CategoryCard(data: category)),
+      ],
+    );
   }
 
   void _pushProjectListScreen(BuildContext context, int? categoryId) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => ProjectListScreen(categoryId: categoryId),
+      ),
+    );
+  }
+
+  Future<void> _openBatchCategoryScreen(BatchCategoryProjectsAction action) async {
+    final categories = ref.read(projectCategoriesProvider);
+    if (categories.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Create a category first.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final title = action == BatchCategoryProjectsAction.assign
+        ? 'Assign projects to…'
+        : 'Remove projects from…';
+    final picked = await showProjectCategoryPicker(
+      context: context,
+      categories: categories,
+      title: title,
+    );
+    if (!mounted || picked == null) return;
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => BatchCategoryProjectsScreen(
+          action: action,
+          categoryId: picked.id,
+          categoryTitle: categoryDisplayTitle(picked),
+        ),
       ),
     );
   }
@@ -263,16 +339,69 @@ class _CategoryListState extends ConsumerState<CategoryList> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                _isEditMode ? 'Select categories to delete' : 'Categories',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: _isEditMode
-                      ? Theme.of(context).colorScheme.error
-                      : null,
+              Expanded(
+                child: Text(
+                  _isEditMode
+                      ? 'Edit name/icon, or delete'
+                      : 'Categories',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: _isEditMode
+                        ? Theme.of(context).colorScheme.error
+                        : null,
+                  ),
                 ),
               ),
+              if (_isEditMode) ...[
+                PopupMenuButton<String>(
+                  tooltip: 'Batch project actions',
+                  onSelected: (value) {
+                    if (value == 'assign') {
+                      _openBatchCategoryScreen(
+                        BatchCategoryProjectsAction.assign,
+                      );
+                    } else if (value == 'unassign') {
+                      _openBatchCategoryScreen(
+                        BatchCategoryProjectsAction.unassign,
+                      );
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem<String>(
+                      value: 'assign',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.drive_file_move_rtl,
+                            size: 20,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text('Assign projects to category…'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'unassign',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.folder_off_outlined,
+                            size: 20,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text('Remove projects from category…'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               TextButton.icon(
                 onPressed: _toggleEditMode,
                 icon: Icon(_isEditMode ? Icons.done : Icons.edit),

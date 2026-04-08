@@ -342,4 +342,17 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
         ))
         .get();
   }
+
+  /// Root-level projects (no parent) in [categoryId], excluding deleted.
+  Future<int> countRootProjectsInCategory(int categoryId) async {
+    final rows = await (select(project)
+          ..where(
+            (p) =>
+                p.category.equals(categoryId) &
+                p.parentProjectId.isNull() &
+                p.isDeleted.equals(false),
+          ))
+        .get();
+    return rows.length;
+  }
 }

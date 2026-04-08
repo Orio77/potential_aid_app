@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
+import 'package:potential_aid_app/providers/projects_notifier.dart';
 
 class ProjectCategoriesNotifier
     extends StateNotifier<List<ProjectCategoryData>> {
@@ -107,6 +108,24 @@ class ProjectCategoriesNotifier
   Future<void> updateProjectsCategory(int projectId, int categoryId) async {
     final updates = ProjectCompanion(category: Value(categoryId));
     await _database.projectDao.updateProject(projectId, updates);
+    _ref.invalidate(projectsNotifierProvider);
+  }
+
+  /// Sets [categoryId] for all [projectIds] (use `null` to clear category / uncategorize).
+  Future<void> batchSetProjectsCategory(
+    List<int> projectIds,
+    int? categoryId,
+  ) async {
+    if (projectIds.isEmpty) return;
+    await _database.transaction(() async {
+      for (final id in projectIds) {
+        await _database.projectDao.updateProject(
+          id,
+          ProjectCompanion(category: Value(categoryId)),
+        );
+      }
+    });
+    _ref.invalidate(projectsNotifierProvider);
   }
 }
 

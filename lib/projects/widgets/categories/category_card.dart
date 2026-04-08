@@ -9,41 +9,61 @@ class CategoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 2,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(12.0),
-        child: data.title == null || data.title!.isEmpty
-            ? _buildIconView(context, data.iconCodePoint!)
-            : (data.iconCodePoint == null
-                  ? _buildTitleView(context, data.title!)
-                  : _buildIconTitleView(
-                      context,
-                      data.title!,
-                      data.iconCodePoint!,
-                    )),
+      clipBehavior: Clip.antiAlias,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final fillHeight = constraints.maxHeight.isFinite;
+
+          Widget content;
+          if (data.title == null || data.title!.isEmpty) {
+            content = _buildIconView(context, data.iconCodePoint!);
+          } else if (data.iconCodePoint == null) {
+            content = _buildTitleView(context, data.title!);
+          } else {
+            content = _buildIconTitleView(
+              context,
+              data.title!,
+              data.iconCodePoint!,
+            );
+          }
+
+          if (fillHeight) {
+            return SizedBox(
+              width: constraints.maxWidth.isFinite
+                  ? constraints.maxWidth
+                  : double.infinity,
+              height: constraints.maxHeight,
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Center(child: content),
+              ),
+            );
+          }
+
+          return Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: content,
+          );
+        },
       ),
     );
   }
 
   Widget _buildIconView(BuildContext context, int iconCodePoint) {
-    return Center(
-      child: Icon(
-        IconData(iconCodePoint, fontFamily: 'MaterialIcons'),
-        size: 32,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
+    return Icon(
+      IconData(iconCodePoint, fontFamily: 'MaterialIcons'),
+      size: 40,
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
     );
   }
 
   Widget _buildTitleView(BuildContext context, String title) {
-    return Center(
-      child: Text(
-        title,
-        textAlign: TextAlign.center,
-        maxLines: 3,
-        overflow: TextOverflow.ellipsis,
-        style: Theme.of(context).textTheme.bodyMedium,
-      ),
+    return Text(
+      title,
+      textAlign: TextAlign.center,
+      maxLines: 3,
+      overflow: TextOverflow.ellipsis,
+      style: Theme.of(context).textTheme.bodyMedium,
     );
   }
 
@@ -52,6 +72,7 @@ class CategoryCard extends StatelessWidget {
     String title,
     int iconCodePoint,
   ) {
+    final theme = Theme.of(context);
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -60,17 +81,17 @@ class CategoryCard extends StatelessWidget {
         Text(
           title,
           textAlign: TextAlign.center,
-          maxLines: 2,
+          maxLines: 3,
           overflow: TextOverflow.ellipsis,
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500),
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
         ),
-        const SizedBox(height: 8.0),
+        const SizedBox(height: 10),
         Icon(
           IconData(iconCodePoint, fontFamily: 'MaterialIcons'),
-          size: 28,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          size: 36,
+          color: theme.colorScheme.onSurfaceVariant,
         ),
       ],
     );
