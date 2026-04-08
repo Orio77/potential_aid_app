@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart' hide SearchBar;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -68,7 +69,11 @@ class _BatchCategoryProjectsScreenState
     });
     try {
       final db = ref.read(databaseProvider);
-      final list = await db.projectDao.getAllProjects(null);
+      final list = await db.projectDao.getAllProjects([
+        (p) => p.current.isSmallerThan(p.goal),
+      ]);
+ 
+ 
       if (!mounted) return;
       setState(() {
         _allRootProjects =
