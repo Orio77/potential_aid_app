@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_iconpicker/Models/configuration.dart';
-import 'package:flutter_iconpicker/flutter_iconpicker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/projects/providers/project_categories_notifier.dart';
+import 'package:potential_aid_app/projects/widgets/categories/category_icon_picker_sheet.dart';
 
 class AddCategoryDialog extends ConsumerStatefulWidget {
   const AddCategoryDialog({super.key});
@@ -116,17 +115,9 @@ class _AddCategoryDialogState extends ConsumerState<AddCategoryDialog> {
   }
 
   Future<void> _pickIcon(BuildContext context) async {
-    final icon = await showIconPicker(
-      context,
-      configuration: SinglePickerConfiguration(
-        showTooltips: true,
-        iconPackModes: [IconPack.allMaterial],
-      ),
-    );
-    if (icon != null) {
-      setState(() {
-        _chosenIcon = icon.data;
-      });
+    final icon = await showCategoryIconPicker(context);
+    if (icon != null && context.mounted) {
+      setState(() => _chosenIcon = icon);
     }
   }
 
