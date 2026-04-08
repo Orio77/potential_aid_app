@@ -178,7 +178,9 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
   void _removeSubtask(int index) async {
     final subtask = _stateManager.getSubtask(index);
     if (subtask != null && subtask.isExisting) {
-      await _deleteParentTaskFromSubtasks(index);
+      await ref
+          .read(projectTasksNotifier(widget.task.projectId).notifier)
+          .deleteTask(subtask.savedId);
     }
     _stateManager.removeSubtask(index);
     setState(() {
@@ -243,18 +245,6 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
       setState(() {
         _stateManager.updateSubtask(index, updatedSubtask);
       });
-    }
-  }
-
-  Future<void> _deleteParentTaskFromSubtasks(int index) async {
-    final subtask = _stateManager.getSubtask(index);
-    if (subtask != null && subtask.savedId != -1) {
-      await ref
-          .read(projectTasksNotifier(widget.task.projectId).notifier)
-          .updateTask(
-            subtask.savedId,
-            TaskCompanion(parentTaskId: Value(null), depth: Value(0)),
-          );
     }
   }
 

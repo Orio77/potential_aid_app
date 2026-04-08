@@ -117,11 +117,24 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
   Future<void> deleteTask(int taskId) async {
     // Get current version for soft delete
     final currentTask = await getTaskById(taskId);
-    final deleteCompanion = _markForDeletion(currentTask.version);
+
+    // Cascade soft-delete all descendants first
+    final descendants = await getAllDescendantsRecursive(taskId);
+    if (descendants.isNotEmpty) {
+      await batch((b) {
+        for (final desc in descendants) {
+          b.update(
+            task,
+            _markForDeletion(desc.version),
+            where: (row) => row.id.equals(desc.id),
+          );
+        }
+      });
+    }
 
     await (update(
       task,
-    )..where((t) => t.id.equals(taskId))).write(deleteCompanion);
+    )..where((t) => t.id.equals(taskId))).write(_markForDeletion(currentTask.version));
   }
 
   /// Soft-deletes all non-deleted tasks belonging to [projectId].
