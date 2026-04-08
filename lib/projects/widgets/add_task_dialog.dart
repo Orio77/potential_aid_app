@@ -186,7 +186,9 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
       final taskName = _taskNameController.text.trim();
       final current = int.tryParse(_currentController.text.trim());
       final endGoal = int.tryParse(_endGoalController.text.trim());
-      final unit = _unitController.text.trim();
+      final unit = _unitController.text.isNotEmpty
+          ? _unitController.text.trim()
+          : "completed";
 
       if (widget.taskData == null) {
         await ref

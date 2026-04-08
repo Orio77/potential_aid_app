@@ -202,7 +202,9 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
                   0,
                   int.tryParse(_currentController.text)!,
                   int.tryParse(_endGoalController.text)!,
-                  _unitController.text,
+                  _unitController.text.isNotEmpty
+                      ? _unitController.text.trim()
+                      : "completed",
                   widget.projectData == null
                       ? widget.categoryId
                       : widget.projectData!.category,
