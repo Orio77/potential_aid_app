@@ -36,44 +36,88 @@ class BlockCompletionElementState
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
-      children: [
-        const SizedBox(width: 8),
-        const Icon(Icons.timer),
-        const SizedBox(width: 16),
-        ConstrainedBox(
-          constraints: BoxConstraints.tightFor(
-            width: CompletionService.fieldWidth(blockLength),
-          ),
-          child: TextField(
-            controller: _completionController,
-            textAlign: TextAlign.center,
-            decoration: InputDecoration(
-              floatingLabelBehavior: FloatingLabelBehavior.always,
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Material(
+      color: colorScheme.primaryContainer.withValues(alpha: 0.35),
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.schedule_rounded, size: 22, color: colorScheme.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Block time',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            keyboardType: TextInputType.number,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(
-                blockLength.toString().length + 1,
-              ),
-            ],
-          ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                ConstrainedBox(
+                  constraints: BoxConstraints.tightFor(
+                    width: CompletionService.fieldWidth(blockLength),
+                  ),
+                  child: TextField(
+                    controller: _completionController,
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      labelText: 'Minutes',
+                      floatingLabelBehavior: FloatingLabelBehavior.auto,
+                      border: const OutlineInputBorder(),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 10,
+                      ),
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(
+                        blockLength.toString().length + 1,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'up to $blockLength min',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                Tooltip(
+                  message: 'Use full block length ($blockLength min)',
+                  child: IconButton(
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () {
+                      completionCount = blockLength;
+                      setState(() {
+                        _completionController.text = completionCount.toString();
+                      });
+                    },
+                    icon: const Icon(Icons.flag_rounded),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Text(' / $blockLength minutes'),
-        const SizedBox(width: 8),
-        TextButton(
-          onPressed: () {
-            completionCount = blockLength;
-            setState(() {
-              _completionController.text = completionCount.toString();
-            });
-          },
-          child: Text('>>'),
-        ),
-      ],
+      ),
     );
   }
 

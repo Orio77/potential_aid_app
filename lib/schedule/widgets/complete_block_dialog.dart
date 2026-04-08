@@ -33,17 +33,21 @@ class _CompleteBlockDialogState extends ConsumerState<CompleteBlockDialog> {
     final screenWidth = MediaQuery.of(context).size.width;
     final dialogWidth = (screenWidth * 0.85).clamp(280.0, 400.0);
 
+    final theme = Theme.of(context);
+
     return AlertDialog(
-      title: const Center(
-        child: Text('Complete This Block', textAlign: TextAlign.center),
-      ),
+      title: Text(
+            'Complete this block',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.titleLarge,
+          ),
       content: SizedBox(
         width: dialogWidth,
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SizedBox(height: 12),
+            const SizedBox(height: 4),
             blockWithTasksAsync.when(
               data: (blockWithTasks) {
                 if (blockWithTasks.tasks != null) {
@@ -53,39 +57,71 @@ class _CompleteBlockDialogState extends ConsumerState<CompleteBlockDialog> {
                   }
                 }
 
+                final tasks = blockWithTasks.tasks;
                 return ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.4,
+                    maxHeight: MediaQuery.of(context).size.height * 0.5,
                   ),
-                  child: Column(
-                    children: [
-                      BlockCompletionElement(
-                        key: _blockKey,
-                        block: blockWithTasks.block,
-                        onBlockCompletion: (blockId, minutesCompleted) {},
-                      ),
-                      if (blockWithTasks.tasks != null) ...[
-                        ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: blockWithTasks.tasks!.length,
-                          itemBuilder: (context, index) {
-                            final task = blockWithTasks.tasks![index];
-                            return TaskCompletionElement(
-                              key: _taskKeys[index],
-                              task: task,
-                              onTaskCompletion: (taskId, completionCount) {},
-                            );
-                          },
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        BlockCompletionElement(
+                          key: _blockKey,
+                          block: blockWithTasks.block,
+                          onBlockCompletion: (blockId, minutesCompleted) {},
                         ),
+                        if (tasks != null && tasks.isNotEmpty) ...[
+                          const SizedBox(height: 20),
+                          Row(
+                            children: [
+                              Text(
+                                'Tasks',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.secondaryContainer,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  '${tasks.length}',
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    color: theme
+                                        .colorScheme
+                                        .onSecondaryContainer,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          for (var i = 0; i < tasks.length; i++) ...[
+                            if (i > 0) const SizedBox(height: 10),
+                            TaskCompletionElement(
+                              key: _taskKeys[i],
+                              task: tasks[i],
+                              onTaskCompletion: (taskId, completionCount) {},
+                            ),
+                          ],
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 );
               },
               error: (error, stack) => Text('Error: $error'),
-              loading: () => const CircularProgressIndicator(),
+              loading: () => const Center(child: CircularProgressIndicator()),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
           ],
         ),
       ),

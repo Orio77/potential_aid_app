@@ -35,44 +35,94 @@ class TaskCompletionElementState extends ConsumerState<TaskCompletionElement> {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
-      children: [
-        const SizedBox(width: 8),
-        const Icon(Icons.task_alt),
-        const SizedBox(width: 16),
-        ConstrainedBox(
-          constraints: BoxConstraints.tightFor(
-            width: CompletionService.fieldWidth(taskLength),
-          ),
-          child: TextField(
-            controller: _completionController,
-            textAlign: TextAlign.center,
-            decoration: InputDecoration(
-              floatingLabelBehavior: FloatingLabelBehavior.always,
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final rawUnit = widget.task.unit ?? '';
+    final unitLabel = rawUnit.trim().isEmpty ? 'units' : rawUnit.trim();
+
+    return Material(
+      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.task_alt, size: 22, color: colorScheme.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    widget.task.name,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      height: 1.25,
+                    ),
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
-            keyboardType: TextInputType.number,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(
-                taskLength.toString().length + 2,
-              ),
-            ],
-          ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                ConstrainedBox(
+                  constraints: BoxConstraints.tightFor(
+                    width: CompletionService.fieldWidth(taskLength),
+                  ),
+                  child: TextField(
+                    controller: _completionController,
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      labelText: 'Total',
+                      floatingLabelBehavior: FloatingLabelBehavior.auto,
+                      border: const OutlineInputBorder(),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 10,
+                      ),
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(
+                        taskLength.toString().length + 2,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'of $taskLength $unitLabel',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                Tooltip(
+                  message: 'Set total to goal ($taskLength)',
+                  child: IconButton(
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () {
+                      completionCount = taskLength;
+                      setState(() {
+                        _completionController.text = completionCount.toString();
+                      });
+                    },
+                    icon: const Icon(Icons.flag_rounded),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Text(' / $taskLength ${widget.task.unit}'),
-        const SizedBox(width: 8),
-        TextButton(
-          onPressed: () {
-            completionCount = taskLength;
-            setState(() {
-              _completionController.text = completionCount.toString();
-            });
-          },
-          child: Text('>>'),
-        ),
-      ],
+      ),
     );
   }
 
