@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
+import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
 import 'package:potential_aid_app/projects/providers/task_progress_providers.dart';
 
 class ProgressUpdateDialog extends ConsumerStatefulWidget {
@@ -57,7 +58,7 @@ class _ProgressUpdateDialogState extends ConsumerState<ProgressUpdateDialog> {
           .taskDao
           .updateTaskProgress(widget.task.id, value);
 
-      ref.invalidate(firstDepthTasksProvider(widget.task.projectId));
+      ref.invalidate(projectTasksNotifier(widget.task.projectId));
       if (widget.task.parentTaskId != null) {
         ref.invalidate(taskSubtasksProvider(widget.task.parentTaskId!));
       }

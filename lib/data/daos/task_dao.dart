@@ -108,10 +108,54 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
   }
 
   Future<int> updateTask(int taskId, TaskCompanion updates) async {
-    final syncAwareUpdates = _withSyncFields(updates);
-    return await (update(
-      task,
-    )..where((t) => t.id.equals(taskId))).write(syncAwareUpdates);
+    return transaction(() async {
+      final existing = await getTaskById(taskId);
+
+      final nextCurrent = updates.current.present
+          ? updates.current.value
+          : existing.current;
+      final nextEndGoal = updates.endGoal.present
+          ? updates.endGoal.value
+          : existing.endGoal;
+
+      var cappedCurrent = nextCurrent;
+      if (cappedCurrent > nextEndGoal) cappedCurrent = nextEndGoal;
+      if (cappedCurrent < 0) cappedCurrent = 0;
+
+      final progressDelta = cappedCurrent - existing.current;
+      final completionTs = DateTime.now();
+
+      if (progressDelta > 0) {
+        await into(db.taskCompletion).insert(
+          TaskCompletionCompanion.insert(
+            taskId: taskId,
+            count: progressDelta,
+            completedAt: completionTs,
+            lastModified: DateTime.now(),
+            needsSync: const Value(true),
+            version: const Value(1),
+          ),
+        );
+      }
+
+      final completed = cappedCurrent >= nextEndGoal;
+      if (completed && !existing.isCompleted) {
+        await _completeAllSubtasks(taskId, completionTs);
+      }
+
+      final nextCompletedAt =
+          completed ? (existing.completedAt ?? completionTs) : null;
+
+      final merged = updates.copyWith(
+        current: Value(cappedCurrent),
+        isCompleted: Value(completed),
+        completedAt: Value(nextCompletedAt),
+      );
+
+      final syncAwareUpdates = _withSyncFields(merged);
+      return await (update(task)..where((t) => t.id.equals(taskId)))
+          .write(syncAwareUpdates);
+    });
   }
 
   Future<void> deleteTask(int taskId) async {
@@ -311,9 +355,24 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
       final taskData = await getTaskById(taskId);
       final bool nowComplete = newCurrent >= taskData.endGoal;
       final actualCurrent = nowComplete ? taskData.endGoal : newCurrent;
+      final completionTs = DateTime.now();
+      final progressDelta = actualCurrent - taskData.current;
+
+      if (progressDelta > 0) {
+        await into(db.taskCompletion).insert(
+          TaskCompletionCompanion.insert(
+            taskId: taskId,
+            count: progressDelta,
+            completedAt: completionTs,
+            lastModified: DateTime.now(),
+            needsSync: const Value(true),
+            version: const Value(1),
+          ),
+        );
+      }
 
       if (nowComplete && !taskData.isCompleted) {
-        await _completeAllSubtasks(taskId, DateTime.now());
+        await _completeAllSubtasks(taskId, completionTs);
       }
 
       await (update(task)..where((t) => t.id.equals(taskId))).write(
@@ -323,7 +382,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
             isCompleted: Value(nowComplete || taskData.isCompleted),
             completedAt: Value(
               nowComplete && taskData.completedAt == null
-                  ? DateTime.now()
+                  ? completionTs
                   : taskData.completedAt,
             ),
           ),
