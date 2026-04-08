@@ -17,33 +17,60 @@ class BlockInfoDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final blockAsync = ref.watch(blockTasksNotifier(blockId));
-    final projectAsync = ref.watch(projectByBlockProvider(blockId));
     final completionAsync = ref.watch(blockCompletionPercentageProvider(blockId));
 
-    return AlertDialog(
-      contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-      title: projectAsync.when(
-        data: (project) => _DialogTitle(
-          projectName: project?.name ?? 'Deleted Project',
-          completionPercentage: completionAsync.valueOrNull,
-        ),
-        loading: () => const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2)),
-        error: (_, _) => const Text('Block Info'),
-      ),
-      content: blockAsync.when(
-        data: (blockWithTasks) => _DialogContent(blockWithTasks: blockWithTasks),
-        loading: () => const SizedBox(
+    return blockAsync.when(
+      data: (blockWithTasks) {
+        final projectAsync = ref.watch(
+          projectProvider(blockWithTasks.block.projectId),
+        );
+        return AlertDialog(
+          contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+          title: projectAsync.when(
+            data: (project) => _DialogTitle(
+              projectName: project?.name ?? 'Deleted Project',
+              completionPercentage: completionAsync.valueOrNull,
+            ),
+            loading: () => const SizedBox(
+              height: 24,
+              width: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            error: (_, _) => const Text('Block Info'),
+          ),
+          content: _DialogContent(blockWithTasks: blockWithTasks),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+      loading: () => AlertDialog(
+        contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+        title: const Text('Block Info'),
+        content: const SizedBox(
           height: 80,
           child: Center(child: CircularProgressIndicator()),
         ),
-        error: (error, _) => Text('Error loading block: $error'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close'),
-        ),
-      ],
+      error: (error, _) => AlertDialog(
+        title: const Text('Block Info'),
+        content: Text('Error loading block: $error'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
     );
   }
 }

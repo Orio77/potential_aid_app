@@ -115,6 +115,7 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
     });
 
     _ref.invalidate(blockTasksNotifier(blockId));
+    _ref.invalidate(projectByBlockProvider(blockId));
     await _loadScheduleForCurrentDate();
     _refreshWidget();
   }

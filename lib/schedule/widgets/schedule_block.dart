@@ -37,11 +37,13 @@ class ScheduleBlock extends ConsumerWidget {
     final AsyncValue<BlockWithTasks> blockAsync = ref.watch(
       blockTasksNotifier(blockId),
     );
-    final projectAsync = ref.watch(projectByBlockProvider(blockId));
     final dateTime = ref.watch(dateTimeNotifierProvider);
 
     return blockAsync.when(
       data: (block) {
+        final projectAsync = ref.watch(
+          projectProvider(block.block.projectId),
+        );
         return completionAsync.when(
           data: (completionPercentage) {
             return projectAsync.when(
