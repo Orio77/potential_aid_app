@@ -16,6 +16,9 @@ class ScheduleAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
+      // M3 AppBar tints/darkens when body content scrolls ("scrolled under"); keep a flat bar.
+      scrolledUnderElevation: 0,
+      surfaceTintColor: Colors.transparent,
       title: const Padding(
         padding: EdgeInsets.all(8),
         child: Text(
