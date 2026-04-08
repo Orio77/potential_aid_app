@@ -440,43 +440,37 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     final subtasks = _stateManager.subtasks;
     return SizedBox(
       width: _dynamicSubtasksWidth,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Flexible(
-            child: _reparentMode
-                ? ReparentSubtaskList(
-                    subtasks: subtasks,
-                    parentTask: widget.task,
-                    subtasksWidth: _dynamicSubtasksWidth,
-                    onReparent: _reparentSubtask,
-                    onPromoteToRoot: _promoteToRoot,
-                    onToggleSearch: _toggleSearchMode,
-                    onSelectExistingTask: _selectExistingTask,
-                    onRemove: _removeSubtask,
-                    onSaveNeeded: _saveSubtasks,
-                    onComplete: _handleTaskCompletion,
-                    onTextChanged: _handleTextChanged,
-                    onEdit: _editSubtask,
-                  )
-                : ReorderSubtaskList(
-                    subtasks: subtasks,
-                    parentTask: widget.task,
-                    onReorder: (oldIndex, newIndex) {
-                      setState(() =>
-                          _stateManager.reorderSubtasks(oldIndex, newIndex));
-                    },
-                    onToggleSearch: _toggleSearchMode,
-                    onSelectExistingTask: _selectExistingTask,
-                    onRemove: _removeSubtask,
-                    onSaveNeeded: _saveSubtasks,
-                    onComplete: _handleTaskCompletion,
-                    onTextChanged: _handleTextChanged,
-                    onEdit: _editSubtask,
-                  ),
-          ),
-        ],
-      ),
+      child: _reparentMode
+          ? ReparentSubtaskList(
+              subtasks: subtasks,
+              parentTask: widget.task,
+              subtasksWidth: _dynamicSubtasksWidth,
+              onReparent: _reparentSubtask,
+              onPromoteToRoot: _promoteToRoot,
+              onToggleSearch: _toggleSearchMode,
+              onSelectExistingTask: _selectExistingTask,
+              onRemove: _removeSubtask,
+              onSaveNeeded: _saveSubtasks,
+              onComplete: _handleTaskCompletion,
+              onTextChanged: _handleTextChanged,
+              onEdit: _editSubtask,
+            )
+          : ReorderSubtaskList(
+              subtasks: subtasks,
+              parentTask: widget.task,
+              onReorder: (oldIndex, newIndex) {
+                setState(
+                  () => _stateManager.reorderSubtasks(oldIndex, newIndex),
+                );
+              },
+              onToggleSearch: _toggleSearchMode,
+              onSelectExistingTask: _selectExistingTask,
+              onRemove: _removeSubtask,
+              onSaveNeeded: _saveSubtasks,
+              onComplete: _handleTaskCompletion,
+              onTextChanged: _handleTextChanged,
+              onEdit: _editSubtask,
+            ),
     );
   }
 
@@ -520,27 +514,41 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     );
   }
 
-  Widget _buildFloatingActionButtons() {
+  Widget _buildBottomActionBar(BuildContext context) {
     if (isLoading) return const SizedBox.shrink();
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        FloatingActionButton(
-          heroTag: "add_subtask",
-          onPressed: _addSubtask,
-          child: const Icon(Icons.add),
+    final theme = Theme.of(context);
+    return Material(
+      elevation: 4,
+      color: theme.colorScheme.surfaceContainerLow,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _addSubtask,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add subtask'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () async {
+                    await _saveSubtasks();
+                    if (mounted) setState(() {});
+                  },
+                  icon: const Icon(Icons.save),
+                  label: const Text('Save'),
+                ),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(width: 16),
-        FloatingActionButton(
-          heroTag: "save_subtasks",
-          onPressed: () async {
-            await _saveSubtasks();
-            setState(() {});
-          },
-          child: const Icon(Icons.save),
-        ),
-      ],
+      ),
     );
   }
 
@@ -567,19 +575,42 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: _dynamicTotalWidth,
-                child: Stack(
-                  children: [
-                    _buildTaskBreakdownScreen(widget.task),
-                    if (!isLoading) _buildArrows(),
-                  ],
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return SingleChildScrollView(
+                        scrollDirection: Axis.vertical,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: constraints.maxHeight,
+                          ),
+                          child: Center(
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              primary: false,
+                              child: SizedBox(
+                                width: _dynamicTotalWidth,
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    _buildTaskBreakdownScreen(widget.task),
+                                    _buildArrows(),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
-              ),
+                _buildBottomActionBar(context),
+              ],
             ),
-      floatingActionButton: _buildFloatingActionButtons(),
     );
   }
 }

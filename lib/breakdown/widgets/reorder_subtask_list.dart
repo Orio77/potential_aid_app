@@ -33,6 +33,7 @@ class ReorderSubtaskList extends StatelessWidget {
   Widget build(BuildContext context) {
     return ReorderableListView.builder(
       shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       buildDefaultDragHandles: false,
       itemCount: subtasks.length,
       itemBuilder: (context, index) {

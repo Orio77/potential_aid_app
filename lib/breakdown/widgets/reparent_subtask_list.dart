@@ -37,6 +37,7 @@ class ReparentSubtaskList extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.builder(
       shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       // +1 for the project-root drop zone at index 0
       itemCount: subtasks.length + 1,
       itemBuilder: (context, index) {
