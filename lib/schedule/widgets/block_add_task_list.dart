@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/task_search_notifier.dart';
+import 'package:potential_aid_app/schedule/widgets/block_task_row.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
 
 class BlockAddTaskList extends ConsumerStatefulWidget {
@@ -38,12 +39,10 @@ class _TaskListState extends ConsumerState<BlockAddTaskList> {
 
     if (widget.project?.id != oldWidget.project?.id) {
       setState(() {
-        // Use the initialTasks from parent (which handles caching)
         _tasks = List.from(widget.initialTasks ?? []);
         _taskNameController.clear();
       });
 
-      // Notify parent of the current task state
       widget.onTasksChanged(_tasks);
       _updatePredicates();
     } else {}
@@ -64,33 +63,108 @@ class _TaskListState extends ConsumerState<BlockAddTaskList> {
   }
 
   Widget _buildAddTasksView(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SearchTextField(
           controller: _taskNameController,
-          labelText: 'Search Project Tasks',
+          labelText: 'Search project tasks',
           searchProvider: taskSearchProvider,
           onItemSelected: (task) => _addTaskToList(task),
           getDisplayText: (task) => task.name,
           predicates: _predicates,
         ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: _tasks.isEmpty
-              ? const Center(child: Text('No tasks selected'))
-              : ListView.builder(
-                  itemCount: _tasks.length,
-                  itemBuilder: (context, index) {
-                    final task = _tasks[index];
-                    return ListTile(
-                      title: Text(task.name),
-                      trailing: IconButton(
-                        onPressed: () => _removeTaskFromList(index),
-                        icon: Icon(Icons.remove_circle_outline),
-                      ),
-                    );
-                  },
+        const SizedBox(height: 10),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Row(
+            children: [
+              Icon(Icons.checklist_rounded, size: 18, color: cs.primary),
+              const SizedBox(width: 8),
+              Text(
+                'Tasks in this block',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
                 ),
+              ),
+              const Spacer(),
+              Text(
+                '${_tasks.length}',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: Material(
+            color: cs.surfaceContainerHighest,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.9)),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: _tasks.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.playlist_add_check_outlined,
+                            size: 36,
+                            color: cs.outline,
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'No tasks yet',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              color: cs.onSurface,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Pick tasks from the search field above',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: cs.onSurfaceVariant,
+                              height: 1.35,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    itemCount: _tasks.length,
+                    separatorBuilder: (_, _) =>
+                        Divider(height: 1, color: cs.outlineVariant),
+                    itemBuilder: (context, index) {
+                      final task = _tasks[index];
+                      return BlockTaskRow(
+                        task: task,
+                        dense: true,
+                        trailing: IconButton(
+                          tooltip: 'Remove task',
+                          onPressed: () => _removeTaskFromList(index),
+                          icon: Icon(
+                            Icons.remove_circle_outline_rounded,
+                            color: cs.error,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
         ),
       ],
     );
@@ -117,6 +191,6 @@ class _TaskListState extends ConsumerState<BlockAddTaskList> {
   Widget build(BuildContext context) {
     return widget.project != null
         ? _buildAddTasksView(context)
-        : SizedBox.shrink();
+        : const SizedBox.shrink();
   }
 }

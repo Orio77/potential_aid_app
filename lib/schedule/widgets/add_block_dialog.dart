@@ -228,7 +228,7 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
                 const SizedBox(height: 8),
 
                 SizedBox(
-                  height: 190,
+                  height: 240,
                   child: BlockAddTaskList(
                     project: _selectedProject,
                     initialTasks: _selectedTasks,
