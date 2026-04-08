@@ -50,9 +50,12 @@ Widget _buildProgressSection(
       final availableHeight = constraints.maxHeight;
       final hasVeryTightHeight = availableHeight < 90;
 
-      return Padding(
-        padding: EdgeInsets.all(isVeryCompact ? 2.0 : (isCompact ? 4.0 : 8.0)),
-        child: Column(
+      final pad = EdgeInsets.all(isVeryCompact ? 2.0 : (isCompact ? 4.0 : 8.0));
+      final innerW = constraints.maxWidth.isFinite
+          ? (constraints.maxWidth - pad.horizontal).clamp(0.0, double.infinity)
+          : 200.0;
+
+      Widget column = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -153,7 +156,21 @@ Widget _buildProgressSection(
 
             ProgressBar(completionValue: current / goal),
           ],
-        ),
+        );
+
+      // Whenever height is bounded (grids, cards), scale down only if content
+      // exceeds space — avoids overflow with text scaling or ProgressBar extras.
+      if (constraints.hasBoundedHeight && innerW > 0) {
+        column = FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.topLeft,
+          child: SizedBox(width: innerW, child: column),
+        );
+      }
+
+      return Padding(
+        padding: pad,
+        child: column,
       );
     },
   );

@@ -38,10 +38,16 @@ class _RelatedProjectsListState extends ConsumerState<RelatedProjectsList> {
     List<ProjectData> allProjects,
     List<ProjectData> filtered,
   ) {
+    // Card has default margin (~4dp each side); Container also has padding — inner
+    // Column height must fit the header row + grid / empty state without overflowing.
+    const chromeBelowGrid = 120.0;
+    // Taller cells than aspect 2.0 so [ProjectProgressInfo] fits (title + stats + bar).
+    const gridRowExtent = 172.0;
     return Container(
-      height: ((filtered.length / 2).ceil() * 160.0) + 70.0,
+      height: ((filtered.length / 2).ceil() * gridRowExtent) + chromeBelowGrid,
       padding: const EdgeInsets.all(8.0),
       child: Card(
+        margin: EdgeInsets.zero,
         child: Column(
           children: [
             Padding(
@@ -89,7 +95,7 @@ class _RelatedProjectsListState extends ConsumerState<RelatedProjectsList> {
                         crossAxisCount: 2,
                         crossAxisSpacing: 8.0,
                         mainAxisSpacing: 8.0,
-                        childAspectRatio: 2.0,
+                        childAspectRatio: 1.52,
                       ),
                       itemCount: filtered.length,
                       itemBuilder: (context, index) {
@@ -105,7 +111,7 @@ class _RelatedProjectsListState extends ConsumerState<RelatedProjectsList> {
                           child: Card(
                             elevation: 2,
                             child: Padding(
-                              padding: const EdgeInsets.all(8.0),
+                              padding: const EdgeInsets.all(6.0),
                               child: ProjectProgressInfo(
                                 project: filtered[index],
                               ),
