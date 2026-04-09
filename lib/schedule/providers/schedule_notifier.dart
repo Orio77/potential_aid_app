@@ -6,6 +6,7 @@ import 'package:potential_aid_app/schedule/providers/block_with_tasks_notifier.d
 import 'package:potential_aid_app/schedule/providers/completion_notifier.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
+import 'package:potential_aid_app/pursuit/providers/pursuit_focus_notifier.dart';
 import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/widget/widget_update_service.dart';
@@ -246,6 +247,13 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
     );
 
     final task = await _database.taskDao.getTaskById(taskId);
+
+    if (task.isCompleted) {
+      await _ref
+          .read(pursuitFocusNotifierProvider.notifier)
+          .onTaskCompleted(taskId, task.projectId);
+    }
+
     _ref.invalidate(projectStatsNotifier(task.projectId));
 
     final monthYearDate = LocalDate.today();
@@ -268,6 +276,13 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
         completedCount,
       );
       _ref.invalidate(projectProvider(task.projectId));
+      final updated =
+          await _database.projectDao.getProjectById(task.projectId);
+      if (updated != null && updated.current >= updated.goal) {
+        await _ref
+            .read(pursuitFocusNotifierProvider.notifier)
+            .onProjectProgressChanged(task.projectId);
+      }
     }
 
     _ref.invalidate(projectTasksNotifier(task.projectId));
@@ -316,6 +331,13 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
     );
 
     _ref.invalidate(projectProvider(projectId));
+
+    final updated = await _database.projectDao.getProjectById(projectId);
+    if (updated != null && updated.current >= updated.goal) {
+      await _ref
+          .read(pursuitFocusNotifierProvider.notifier)
+          .onProjectProgressChanged(projectId);
+    }
 
     return res;
   }

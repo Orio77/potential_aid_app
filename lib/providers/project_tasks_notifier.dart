@@ -1,13 +1,15 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
+import 'package:potential_aid_app/pursuit/providers/pursuit_focus_notifier.dart';
 import 'package:potential_aid_app/providers/database_provider.dart';
 
 class ProjectTasksNotifier extends StateNotifier<AsyncValue<List<TaskData>>> {
+  final Ref _ref;
   final AppDatabase _database;
   final int projectId;
 
-  ProjectTasksNotifier(this._database, this.projectId)
+  ProjectTasksNotifier(this._ref, this._database, this.projectId)
     : super(const AsyncValue.loading()) {
     _loadTasks();
   }
@@ -69,7 +71,14 @@ class ProjectTasksNotifier extends StateNotifier<AsyncValue<List<TaskData>>> {
   }
 
   Future<int> updateTask(int taskId, TaskCompanion updates) async {
+    final before = await _database.taskDao.getTaskById(taskId);
     final result = await _database.taskDao.updateTask(taskId, updates);
+    final after = await _database.taskDao.getTaskById(taskId);
+    if (!before.isCompleted && after.isCompleted) {
+      await _ref
+          .read(pursuitFocusNotifierProvider.notifier)
+          .onTaskCompleted(after.id, after.projectId);
+    }
     await refresh();
     return result;
   }
@@ -104,5 +113,5 @@ final projectTasksNotifier =
       int
     >((ref, projectId) {
       final database = ref.watch(databaseProvider);
-      return ProjectTasksNotifier(database, projectId);
+      return ProjectTasksNotifier(ref, database, projectId);
     });

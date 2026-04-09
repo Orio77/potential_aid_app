@@ -32,7 +32,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 28;
+  int get schemaVersion => 29;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -40,6 +40,11 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
     },
     onUpgrade: (Migrator m, int from, int to) async {
+      if (from < 29) {
+        await customStatement(
+          'ALTER TABLE settings ADD COLUMN pursuit_state_json TEXT',
+        );
+      }
       if (from < 27) {
         await customStatement(
           'ALTER TABLE settings ADD COLUMN default_timeline_project_id INTEGER',

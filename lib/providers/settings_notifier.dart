@@ -239,6 +239,11 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   Future<void> _saveCurrentSettings() async {
     if (!mounted) return;
 
+    final existing =
+        await (_database.select(_database.settings)
+              ..where((t) => t.id.equals(1)))
+            .getSingleOrNull();
+
     final settings = SettingsCompanion.insert(
       id: const Value(1),
       defaultStartTime: state.defaultStartTime,
@@ -248,13 +253,9 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
       defaultTimelineCategoryId: Value(state.defaultTimelineCategoryId),
       defaultTimelineShowProjects: Value(state.defaultTimelineShowProjects),
       defaultTimelineUncompletedOnly: Value(state.defaultTimelineUncompletedOnly),
+      pursuitStateJson: Value(existing?.pursuitStateJson),
       lastModified: DateTime.now(),
     );
-
-    final existing =
-        await (_database.select(_database.settings)
-              ..where((t) => t.id.equals(1)))
-            .getSingleOrNull();
 
     if (existing != null) {
       await (_database.update(_database.settings)..where((t) => t.id.equals(1)))

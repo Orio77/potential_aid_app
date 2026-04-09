@@ -21,6 +21,9 @@ class Settings extends Table {
 
   BoolColumn get defaultTimelineUncompletedOnly => boolean().nullable()();
 
+  /// JSON: pursuit focus slots, project queue, per-project task queues.
+  TextColumn get pursuitStateJson => text().nullable()();
+
   // Sync Fields
   TextColumn get supabaseId => text().nullable()();
   DateTimeColumn get lastModified => dateTime()();

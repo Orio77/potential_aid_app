@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
@@ -98,7 +98,9 @@ class ProjectsNotifier extends StateNotifier<List<ProjectData>> {
 final projectsNotifierProvider =
     StateNotifierProvider<ProjectsNotifier, List<ProjectData>>((ref) {
       final database = ref.watch(databaseProvider);
-      return ProjectsNotifier(database);
+      final notifier = ProjectsNotifier(database);
+      notifier.setPredicates([(p) => p.current.isSmallerThan(p.goal)]);
+      return notifier;
     });
 
 final projectProvider = FutureProvider.family<ProjectData?, int>((

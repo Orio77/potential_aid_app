@@ -3,6 +3,7 @@ import 'package:potential_aid_app/claude/screens/claude_suggestions_screen.dart'
 import 'package:potential_aid_app/stats/screens/completion_stats_screen.dart';
 import 'package:potential_aid_app/projects/screens/project_category_list_screen.dart';
 import 'package:potential_aid_app/timeline/screens/timeline_screen.dart';
+import 'package:potential_aid_app/pursuit/screens/pursuit_focus_screen.dart';
 import 'package:potential_aid_app/widgets/sync/sync_button.dart';
 
 class ScheduleAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -19,11 +20,23 @@ class ScheduleAppBar extends StatelessWidget implements PreferredSizeWidget {
       // M3 AppBar tints/darkens when body content scrolls ("scrolled under"); keep a flat bar.
       scrolledUnderElevation: 0,
       surfaceTintColor: Colors.transparent,
-      title: const Padding(
-        padding: EdgeInsets.all(8),
-        child: Text(
-          'Daily Schedule',
-          style: TextStyle(fontWeight: FontWeight.w500, fontSize: 24),
+      title: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              tooltip: 'Pursuit focus',
+              icon: const Icon(Icons.filter_3),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (context) => const PursuitFocusScreen(),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
       ),
       centerTitle: true,
