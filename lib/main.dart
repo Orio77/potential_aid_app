@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -12,7 +14,9 @@ import 'package:time_machine/time_machine.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  HomeWidget.registerInteractivityCallback(widgetBackgroundCallback);
+  if (Platform.isAndroid || Platform.isIOS) {
+    HomeWidget.registerInteractivityCallback(widgetBackgroundCallback);
+  }
 
   // Load environment variables first
   await dotenv.load(fileName: "assets/.env");
