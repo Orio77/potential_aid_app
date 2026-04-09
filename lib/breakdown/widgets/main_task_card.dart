@@ -5,8 +5,8 @@ import 'package:potential_aid_app/breakdown/widgets/subtask_buttons.dart';
 
 /// The left-hand task card in the breakdown layout.
 ///
-/// Pass [onDrop] to enable reparent-mode drag-target behaviour — a subtask
-/// index is delivered when one is dropped onto the card.
+/// Pass [onDrop] for reparent mode: dropping a subtask on the card promotes it
+/// to the same parent and depth as this task (sibling of this task).
 class MainTaskCard extends StatelessWidget {
   final TaskData task;
   final GlobalKey cardKey;
@@ -17,6 +17,10 @@ class MainTaskCard extends StatelessWidget {
   /// with the index of the dragged subtask.
   final Function(int)? onDrop;
 
+  /// When [onDrop] is set, used to decide if a drag index may be dropped here
+  /// (e.g. only persisted subtasks).
+  final bool Function(int dragIndex)? onWillAcceptDrop;
+
   const MainTaskCard({
     super.key,
     required this.task,
@@ -24,6 +28,7 @@ class MainTaskCard extends StatelessWidget {
     required this.onEdit,
     required this.onNavigateToProject,
     this.onDrop,
+    this.onWillAcceptDrop,
   });
 
   @override
@@ -32,19 +37,29 @@ class MainTaskCard extends StatelessWidget {
     if (onDrop == null) return card;
 
     return DragTarget<int>(
-      onWillAcceptWithDetails: (_) => true,
+      hitTestBehavior: HitTestBehavior.opaque,
+      onWillAcceptWithDetails: (details) =>
+          onWillAcceptDrop?.call(details.data) ?? true,
       onAcceptWithDetails: (details) => onDrop!(details.data),
       builder: (context, candidateData, _) {
         final hovered = candidateData.isNotEmpty;
         return AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          decoration: hovered
-              ? BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.deepPurple, width: 2),
-                  color: Colors.deepPurple.withValues(alpha: 0.06),
-                )
-              : null,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: hovered
+                ? Colors.deepPurple.withValues(alpha: 0.06)
+                : null,
+            boxShadow: hovered
+                ? [
+                    BoxShadow(
+                      color: Colors.deepPurple.withValues(alpha: 0.45),
+                      blurRadius: 6,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                : null,
+          ),
           child: card,
         );
       },

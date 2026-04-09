@@ -266,6 +266,25 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
 
   // ── Drag-to-reparent ────────────────────────────────────────────────────────
 
+  bool _canDropSubtaskOnMain(int dragIndex) {
+    final dragged = _stateManager.getSubtask(dragIndex);
+    return dragged != null && dragged.isExisting;
+  }
+
+  /// Drop on the main task card [P]: promote subtask [S] one level — same parent
+  /// and depth as [P] (sibling of [P]). Subtree under [S] shifts by the depth delta.
+  /// If [P] is at project root, [S] moves to root (parent null, depth 0).
+  Future<void> _reparentOntoMainTask(int dragIndex) async {
+    final dragged = _stateManager.getSubtask(dragIndex);
+    if (dragged == null || !dragged.isExisting) return;
+
+    await _moveToParent(
+      dragIndex,
+      newParentId: widget.task.parentTaskId,
+      newDepth: widget.task.depth,
+    );
+  }
+
   /// When a subtask is dropped onto another subtask, reparent it under that
   /// target (the target becomes the new parent).
   Future<void> _reparentSubtask(int dragIndex, int targetIndex) async {
@@ -367,7 +386,8 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
               cardKey: mainTaskKey,
               onEdit: () => _editTask(widget.task),
               onNavigateToProject: _navigateToProject,
-              onDrop: _reparentMode ? _promoteToSibling : null,
+              onDrop: _reparentMode ? _reparentOntoMainTask : null,
+              onWillAcceptDrop: _reparentMode ? _canDropSubtaskOnMain : null,
             ),
             SizedBox(width: TaskBreakdownConstants.spacing),
             _buildSubtasksList(),
@@ -375,27 +395,6 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
         ),
       ),
     );
-  }
-
-  /// Promotes the subtask at [dragIndex] to be a sibling of widget.task —
-  /// i.e. parentTaskId = widget.task.parentTaskId, depth = widget.task.depth.
-  /// If widget.task is already depth 0 this is the same as _promoteToRoot.
-  Future<void> _promoteToSibling(int dragIndex) async {
-    if (widget.task.depth == 0) {
-      await _promoteToRoot(dragIndex);
-      return;
-    }
-    await _moveToParent(
-      dragIndex,
-      newParentId: widget.task.parentTaskId,
-      newDepth: widget.task.depth,
-    );
-  }
-
-  /// Detaches the subtask from all parents — becomes a root task in the project
-  /// (parentTaskId = null, depth = 0).
-  Future<void> _promoteToRoot(int dragIndex) async {
-    await _moveToParent(dragIndex, newParentId: null, newDepth: 0);
   }
 
   Future<void> _moveToParent(
@@ -410,6 +409,13 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
         ref.read(projectTasksNotifier(widget.task.projectId).notifier);
 
     final draggedTask = await notifier.getTask(dragged.savedId);
+    if (!mounted) return;
+
+    if (draggedTask.parentTaskId == newParentId &&
+        draggedTask.depth == newDepth) {
+      return;
+    }
+
     final depthDelta = newDepth - draggedTask.depth;
 
     await notifier.updateTaskSilent(
@@ -446,7 +452,6 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
               parentTask: widget.task,
               subtasksWidth: _dynamicSubtasksWidth,
               onReparent: _reparentSubtask,
-              onPromoteToRoot: _promoteToRoot,
               onToggleSearch: _toggleSearchMode,
               onSelectExistingTask: _selectExistingTask,
               onRemove: _removeSubtask,

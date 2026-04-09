@@ -3,12 +3,13 @@ import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/breakdown/models/subtask_item.dart';
 import 'package:potential_aid_app/breakdown/widgets/subtask_card.dart';
 
+/// Subtask rows for reparent mode. Dropping on another row nests under that
+/// task; dropping on the main task card (handled by the screen) promotes one level.
 class ReparentSubtaskList extends StatelessWidget {
   final List<SubtaskItem> subtasks;
   final TaskData parentTask;
   final double subtasksWidth;
   final Function(int dragIndex, int targetIndex) onReparent;
-  final Function(int dragIndex) onPromoteToRoot;
   final Function(int) onToggleSearch;
   final Function(int, TaskData) onSelectExistingTask;
   final Function(int) onRemove;
@@ -23,7 +24,6 @@ class ReparentSubtaskList extends StatelessWidget {
     required this.parentTask,
     required this.subtasksWidth,
     required this.onReparent,
-    required this.onPromoteToRoot,
     required this.onToggleSearch,
     required this.onSelectExistingTask,
     required this.onRemove,
@@ -38,12 +38,9 @@ class ReparentSubtaskList extends StatelessWidget {
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      // +1 for the project-root drop zone at index 0
-      itemCount: subtasks.length + 1,
+      itemCount: subtasks.length,
       itemBuilder: (context, index) {
-        if (index == 0) return _buildProjectRootDropZone(context);
-
-        final realIndex = index - 1;
+        final realIndex = index;
         final subtask = subtasks[realIndex];
 
         final card = SubtaskCard(
@@ -59,88 +56,56 @@ class ReparentSubtaskList extends StatelessWidget {
           onEdit: onEdit,
         );
 
-        return DragTarget<int>(
+        // Draggable wraps DragTarget so the row's DragTarget is removed while dragging
+        // (childWhenDragging replaces the subtree); the reverse broke drops on the main card.
+        return LongPressDraggable<int>(
           key: Key(subtask.id),
-          onWillAcceptWithDetails: (d) => d.data != realIndex && subtask.isExisting,
-          onAcceptWithDetails: (d) => onReparent(d.data, realIndex),
-          builder: (context, candidateData, _) {
-            final hovered = candidateData.isNotEmpty;
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 120),
-              decoration: hovered
-                  ? BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.deepPurple, width: 2),
-                      color: Colors.deepPurple.withValues(alpha: 0.06),
-                    )
-                  : null,
-              child: LongPressDraggable<int>(
-                data: realIndex,
-                delay: const Duration(milliseconds: 300),
-                feedback: Material(
-                  elevation: 6,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    width: subtasksWidth * 0.85,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.deepPurple.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.deepPurple),
-                    ),
-                    child: Text(
-                      subtask.controller.text,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-                childWhenDragging: Opacity(opacity: 0.3, child: card),
-                child: card,
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildProjectRootDropZone(BuildContext context) {
-    return DragTarget<int>(
-      key: const ValueKey('project_root_drop'),
-      onWillAcceptWithDetails: (_) => true,
-      onAcceptWithDetails: (d) => onPromoteToRoot(d.data),
-      builder: (context, candidateData, _) {
-        final hovered = candidateData.isNotEmpty;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-          decoration: BoxDecoration(
+          data: realIndex,
+          delay: const Duration(milliseconds: 300),
+          feedback: Material(
+            elevation: 6,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: hovered ? Colors.orange : Colors.grey.shade400,
-              width: hovered ? 2 : 1,
+            child: Container(
+              width: subtasksWidth * 0.85,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.deepPurple.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.deepPurple),
+              ),
+              child: Text(
+                subtask.controller.text,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-            color: hovered
-                ? Colors.orange.withValues(alpha: 0.10)
-                : Colors.grey.shade100,
           ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.drive_file_move_outline,
-                size: 18,
-                color: hovered ? Colors.orange : Colors.grey,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Move to project root (depth 0)',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: hovered ? Colors.orange.shade800 : Colors.grey,
+          childWhenDragging: Opacity(opacity: 0.3, child: card),
+          child: DragTarget<int>(
+            onWillAcceptWithDetails: (d) =>
+                d.data != realIndex && subtask.isExisting,
+            onAcceptWithDetails: (d) => onReparent(d.data, realIndex),
+            builder: (context, candidateData, _) {
+              final hovered = candidateData.isNotEmpty;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 120),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: hovered
+                      ? Colors.deepPurple.withValues(alpha: 0.06)
+                      : null,
+                  boxShadow: hovered
+                      ? [
+                          BoxShadow(
+                            color: Colors.deepPurple.withValues(alpha: 0.35),
+                            blurRadius: 4,
+                            spreadRadius: 0.5,
+                          ),
+                        ]
+                      : null,
                 ),
-              ),
-            ],
+                child: card,
+              );
+            },
           ),
         );
       },
