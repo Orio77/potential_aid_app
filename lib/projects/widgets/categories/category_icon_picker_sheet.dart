@@ -286,6 +286,18 @@ const List<_IconGroup> _kGroups = [
   ]),
 ];
 
+/// Reverse lookup: code point → the [IconData] constant from the curated set.
+/// Falls back to [Icons.category_outlined] for unknown code points, which keeps
+/// tree-shaking happy because every referenced icon is a compile-time constant.
+final Map<int, IconData> _codePointMap = Map.fromEntries(
+  _kGroups.expand((g) => g.choices).map((c) => MapEntry(c.icon.codePoint, c.icon)),
+);
+
+IconData iconDataFromCodePoint(int? codePoint) {
+  if (codePoint == null) return Icons.category_outlined;
+  return _codePointMap[codePoint] ?? Icons.category_outlined;
+}
+
 /// Modern bottom sheet: search, grouped grid, drag handle. Returns selected [IconData] or null.
 Future<IconData?> showCategoryIconPicker(BuildContext context) {
   return showModalBottomSheet<IconData>(

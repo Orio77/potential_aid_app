@@ -13,6 +13,7 @@ import 'package:potential_aid_app/projects/widgets/select_project_dialog.dart';
 import 'package:potential_aid_app/timeline/widgets/date_card_list.dart';
 import 'package:potential_aid_app/timeline/widgets/mobile_project_list.dart';
 import 'package:potential_aid_app/timeline/widgets/mobile_task_agenda.dart';
+import 'package:potential_aid_app/projects/widgets/categories/category_icon_picker_sheet.dart' show iconDataFromCodePoint;
 import 'package:potential_aid_app/timeline/widgets/my_categories_picker_dialog.dart';
 import 'package:potential_aid_app/timeline/widgets/project_intervals.dart';
 import 'package:potential_aid_app/timeline/widgets/task_cards.dart';
@@ -383,10 +384,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
               icon: Icon(
                 selectedCategory == null
                     ? Icons.category
-                    : IconData(
-                        selectedCategory!.iconCodePoint ?? 0,
-                        fontFamily: 'MaterialIcons',
-                      ),
+                    : iconDataFromCodePoint(selectedCategory!.iconCodePoint),
               ),
             ),
             IconButton(

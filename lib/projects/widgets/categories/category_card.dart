@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:potential_aid_app/data/database.dart';
+import 'package:potential_aid_app/projects/widgets/categories/category_icon_picker_sheet.dart';
 
 class CategoryCard extends StatelessWidget {
   final ProjectCategoryData data;
@@ -51,7 +52,7 @@ class CategoryCard extends StatelessWidget {
 
   Widget _buildIconView(BuildContext context, int iconCodePoint) {
     return Icon(
-      IconData(iconCodePoint, fontFamily: 'MaterialIcons'),
+      iconDataFromCodePoint(iconCodePoint),
       size: 40,
       color: Theme.of(context).colorScheme.onSurfaceVariant,
     );
@@ -89,7 +90,7 @@ class CategoryCard extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Icon(
-          IconData(iconCodePoint, fontFamily: 'MaterialIcons'),
+          iconDataFromCodePoint(iconCodePoint),
           size: 36,
           color: theme.colorScheme.onSurfaceVariant,
         ),

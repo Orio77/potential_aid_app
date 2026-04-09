@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/projects/providers/project_categories_notifier.dart';
+import 'package:potential_aid_app/projects/widgets/categories/category_icon_picker_sheet.dart' show iconDataFromCodePoint;
 
 class MyCategoriesPickerDialog extends ConsumerStatefulWidget {
   const MyCategoriesPickerDialog({super.key});
@@ -26,12 +27,7 @@ class _MyCategoriesPickerDialogState
           if (_selectedCategory == null) const Text("None"),
           if (_selectedCategory != null &&
               _selectedCategory!.iconCodePoint != null)
-            Icon(
-              IconData(
-                _selectedCategory!.iconCodePoint!,
-                fontFamily: 'MaterialIcons',
-              ),
-            ),
+            Icon(iconDataFromCodePoint(_selectedCategory!.iconCodePoint)),
           if (_selectedCategory != null && _selectedCategory!.title != null)
             Text(_selectedCategory!.title!),
         ],
@@ -45,12 +41,7 @@ class _MyCategoriesPickerDialogState
             final category = categories[index];
             final isSelected = _selectedCategory?.id == category.id;
             return ListTile(
-              leading: Icon(
-                IconData(
-                  category.iconCodePoint ?? 0,
-                  fontFamily: 'MaterialIcons',
-                ),
-              ),
+              leading: Icon(iconDataFromCodePoint(category.iconCodePoint)),
               title: Text(category.title ?? ''),
               selected: isSelected,
               onTap: () {

@@ -24,9 +24,8 @@ android {
         applicationId = "com.example.potential_aid_app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        // super_native_extensions requires minSdk 23
-        // Override Flutter's default minSdk to ensure compatibility
-        minSdk = flutter.minSdkVersion
+        // super_native_extensions requires minSdk 23 (manifest merger fails at 21).
+        minSdk = maxOf(flutter.minSdkVersion, 23)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/projects/providers/project_categories_notifier.dart';
 import 'package:potential_aid_app/projects/widgets/categories/add_to_category_dialog.dart';
+import 'package:potential_aid_app/projects/widgets/categories/category_icon_picker_sheet.dart';
 
 class AddToCategory extends ConsumerWidget {
   final int projectId;
@@ -32,12 +33,7 @@ class AddToCategory extends ConsumerWidget {
               projectId,
               category.iconCodePoint ?? Icons.category_rounded.codePoint,
             ),
-            icon: Icon(
-              IconData(
-                category.iconCodePoint ?? Icons.category_rounded.codePoint,
-                fontFamily: 'MaterialIcons',
-              ),
-            ),
+            icon: Icon(iconDataFromCodePoint(category.iconCodePoint)),
           );
         }
       },

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:potential_aid_app/data/database.dart';
+import 'package:potential_aid_app/projects/widgets/categories/category_icon_picker_sheet.dart';
 
 Future<ProjectCategoryData?> showProjectCategoryPicker({
   required BuildContext context,
@@ -24,11 +25,7 @@ Future<ProjectCategoryData?> showProjectCategoryPicker({
                 ? c.title!
                 : 'Untitled';
             return ListTile(
-              leading: Icon(
-                c.iconCodePoint != null
-                    ? IconData(c.iconCodePoint!, fontFamily: 'MaterialIcons')
-                    : Icons.category_outlined,
-              ),
+              leading: Icon(iconDataFromCodePoint(c.iconCodePoint)),
               title: Text(name),
               onTap: () => Navigator.pop(ctx, c),
             );

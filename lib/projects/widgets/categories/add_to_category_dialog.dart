@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/projects/providers/project_categories_notifier.dart';
+import 'package:potential_aid_app/projects/widgets/categories/category_icon_picker_sheet.dart';
 
 class AddToCategoryDialog extends ConsumerStatefulWidget {
   final int projectId;
@@ -52,12 +53,7 @@ class _AddToCategoryDialogState extends ConsumerState<AddToCategoryDialog> {
 
                   if (_selectedCategory != null) ...[
                     if (_selectedCategory!.iconCodePoint != null)
-                      Icon(
-                        IconData(
-                          _selectedCategory!.iconCodePoint!,
-                          fontFamily: 'MaterialIcons',
-                        ),
-                      ),
+                      Icon(iconDataFromCodePoint(_selectedCategory!.iconCodePoint)),
                     if (_selectedCategory!.title != null)
                       Text(_selectedCategory!.title!)
                     else
@@ -90,14 +86,7 @@ class _AddToCategoryDialogState extends ConsumerState<AddToCategoryDialog> {
                     final category = categories[index];
                     return ListTile(
                       title: Text(category.title ?? 'Untitled Category'),
-                      leading: category.iconCodePoint != null
-                          ? Icon(
-                              IconData(
-                                category.iconCodePoint!,
-                                fontFamily: 'MaterialIcons',
-                              ),
-                            )
-                          : const Icon(Icons.category),
+                      leading: Icon(iconDataFromCodePoint(category.iconCodePoint)),
                       onTap: () {
                         setState(() {
                           _selectedCategory = category;

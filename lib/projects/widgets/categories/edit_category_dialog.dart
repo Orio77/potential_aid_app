@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/projects/providers/project_categories_notifier.dart';
-import 'package:potential_aid_app/projects/widgets/categories/category_icon_picker_sheet.dart';
+import 'package:potential_aid_app/projects/widgets/categories/category_icon_picker_sheet.dart' show showCategoryIconPicker, iconDataFromCodePoint;
 
 class EditCategoryDialog extends ConsumerStatefulWidget {
   final ProjectCategoryData category;
@@ -23,9 +23,7 @@ class _EditCategoryDialogState extends ConsumerState<EditCategoryDialog> {
     super.initState();
     _nameController = TextEditingController(text: widget.category.title ?? '');
     final code = widget.category.iconCodePoint;
-    _chosenIcon = code != null
-        ? IconData(code, fontFamily: 'MaterialIcons')
-        : null;
+    _chosenIcon = code != null ? iconDataFromCodePoint(code) : null;
   }
 
   @override
