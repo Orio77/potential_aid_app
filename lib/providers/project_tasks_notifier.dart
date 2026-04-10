@@ -75,9 +75,18 @@ class ProjectTasksNotifier extends StateNotifier<AsyncValue<List<TaskData>>> {
     final result = await _database.taskDao.updateTask(taskId, updates);
     final after = await _database.taskDao.getTaskById(taskId);
     if (!before.isCompleted && after.isCompleted) {
-      await _ref
-          .read(pursuitFocusNotifierProvider.notifier)
-          .onTaskCompleted(after.id, after.projectId);
+      final notifier = _ref.read(pursuitFocusNotifierProvider.notifier);
+      await notifier.onTaskCompleted(after.id, after.projectId);
+
+      final descendants =
+          await _database.taskDao.getAllDescendantsRecursive(after.id);
+      final completedIds = descendants
+          .where((d) => d.isCompleted)
+          .map((d) => d.id)
+          .toList();
+      if (completedIds.isNotEmpty) {
+        await notifier.onTasksCompleted(completedIds, after.projectId);
+      }
     }
     await refresh();
     return result;

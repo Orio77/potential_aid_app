@@ -1,8 +1,8 @@
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
-import 'package:potential_aid_app/providers/database_provider.dart';
 import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
 import 'package:potential_aid_app/projects/providers/task_progress_providers.dart';
 
@@ -54,11 +54,12 @@ class _ProgressUpdateDialogState extends ConsumerState<ProgressUpdateDialog> {
     });
     try {
       await ref
-          .read(databaseProvider)
-          .taskDao
-          .updateTaskProgress(widget.task.id, value);
+          .read(projectTasksNotifier(widget.task.projectId).notifier)
+          .updateTask(
+            widget.task.id,
+            TaskCompanion(current: Value(value)),
+          );
 
-      ref.invalidate(projectTasksNotifier(widget.task.projectId));
       if (widget.task.parentTaskId != null) {
         ref.invalidate(taskSubtasksProvider(widget.task.parentTaskId!));
       }

@@ -111,14 +111,17 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
     return transaction(() async {
       final existing = await getTaskById(taskId);
 
-      final nextCurrent = updates.current.present
-          ? updates.current.value
-          : existing.current;
       final nextEndGoal = updates.endGoal.present
           ? updates.endGoal.value
           : existing.endGoal;
 
-      var cappedCurrent = nextCurrent;
+      final forceComplete = updates.isCompleted.present &&
+          updates.isCompleted.value == true &&
+          !existing.isCompleted;
+
+      var cappedCurrent = forceComplete
+          ? nextEndGoal
+          : (updates.current.present ? updates.current.value : existing.current);
       if (cappedCurrent > nextEndGoal) cappedCurrent = nextEndGoal;
       if (cappedCurrent < 0) cappedCurrent = 0;
 
@@ -161,26 +164,27 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
   }
 
   Future<void> deleteTask(int taskId) async {
-    // Get current version for soft delete
-    final currentTask = await getTaskById(taskId);
+    await transaction(() async {
+      final currentTask = await getTaskById(taskId);
 
-    // Cascade soft-delete all descendants first
-    final descendants = await getAllDescendantsRecursive(taskId);
-    if (descendants.isNotEmpty) {
-      await batch((b) {
-        for (final desc in descendants) {
-          b.update(
-            task,
-            _markForDeletion(desc.version),
-            where: (row) => row.id.equals(desc.id),
-          );
-        }
-      });
-    }
+      // Cascade soft-delete all descendants first
+      final descendants = await getAllDescendantsRecursive(taskId);
+      if (descendants.isNotEmpty) {
+        await batch((b) {
+          for (final desc in descendants) {
+            b.update(
+              task,
+              _markForDeletion(desc.version),
+              where: (row) => row.id.equals(desc.id),
+            );
+          }
+        });
+      }
 
-    await (update(task)..where((t) => t.id.equals(taskId))).write(
-      _markForDeletion(currentTask.version),
-    );
+      await (update(task)..where((t) => t.id.equals(taskId))).write(
+        _markForDeletion(currentTask.version),
+      );
+    });
   }
 
   /// Soft-deletes all non-deleted tasks belonging to [projectId].
@@ -218,18 +222,13 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
     return await query.get();
   }
 
-  /// All non-deleted tasks for a project — completed and uncompleted —
-  /// sorted uncompleted first, then by orderIndex.
+  /// All non-deleted, non-completed tasks for a project, sorted by orderIndex.
   Future<List<TaskData>> getAllTasksByProject(int projectId) async {
     final query = select(task)
       ..where((t) => t.projectId.equals(projectId))
       ..where((t) => t.isDeleted.equals(false))
       ..where((t) => t.isCompleted.equals(false))
-      ..orderBy([
-        (t) =>
-            OrderingTerm(expression: t.isCompleted), // false(0) before true(1)
-        (t) => OrderingTerm(expression: t.orderIndex),
-      ]);
+      ..orderBy([(t) => OrderingTerm(expression: t.orderIndex)]);
     return await query.get();
   }
 
@@ -243,7 +242,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
 
       bool completed = taskData.current + count >= taskData.endGoal;
 
-      if (completed) {
+      if (completed && !taskData.isCompleted) {
         await _completeAllSubtasks(taskId, completedAt);
       }
 
@@ -262,8 +261,11 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
         _withSyncFields(
           TaskCompanion(
             isCompleted: Value(completed),
-            current: Value(taskData.current + count),
+            current: Value(completed
+                ? taskData.endGoal
+                : taskData.current + count),
             completedAt: Value(completed ? completedAt : null),
+            version: Value(taskData.version),
           ),
         ),
       );
@@ -279,31 +281,35 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
 
     if (incompleteSubtasks.isEmpty) return;
 
-    await batch((batch) {
+    await batch((b) {
       for (final subtask in incompleteSubtasks) {
-        batch.insert(
-          db.taskCompletion,
-          TaskCompletionCompanion.insert(
-            taskId: subtask.id,
-            count: subtask.endGoal - subtask.current,
-            completedAt: completedAt,
-            lastModified: DateTime.now(),
-            needsSync: Value(true),
-            version: Value(1),
-          ),
-        );
+        final remaining = subtask.endGoal - subtask.current;
+        if (remaining > 0) {
+          b.insert(
+            db.taskCompletion,
+            TaskCompletionCompanion.insert(
+              taskId: subtask.id,
+              count: remaining,
+              completedAt: completedAt,
+              lastModified: DateTime.now(),
+              needsSync: const Value(true),
+              version: const Value(1),
+            ),
+          );
+        }
       }
     });
 
-    await batch((batch) {
+    await batch((b) {
       for (final subtask in incompleteSubtasks) {
-        batch.update(
+        b.update(
           task,
           _withSyncFields(
             TaskCompanion(
-              isCompleted: Value(true),
+              isCompleted: const Value(true),
               current: Value(subtask.endGoal),
               completedAt: Value(completedAt),
+              version: Value(subtask.version),
             ),
           ),
           where: (t) => t.id.equals(subtask.id),
@@ -365,17 +371,20 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
 
     await batch((b) {
       for (final t in incompleteTasks) {
-        b.insert(
-          db.taskCompletion,
-          TaskCompletionCompanion.insert(
-            taskId: t.id,
-            count: t.endGoal - t.current,
-            completedAt: completedAt,
-            lastModified: DateTime.now(),
-            needsSync: const Value(true),
-            version: const Value(1),
-          ),
-        );
+        final remaining = t.endGoal - t.current;
+        if (remaining > 0) {
+          b.insert(
+            db.taskCompletion,
+            TaskCompletionCompanion.insert(
+              taskId: t.id,
+              count: remaining,
+              completedAt: completedAt,
+              lastModified: DateTime.now(),
+              needsSync: const Value(true),
+              version: const Value(1),
+            ),
+          );
+        }
       }
     });
 
@@ -387,6 +396,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
             isCompleted: const Value(true),
             current: Value(t.endGoal),
             completedAt: Value(completedAt),
+            version: Value(t.version),
           )),
           where: (row) => row.id.equals(t.id),
         );

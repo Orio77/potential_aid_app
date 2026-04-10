@@ -185,6 +185,28 @@ class PursuitFocusNotifier extends StateNotifier<PursuitFocusState> {
     await _persist(state.copyWith(taskQueues: newMap, unifiedTaskOrder: newUto));
   }
 
+  /// Batch-remove multiple completed tasks from the per-project queue and
+  /// the unified task order. Used to clean up auto-completed descendants.
+  Future<void> onTasksCompleted(List<int> taskIds, int projectId) async {
+    if (taskIds.isEmpty) return;
+    await _load();
+
+    final idSet = taskIds.toSet();
+    final newMap = Map<int, List<int>>.from(state.taskQueues);
+    final q = List<int>.from(newMap[projectId] ?? []);
+    q.removeWhere(idSet.contains);
+    if (q.isEmpty) {
+      newMap.remove(projectId);
+    } else {
+      newMap[projectId] = q;
+    }
+
+    final newUto = List<int>.from(state.unifiedTaskOrder)
+      ..removeWhere(idSet.contains);
+
+    await _persist(state.copyWith(taskQueues: newMap, unifiedTaskOrder: newUto));
+  }
+
   // ── Slot management ─────────────────────────────────────────────────────────
 
   Future<void> setSlot(int index, int? projectId) async {

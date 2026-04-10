@@ -249,9 +249,18 @@ class ScheduleNotifier extends StateNotifier<List<int>> {
     final task = await _database.taskDao.getTaskById(taskId);
 
     if (task.isCompleted) {
-      await _ref
-          .read(pursuitFocusNotifierProvider.notifier)
-          .onTaskCompleted(taskId, task.projectId);
+      final notifier = _ref.read(pursuitFocusNotifierProvider.notifier);
+      await notifier.onTaskCompleted(taskId, task.projectId);
+
+      final descendants =
+          await _database.taskDao.getAllDescendantsRecursive(taskId);
+      final completedIds = descendants
+          .where((d) => d.isCompleted)
+          .map((d) => d.id)
+          .toList();
+      if (completedIds.isNotEmpty) {
+        await notifier.onTasksCompleted(completedIds, task.projectId);
+      }
     }
 
     _ref.invalidate(projectStatsNotifier(task.projectId));
