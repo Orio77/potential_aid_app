@@ -208,6 +208,7 @@ class SyncRecordUpdater {
             defaultTimelineUncompletedOnly: Value(
               remoteRecord['default_timeline_uncompleted_only'] as bool? ?? true,
             ),
+            pursuitStateJson: Value(remoteRecord['pursuit_state_json'] as String?),
             lastModified: Value(SyncConverter.parseDateTime(remoteRecord['last_modified']) ?? now),
             needsSync: const Value(false),
             isDeleted: Value(remoteRecord['is_deleted'] as bool? ?? false),

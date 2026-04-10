@@ -116,6 +116,7 @@ class PursuitFocusNotifier extends StateNotifier<PursuitFocusState> {
       SettingsCompanion(
         pursuitStateJson: Value(next.toJsonString()),
         lastModified: Value(DateTime.now()),
+        needsSync: const Value(true),
       ),
     );
     if (mounted) state = next;

@@ -15,6 +15,7 @@ import 'package:potential_aid_app/schedule/providers/block_with_tasks_notifier.d
 import 'package:potential_aid_app/schedule/providers/schedule_notifier.dart';
 import 'package:potential_aid_app/schedule/providers/completion_notifier.dart';
 import 'package:potential_aid_app/providers/settings_notifier.dart';
+import 'package:potential_aid_app/pursuit/providers/pursuit_focus_notifier.dart';
 import 'package:potential_aid_app/stats/providers/stats_provider.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/timeline/providers/timeline_date_notifier.dart';
@@ -62,6 +63,9 @@ final syncServiceProvider = Provider<SyncService>((ref) {
 
     // Settings
     ref.invalidate(settingsNotifierProvider);
+
+    // Pursuit focus
+    ref.invalidate(pursuitFocusNotifierProvider);
 
     // Date/Timeline providers (these may not change but invalidating for consistency)
     ref.invalidate(dateNotifierProvider);
