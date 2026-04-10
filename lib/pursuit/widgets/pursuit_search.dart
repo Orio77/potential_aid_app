@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/breakdown/screens/task_breakdown_screen.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/projects/screens/project_screen.dart';
+import 'package:potential_aid_app/pursuit/models/pursuit_focus_state.dart';
+import 'package:potential_aid_app/pursuit/providers/pursuit_focus_notifier.dart';
 import 'package:potential_aid_app/pursuit/widgets/pursuit_colors.dart';
 import 'package:potential_aid_app/providers/project_tasks_notifier.dart';
 
@@ -223,6 +225,182 @@ class _TaskResultTile extends StatelessWidget {
               onPressed: () {
                 final project = findProject(item.projectId, projects);
                 if (project == null) return;
+                onClose();
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => ProjectScreen(data: project),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Project search ────────────────────────────────────────────────────────────
+
+/// [SearchDelegate] that searches undeleted, uncompleted projects.
+/// Tapping a result adds the project to the pursuit backlog queue.
+class PursuitProjectSearchDelegate extends SearchDelegate<void> {
+  PursuitProjectSearchDelegate({
+    required this.projects,
+    required this.pursuit,
+    required this.ref,
+  });
+
+  final List<ProjectData> projects;
+  final PursuitFocusState pursuit;
+  final WidgetRef ref;
+
+  List<ProjectData> get _eligible => projects
+      .where((p) => !p.isDeleted && p.current < p.goal)
+      .toList()
+    ..sort((a, b) => a.name.compareTo(b.name));
+
+  List<ProjectData> _filter(List<ProjectData> all) {
+    if (query.trim().isEmpty) return all;
+    final q = query.toLowerCase();
+    return all.where((p) => p.name.toLowerCase().contains(q)).toList();
+  }
+
+  @override
+  List<Widget> buildActions(BuildContext context) => [
+        if (query.isNotEmpty)
+          IconButton(
+            icon: const Icon(Icons.clear),
+            tooltip: 'Clear',
+            onPressed: () => query = '',
+          ),
+      ];
+
+  @override
+  Widget buildLeading(BuildContext context) =>
+      BackButton(onPressed: () => close(context, null));
+
+  @override
+  Widget buildResults(BuildContext context) =>
+      _ProjectResultsList(
+        filtered: _filter(_eligible),
+        query: query,
+        pursuit: pursuit,
+        ref: ref,
+        onClose: () => close(context, null),
+      );
+
+  @override
+  Widget buildSuggestions(BuildContext context) => buildResults(context);
+}
+
+class _ProjectResultsList extends StatelessWidget {
+  const _ProjectResultsList({
+    required this.filtered,
+    required this.query,
+    required this.pursuit,
+    required this.ref,
+    required this.onClose,
+  });
+
+  final List<ProjectData> filtered;
+  final String query;
+  final PursuitFocusState pursuit;
+  final WidgetRef ref;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    if (filtered.isEmpty) {
+      return Center(
+        child: Text(
+          query.trim().isEmpty
+              ? 'No active projects found'
+              : 'No results for "$query"',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ),
+      );
+    }
+    return ListView.builder(
+      itemCount: filtered.length,
+      itemBuilder: (_, i) => _ProjectResultTile(
+        project: filtered[i],
+        pursuit: pursuit,
+        ref: ref,
+        onClose: onClose,
+      ),
+    );
+  }
+}
+
+class _ProjectResultTile extends StatelessWidget {
+  const _ProjectResultTile({
+    required this.project,
+    required this.pursuit,
+    required this.ref,
+    required this.onClose,
+  });
+
+  final ProjectData project;
+  final PursuitFocusState pursuit;
+  final WidgetRef ref;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = Color(project.color ?? 0xFF9E9E9E);
+    final inSlot = pursuit.slots.contains(project.id);
+    final inQueue = pursuit.projectQueue.contains(project.id);
+    final statusLabel = inSlot
+        ? 'In active slot'
+        : inQueue
+            ? 'Already in queue'
+            : null;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(8),
+        border: Border(left: BorderSide(color: color, width: 5)),
+      ),
+      child: ListTile(
+        onTap: inSlot || inQueue
+            ? null
+            : () async {
+                await ref
+                    .read(pursuitFocusNotifierProvider.notifier)
+                    .addProjectToBacklog(project.id);
+                if (context.mounted) onClose();
+              },
+        title: Text(project.name),
+        subtitle: statusLabel != null
+            ? Text(
+                statusLabel,
+                style: theme.textTheme.labelSmall
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              )
+            : null,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!inSlot && !inQueue)
+              IconButton(
+                icon: const Icon(Icons.playlist_add, size: 20),
+                tooltip: 'Add to queue',
+                onPressed: () async {
+                  await ref
+                      .read(pursuitFocusNotifierProvider.notifier)
+                      .addProjectToBacklog(project.id);
+                  if (context.mounted) onClose();
+                },
+              ),
+            IconButton(
+              icon: const Icon(Icons.open_in_new, size: 18),
+              tooltip: 'Open project',
+              onPressed: () {
                 onClose();
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(

@@ -35,23 +35,34 @@ class _PursuitFocusScreenState extends ConsumerState<PursuitFocusScreen> {
             ? _AddTaskButton(pursuit: pursuit)
             : _AddToQueueButton(),
         actions: [
-          if (_taskView) ...{IconButton(
+          IconButton(
             icon: const Icon(Icons.search),
-            tooltip: 'Search tasks',
+            tooltip: _taskView ? 'Search tasks' : 'Search projects',
             onPressed: () {
-              final activeIds = pursuit.slots.whereType<int>().toList();
-              showSearch(
-                context: context,
-                delegate: PursuitSearchDelegate(
-                  activeProjectIds: activeIds,
-                  db: db,
-                  projects: projects,
-                  ref: ref,
-                  slots: pursuit.slots,
-                ),
-              );
+              if (_taskView) {
+                final activeIds = pursuit.slots.whereType<int>().toList();
+                showSearch(
+                  context: context,
+                  delegate: PursuitSearchDelegate(
+                    activeProjectIds: activeIds,
+                    db: db,
+                    projects: projects,
+                    ref: ref,
+                    slots: pursuit.slots,
+                  ),
+                );
+              } else {
+                showSearch(
+                  context: context,
+                  delegate: PursuitProjectSearchDelegate(
+                    projects: projects,
+                    pursuit: pursuit,
+                    ref: ref,
+                  ),
+                );
+              }
             },
-          )},
+          ),
           IconButton(
             tooltip: _taskView ? 'Project view' : 'Task view',
             icon: Icon(_taskView
