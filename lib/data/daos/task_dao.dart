@@ -355,6 +355,45 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
     return query.get();
   }
 
+  /// Marks every non-completed, non-deleted task in [projectId] as completed.
+  /// Called when a project's current value reaches or exceeds its goal on edit.
+  Future<void> completeAllTasksForProject(int projectId) async {
+    final incompleteTasks = await getTasksByProject(projectId);
+    if (incompleteTasks.isEmpty) return;
+
+    final completedAt = DateTime.now();
+
+    await batch((b) {
+      for (final t in incompleteTasks) {
+        b.insert(
+          db.taskCompletion,
+          TaskCompletionCompanion.insert(
+            taskId: t.id,
+            count: t.endGoal - t.current,
+            completedAt: completedAt,
+            lastModified: DateTime.now(),
+            needsSync: const Value(true),
+            version: const Value(1),
+          ),
+        );
+      }
+    });
+
+    await batch((b) {
+      for (final t in incompleteTasks) {
+        b.update(
+          task,
+          _withSyncFields(TaskCompanion(
+            isCompleted: const Value(true),
+            current: Value(t.endGoal),
+            completedAt: Value(completedAt),
+          )),
+          where: (row) => row.id.equals(t.id),
+        );
+      }
+    });
+  }
+
   Future<void> updateTaskProgress(int taskId, int newCurrent) async {
     return transaction(() async {
       final taskData = await getTaskById(taskId);

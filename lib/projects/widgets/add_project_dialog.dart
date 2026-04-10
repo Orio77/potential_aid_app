@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
+import 'package:potential_aid_app/providers/database_provider.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
 import 'package:potential_aid_app/providers/project_intervals_notifier.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
+import 'package:potential_aid_app/providers/tasks_notifier.dart';
+import 'package:potential_aid_app/pursuit/providers/pursuit_focus_notifier.dart';
 import 'package:potential_aid_app/stats/providers/stats_provider.dart';
 import 'package:potential_aid_app/projects/services/project_service.dart';
 import 'package:potential_aid_app/utils/time_utils.dart';
@@ -309,10 +312,11 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
               category: category,
             );
       } else {
+        final projectId = widget.projectData!.id;
         await ref
             .read(projectsNotifierProvider.notifier)
             .updateProject(
-              widget.projectData!.id,
+              projectId,
               ProjectCompanion(
                 name: Value(projectName),
                 startDate: Value(startDate),
@@ -324,8 +328,18 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
                 category: Value(category),
               ),
             );
-        ref.invalidate(projectStatsNotifier(widget.projectData!.id));
-        ref.invalidate(projectProvider(widget.projectData!.id));
+
+        if (current >= goal) {
+          final db = ref.read(databaseProvider);
+          await db.taskDao.completeAllTasksForProject(projectId);
+          await ref
+              .read(pursuitFocusNotifierProvider.notifier)
+              .onProjectProgressChanged(projectId);
+          ref.invalidate(tasksNotifierProvider);
+        }
+
+        ref.invalidate(projectStatsNotifier(projectId));
+        ref.invalidate(projectProvider(projectId));
       }
 
       if (mounted) {
