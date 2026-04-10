@@ -35,7 +35,7 @@ class _PursuitFocusScreenState extends ConsumerState<PursuitFocusScreen> {
             ? _AddTaskButton(pursuit: pursuit)
             : _AddToQueueButton(),
         actions: [
-          IconButton(
+          if (_taskView) ...{IconButton(
             icon: const Icon(Icons.search),
             tooltip: 'Search tasks',
             onPressed: () {
@@ -51,7 +51,7 @@ class _PursuitFocusScreenState extends ConsumerState<PursuitFocusScreen> {
                 ),
               );
             },
-          ),
+          )},
           IconButton(
             tooltip: _taskView ? 'Project view' : 'Task view',
             icon: Icon(_taskView
