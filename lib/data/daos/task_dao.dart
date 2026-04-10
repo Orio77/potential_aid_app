@@ -143,8 +143,9 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
         await _completeAllSubtasks(taskId, completionTs);
       }
 
-      final nextCompletedAt =
-          completed ? (existing.completedAt ?? completionTs) : null;
+      final nextCompletedAt = completed
+          ? (existing.completedAt ?? completionTs)
+          : null;
 
       final merged = updates.copyWith(
         current: Value(cappedCurrent),
@@ -153,8 +154,9 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
       );
 
       final syncAwareUpdates = _withSyncFields(merged);
-      return await (update(task)..where((t) => t.id.equals(taskId)))
-          .write(syncAwareUpdates);
+      return await (update(
+        task,
+      )..where((t) => t.id.equals(taskId))).write(syncAwareUpdates);
     });
   }
 
@@ -176,17 +178,19 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
       });
     }
 
-    await (update(
-      task,
-    )..where((t) => t.id.equals(taskId))).write(_markForDeletion(currentTask.version));
+    await (update(task)..where((t) => t.id.equals(taskId))).write(
+      _markForDeletion(currentTask.version),
+    );
   }
 
   /// Soft-deletes all non-deleted tasks belonging to [projectId].
   /// Called as part of project deletion to prevent orphaned tasks.
   Future<void> softDeleteTasksByProject(int projectId) async {
-    final tasks = await (select(task)
-      ..where((t) => t.projectId.equals(projectId) & t.isDeleted.equals(false)))
-        .get();
+    final tasks =
+        await (select(task)..where(
+              (t) => t.projectId.equals(projectId) & t.isDeleted.equals(false),
+            ))
+            .get();
 
     if (tasks.isEmpty) return;
 
@@ -220,6 +224,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
     final query = select(task)
       ..where((t) => t.projectId.equals(projectId))
       ..where((t) => t.isDeleted.equals(false))
+      ..where((t) => t.isCompleted.equals(false))
       ..orderBy([
         (t) =>
             OrderingTerm(expression: t.isCompleted), // false(0) before true(1)
