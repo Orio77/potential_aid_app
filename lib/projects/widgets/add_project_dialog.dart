@@ -36,12 +36,8 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
   bool _isLoading = false;
   String? _errorMessage;
 
-  bool get _isFormValid => ProjectService.isFormValid(
-    _projectNameController.text,
-    _currentController.text,
-    _endGoalController.text,
-    _unitController.text,
-  );
+  bool get _isFormValid =>
+      ProjectService.isFormValid(_projectNameController.text);
 
   @override
   void initState() {
@@ -203,8 +199,8 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
                   _startDate,
                   _deadline,
                   0,
-                  int.tryParse(_currentController.text)!,
-                  int.tryParse(_endGoalController.text)!,
+                  int.tryParse(_currentController.text) ?? 0,
+                  int.tryParse(_endGoalController.text) ?? 1,
                   _unitController.text.isNotEmpty
                       ? _unitController.text.trim()
                       : "completed",
