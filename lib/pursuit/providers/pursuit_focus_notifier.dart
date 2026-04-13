@@ -17,7 +17,9 @@ class PursuitFocusNotifier extends StateNotifier<PursuitFocusState> {
 
   Future<void> _load() async {
     final row =
-        await (_db.select(_db.settings)..where((s) => s.id.equals(1)))
+        await (_db.select(_db.settings)
+              ..where((s) => s.id.equals(1))
+              ..limit(1))
             .getSingleOrNull();
     final raw = PursuitFocusState.tryParse(row?.pursuitStateJson);
     final base = raw ?? PursuitFocusState.initial();
@@ -108,7 +110,9 @@ class PursuitFocusNotifier extends StateNotifier<PursuitFocusState> {
 
   Future<void> _persist(PursuitFocusState next) async {
     final row =
-        await (_db.select(_db.settings)..where((s) => s.id.equals(1)))
+        await (_db.select(_db.settings)
+              ..where((s) => s.id.equals(1))
+              ..limit(1))
             .getSingleOrNull();
     if (row == null) return;
 

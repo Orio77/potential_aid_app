@@ -112,7 +112,8 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
   Future<TimelineResolvedDefaults> resolveTimelineDefaults() async {
     final row =
         await (_database.select(_database.settings)
-              ..where((s) => s.id.equals(1)))
+              ..where((s) => s.id.equals(1))
+              ..limit(1))
             .getSingleOrNull();
 
     if (row == null) {
@@ -241,7 +242,8 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
 
     final existing =
         await (_database.select(_database.settings)
-              ..where((t) => t.id.equals(1)))
+              ..where((t) => t.id.equals(1))
+              ..limit(1))
             .getSingleOrNull();
 
     final settings = SettingsCompanion.insert(
