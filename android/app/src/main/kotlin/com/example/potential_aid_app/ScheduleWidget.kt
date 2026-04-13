@@ -82,7 +82,7 @@ class ScheduleWidget : AppWidgetProvider() {
         views.setOnClickPendingIntent(
             R.id.widget_btn_prev,
             PendingIntent.getBroadcast(
-                context, 0, prevIntent,
+                context, appWidgetId * 10 + 0, prevIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
         )
@@ -93,7 +93,7 @@ class ScheduleWidget : AppWidgetProvider() {
         views.setOnClickPendingIntent(
             R.id.widget_btn_next,
             PendingIntent.getBroadcast(
-                context, 1, nextIntent,
+                context, appWidgetId * 10 + 1, nextIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
         )
@@ -111,7 +111,7 @@ class ScheduleWidget : AppWidgetProvider() {
         // WidgetCompletionActivity with blockId + blockLength filled in.
         val completionTemplate = Intent(context, WidgetCompletionActivity::class.java)
         val templatePi = PendingIntent.getActivity(
-            context, 2, completionTemplate,
+            context, appWidgetId * 10 + 2, completionTemplate,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
         )
         views.setPendingIntentTemplate(R.id.widget_list, templatePi)
