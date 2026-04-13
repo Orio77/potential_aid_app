@@ -40,10 +40,10 @@ class ProjectTasksNotifier extends StateNotifier<AsyncValue<List<TaskData>>> {
     return await _database.taskDao.getParentTask(taskId);
   }
 
-  Future<int> addTask(
-    String name,
-    int projectId,
-    DateTime deadline, {
+  Future<int> addTask({
+    required String name,
+    required int projectId,
+    required DateTime deadline,
     String? unit,
     int? startPoint,
     int? current,
@@ -78,8 +78,9 @@ class ProjectTasksNotifier extends StateNotifier<AsyncValue<List<TaskData>>> {
       final notifier = _ref.read(pursuitFocusNotifierProvider.notifier);
       await notifier.onTaskCompleted(after.id, after.projectId);
 
-      final descendants =
-          await _database.taskDao.getAllDescendantsRecursive(after.id);
+      final descendants = await _database.taskDao.getAllDescendantsRecursive(
+        after.id,
+      );
       final completedIds = descendants
           .where((d) => d.isCompleted)
           .map((d) => d.id)
