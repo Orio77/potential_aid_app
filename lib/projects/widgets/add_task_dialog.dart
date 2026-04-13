@@ -194,9 +194,9 @@ class _AddTaskDialogState extends ConsumerState<AddTaskDialog> {
         await ref
             .read(projectTasksNotifier(widget.projectId).notifier)
             .addTask(
-              taskName,
-              widget.projectId,
-              _deadline,
+              name: taskName,
+              projectId: widget.projectId,
+              deadline: _deadline,
               unit: unit,
               current: current,
               endGoal: endGoal,
