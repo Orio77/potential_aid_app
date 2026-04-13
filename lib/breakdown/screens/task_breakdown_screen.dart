@@ -39,7 +39,6 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
       TaskBreakdownConstants.padding;
   double _dynamicSubtasksWidth = TaskBreakdownConstants.subtasksWidth;
 
-
   @override
   void initState() {
     super.initState();
@@ -204,9 +203,13 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
 
       if (subtask.isNew && subtask.hasValidContent) {
         final taskId = await notifier.addTask(
-          subtask.controller.text.trim(),
-          widget.task.projectId,
-          date,
+          name: subtask.controller.text.trim(),
+          projectId: widget.task.projectId,
+          deadline: date,
+          startPoint: 0,
+          current: 0,
+          endGoal: 1,
+          unit: 'completed',
           parentTaskId: widget.task.id,
           depth: taskDepth,
           orderIndex: i,
@@ -295,8 +298,9 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     // Don't reparent onto yourself
     if (dragIndex == targetIndex) return;
 
-    final notifier =
-        ref.read(projectTasksNotifier(widget.task.projectId).notifier);
+    final notifier = ref.read(
+      projectTasksNotifier(widget.task.projectId).notifier,
+    );
 
     // Fetch current depths from DB — state manager values may be stale
     final targetTask = await notifier.getTask(target.savedId);
@@ -338,9 +342,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
         .getProjectById(widget.task.projectId);
     if (projectData != null && mounted) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => ProjectScreen(data: projectData),
-        ),
+        MaterialPageRoute(builder: (_) => ProjectScreen(data: projectData)),
       );
     }
   }
@@ -405,8 +407,9 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     final dragged = _stateManager.getSubtask(dragIndex);
     if (dragged == null || !dragged.isExisting) return;
 
-    final notifier =
-        ref.read(projectTasksNotifier(widget.task.projectId).notifier);
+    final notifier = ref.read(
+      projectTasksNotifier(widget.task.projectId).notifier,
+    );
 
     final draggedTask = await notifier.getTask(dragged.savedId);
     if (!mounted) return;
@@ -420,10 +423,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
 
     await notifier.updateTaskSilent(
       dragged.savedId,
-      TaskCompanion(
-        parentTaskId: Value(newParentId),
-        depth: Value(newDepth),
-      ),
+      TaskCompanion(parentTaskId: Value(newParentId), depth: Value(newDepth)),
     );
 
     if (depthDelta != 0) {
@@ -566,7 +566,9 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
         centerTitle: true,
         actions: [
           Tooltip(
-            message: _reparentMode ? 'Switch to reorder mode' : 'Switch to reparent mode',
+            message: _reparentMode
+                ? 'Switch to reorder mode'
+                : 'Switch to reparent mode',
             child: IconButton(
               icon: Icon(
                 _reparentMode ? Icons.reorder : Icons.account_tree_outlined,
