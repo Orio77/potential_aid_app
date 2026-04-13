@@ -7,8 +7,13 @@ import 'package:potential_aid_app/widgets/common/global_search_dialog.dart';
 
 class GlobalSearchLauncher extends StatefulWidget {
   final Widget child;
+  final GlobalKey<NavigatorState> navigatorKey;
 
-  const GlobalSearchLauncher({super.key, required this.child});
+  const GlobalSearchLauncher({
+    super.key,
+    required this.child,
+    required this.navigatorKey,
+  });
 
   @override
   State<GlobalSearchLauncher> createState() => _GlobalSearchLauncherState();
@@ -41,7 +46,7 @@ class _GlobalSearchLauncherState extends State<GlobalSearchLauncher> {
     // Escape / Alt+Left — go back
     if (key == LogicalKeyboardKey.escape ||
         (alt && !ctrl && key == LogicalKeyboardKey.arrowLeft)) {
-      Navigator.maybePop(context);
+      widget.navigatorKey.currentState?.maybePop();
       return true;
     }
 
@@ -81,22 +86,23 @@ class _GlobalSearchLauncherState extends State<GlobalSearchLauncher> {
   }
 
   void _goToSchedule() {
-    Navigator.popUntil(context, (route) => route.isFirst);
+    widget.navigatorKey.currentState?.popUntil((route) => route.isFirst);
   }
 
   void _navigateTo(Widget screen) {
-    Navigator.popUntil(context, (route) => route.isFirst);
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => screen),
-    );
+    final nav = widget.navigatorKey.currentState;
+    if (nav == null) return;
+    nav.popUntil((route) => route.isFirst);
+    nav.push(MaterialPageRoute(builder: (_) => screen));
   }
 
   void _showSearch() {
     if (_isSearchOpen) return;
+    final navContext = widget.navigatorKey.currentContext;
+    if (navContext == null) return;
     _isSearchOpen = true;
     showDialog(
-      context: context,
+      context: navContext,
       builder: (dialogContext) => Dialog(
         child: ConstrainedBox(
           constraints: BoxConstraints(

@@ -30,6 +30,8 @@ void main() async {
   runApp(const ProviderScope(child: MyApp()));
 }
 
+final _navigatorKey = GlobalKey<NavigatorState>();
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -40,7 +42,12 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const GlobalSearchLauncher(child: MainScreen()),
+      navigatorKey: _navigatorKey,
+      builder: (context, child) => GlobalSearchLauncher(
+        navigatorKey: _navigatorKey,
+        child: child!,
+      ),
+      home: const MainScreen(),
     );
   }
 }
