@@ -400,9 +400,19 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
             if (!showProjects) ...[
               TaskDepthNavigator(
                 initialDepth: depth,
-                onDepthChanged: (value) => setState(() {
-                  depth = value;
-                }),
+                onDepthChanged: (value) {
+                  setState(() => depth = value);
+                  final currentMonth = ref.read(timelineDateNotifierProvider);
+                  ref
+                      .read(taskCardsNotifierProvider(value).notifier)
+                      .loadTasksForMonth(
+                        monthDate: currentMonth,
+                        depth: value,
+                        categoryId: selectedCategory?.id,
+                        projectId: selectedProject?.id,
+                        showOnlyUncompleted: _showOnlyUncompleted,
+                      );
+                },
               ),
               // Swim-lane toggle only makes sense on desktop timeline.
               if (!isNarrow)
