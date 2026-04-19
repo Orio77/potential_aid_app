@@ -34,35 +34,33 @@ class _TaskDepthNavigatorState extends State<TaskDepthNavigator> {
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              icon: const Icon(Icons.arrow_upward),
-              onPressed: () => _updateDepth(depth + 1),
-              iconSize: iconSize,
-            ),
-            IconButton(
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              icon: const Icon(Icons.arrow_downward),
-              onPressed: () => _updateDepth((depth > 0) ? depth - 1 : 0),
-              iconSize: iconSize,
-            ),
-          ],
+        IconButton(
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+          icon: const Icon(Icons.arrow_downward),
+          onPressed: () => _updateDepth((depth > 0) ? depth - 1 : 0),
+          iconSize: iconSize,
         ),
-        const SizedBox(width: 12),
-        Text(depth.toString(), style: TextStyle(fontSize: 24)),
-        const SizedBox(width: 12),
+        const SizedBox(width: 4),
+        Text(depth.toString(), style: const TextStyle(fontSize: 16)),
+        const SizedBox(width: 4),
+        IconButton(
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+          icon: const Icon(Icons.arrow_upward),
+          onPressed: () => _updateDepth(depth + 1),
+          iconSize: iconSize,
+        ),
+        const SizedBox(width: 4),
         IconButton(
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(),
           onPressed: () => _updateDepth(0),
           icon: const Icon(Icons.refresh_rounded),
+          iconSize: iconSize,
         ),
       ],
     );
