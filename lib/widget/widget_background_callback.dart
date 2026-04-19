@@ -19,8 +19,8 @@ Future<void> widgetBackgroundCallback(Uri? uri) async {
       (await HomeWidget.getWidgetData<int>('date_offset')) ?? 0;
 
   int newOffset = currentOffset;
-  if (uri?.path == '/date_prev') newOffset--;
-  if (uri?.path == '/date_next') newOffset++;
+  if (uri?.host == 'date_prev') newOffset--;
+  if (uri?.host == 'date_next') newOffset++;
 
   await HomeWidget.saveWidgetData<int>('date_offset', newOffset);
 

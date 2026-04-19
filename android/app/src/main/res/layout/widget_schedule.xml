@@ -44,10 +44,11 @@
     </LinearLayout>
 
     <!-- Divider -->
-    <View
+    <ImageView
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="#CAC4D0"
+        android:contentDescription="@null"
         android:layout_marginBottom="8dp" />
 
     <!-- Block list -->

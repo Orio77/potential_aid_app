@@ -64,13 +64,13 @@ class ScheduleWidgetFactory(
 
         if (block.isCompleted) {
             rv.setTextViewText(R.id.block_completion_badge, "${block.completionPct}%")
-            rv.setInt(R.id.block_completion_badge, "setVisibility", android.view.View.VISIBLE)
-            rv.setInt(R.id.block_complete_btn, "setVisibility", android.view.View.GONE)
-            rv.setInt(R.id.block_complete_btn, "setEnabled", 0)
+            rv.setViewVisibility(R.id.block_completion_badge, android.view.View.VISIBLE)
+            rv.setViewVisibility(R.id.block_complete_btn, android.view.View.GONE)
+            rv.setBoolean(R.id.block_complete_btn, "setEnabled", false)
         } else {
-            rv.setInt(R.id.block_completion_badge, "setVisibility", android.view.View.GONE)
-            rv.setInt(R.id.block_complete_btn, "setVisibility", android.view.View.VISIBLE)
-            rv.setInt(R.id.block_complete_btn, "setEnabled", 1)
+            rv.setViewVisibility(R.id.block_completion_badge, android.view.View.GONE)
+            rv.setViewVisibility(R.id.block_complete_btn, android.view.View.VISIBLE)
+            rv.setBoolean(R.id.block_complete_btn, "setEnabled", true)
 
             // Fill-in intent: merged with the template PendingIntent set in ScheduleWidget
             val fillIn = Intent().apply {

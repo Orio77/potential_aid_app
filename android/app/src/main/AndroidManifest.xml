@@ -75,6 +75,12 @@
             </intent-filter>
         </receiver>
 
+        <!-- home_widget background service (JobIntentService invoked by the receiver above) -->
+        <service
+            android:name="es.antonborri.home_widget.HomeWidgetBackgroundService"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="false" />
+
         <!-- Flutter engine metadata -->
         <meta-data
             android:name="flutterEmbedding"
