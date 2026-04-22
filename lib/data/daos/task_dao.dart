@@ -10,20 +10,23 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
   TaskDao(super.db);
 
   // Sync helper methods
-  TaskCompanion _withSyncFields(TaskCompanion companion) {
+  //
+  // [currentVersion] must be the row's current version as read from the DB
+  // (or 0 for a brand-new insert so the row lands at version 1). Never rely
+  // on [companion.version] — callers almost never set it, so the previous
+  // implementation always produced version=2.
+  TaskCompanion _withSyncFields(TaskCompanion companion, int currentVersion) {
     return companion.copyWith(
       lastModified: Value(DateTime.now()),
-      needsSync: Value(true),
-      version: Value(
-        (companion.version.present ? companion.version.value : 1) + 1,
-      ),
+      needsSync: const Value(true),
+      version: Value(currentVersion + 1),
     );
   }
 
   TaskCompanion _markForDeletion(int version) {
     return TaskCompanion(
-      isDeleted: Value(true),
-      needsSync: Value(true),
+      isDeleted: const Value(true),
+      needsSync: const Value(true),
       lastModified: Value(DateTime.now()),
       version: Value(version + 1),
     );
@@ -102,6 +105,8 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
         orderIndex: Value(orderIndex ?? 0),
         lastModified: DateTime.now(),
       ),
+      // Brand-new row: baseline 0 so helper writes version=1.
+      0,
     );
 
     return await into(task).insert(taskData);
@@ -156,7 +161,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
         completedAt: Value(nextCompletedAt),
       );
 
-      final syncAwareUpdates = _withSyncFields(merged);
+      final syncAwareUpdates = _withSyncFields(merged, existing.version);
       return await (update(
         task,
       )..where((t) => t.id.equals(taskId))).write(syncAwareUpdates);
@@ -169,6 +174,8 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
 
       // Cascade soft-delete all descendants first
       final descendants = await getAllDescendantsRecursive(taskId);
+      final allIds = <int>[taskId, ...descendants.map((d) => d.id)];
+
       if (descendants.isNotEmpty) {
         await batch((b) {
           for (final desc in descendants) {
@@ -184,11 +191,16 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
       await (update(task)..where((t) => t.id.equals(taskId))).write(
         _markForDeletion(currentTask.version),
       );
+
+      // Soft-delete dependent rows so they're pushed to Supabase as deletes
+      // before the local FK cascade has a chance to hard-delete them.
+      await _softDeleteDependentsForTasks(allIds);
     });
   }
 
-  /// Soft-deletes all non-deleted tasks belonging to [projectId].
-  /// Called as part of project deletion to prevent orphaned tasks.
+  /// Soft-deletes all non-deleted tasks belonging to [projectId] and their
+  /// dependent rows (block_task links, task_completion). Called as part of
+  /// project deletion to prevent orphaned rows on the remote DB.
   Future<void> softDeleteTasksByProject(int projectId) async {
     final tasks =
         await (select(task)..where(
@@ -207,6 +219,63 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
         );
       }
     });
+
+    await _softDeleteDependentsForTasks(tasks.map((t) => t.id).toList());
+  }
+
+  /// Marks every still-live block_task and task_completion row attached to
+  /// any of [taskIds] as deleted+needsSync so they'll be pushed to Supabase
+  /// instead of silently disappearing via the local FK cascade.
+  Future<void> _softDeleteDependentsForTasks(List<int> taskIds) async {
+    if (taskIds.isEmpty) return;
+
+    final now = DateTime.now();
+
+    final links =
+        await (select(db.blockTask)..where(
+              (bt) => bt.taskId.isIn(taskIds) & bt.isDeleted.equals(false),
+            ))
+            .get();
+    if (links.isNotEmpty) {
+      await batch((b) {
+        for (final link in links) {
+          b.update(
+            db.blockTask,
+            BlockTaskCompanion(
+              isDeleted: const Value(true),
+              needsSync: const Value(true),
+              lastModified: Value(now),
+              version: Value(link.version + 1),
+            ),
+            where: (bt) =>
+                bt.blockId.equals(link.blockId) &
+                bt.taskId.equals(link.taskId),
+          );
+        }
+      });
+    }
+
+    final completions =
+        await (select(db.taskCompletion)..where(
+              (tc) => tc.taskId.isIn(taskIds) & tc.isDeleted.equals(false),
+            ))
+            .get();
+    if (completions.isNotEmpty) {
+      await batch((b) {
+        for (final c in completions) {
+          b.update(
+            db.taskCompletion,
+            TaskCompletionCompanion(
+              isDeleted: const Value(true),
+              needsSync: const Value(true),
+              lastModified: Value(now),
+              version: Value(c.version + 1),
+            ),
+            where: (tc) => tc.id.equals(c.id),
+          );
+        }
+      });
+    }
   }
 
   Future<List<TaskData>> getTasksByProject(int projectId) async {
@@ -265,13 +334,70 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
                 ? taskData.endGoal
                 : taskData.current + count),
             completedAt: Value(completed ? completedAt : null),
-            version: Value(taskData.version),
           ),
+          taskData.version,
         ),
       );
 
+      // If this task transitioned from not-completed to completed, roll up
+      // one unit of progress to its parent (each completed subtask counts as
+      // one unit toward its parent's goal).
+      if (completed &&
+          !taskData.isCompleted &&
+          taskData.parentTaskId != null) {
+        await _rollupCompletionToParent(
+          taskData.parentTaskId!,
+          completedAt,
+        );
+      }
+
       return completionId;
     });
+  }
+
+  /// Adds one unit of progress to [parentId] because a direct child just
+  /// transitioned to completed. If the parent reaches its goal, its remaining
+  /// incomplete descendants are cascaded to completed and the rollup continues
+  /// up the chain.
+  Future<void> _rollupCompletionToParent(
+    int parentId,
+    DateTime completedAt,
+  ) async {
+    final parent = await getTaskById(parentId);
+    if (parent.isCompleted) return;
+
+    final newCurrent = parent.current + 1;
+    final willComplete = newCurrent >= parent.endGoal;
+
+    if (willComplete) {
+      await _completeAllSubtasks(parentId, completedAt);
+    }
+
+    await into(db.taskCompletion).insert(
+      TaskCompletionCompanion.insert(
+        taskId: parentId,
+        count: 1,
+        completedAt: completedAt,
+        lastModified: DateTime.now(),
+        needsSync: const Value(true),
+        version: const Value(1),
+      ),
+    );
+
+    await (update(task)..where((t) => t.id.equals(parentId))).write(
+      _withSyncFields(
+        TaskCompanion(
+          isCompleted: Value(willComplete),
+          current: Value(willComplete ? parent.endGoal : newCurrent),
+          completedAt: Value(willComplete ? completedAt : null),
+        ),
+        parent.version,
+      ),
+    );
+
+    if (willComplete && parent.parentTaskId != null) {
+      await _rollupCompletionToParent(parent.parentTaskId!, completedAt);
+    }
   }
 
   Future<void> _completeAllSubtasks(int taskId, DateTime completedAt) async {
@@ -309,8 +435,8 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
               isCompleted: const Value(true),
               current: Value(subtask.endGoal),
               completedAt: Value(completedAt),
-              version: Value(subtask.version),
             ),
+            subtask.version,
           ),
           where: (t) => t.id.equals(subtask.id),
         );
@@ -392,12 +518,14 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
       for (final t in incompleteTasks) {
         b.update(
           task,
-          _withSyncFields(TaskCompanion(
-            isCompleted: const Value(true),
-            current: Value(t.endGoal),
-            completedAt: Value(completedAt),
-            version: Value(t.version),
-          )),
+          _withSyncFields(
+            TaskCompanion(
+              isCompleted: const Value(true),
+              current: Value(t.endGoal),
+              completedAt: Value(completedAt),
+            ),
+            t.version,
+          ),
           where: (row) => row.id.equals(t.id),
         );
       }
@@ -440,6 +568,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
                   : taskData.completedAt,
             ),
           ),
+          taskData.version,
         ),
       );
     });

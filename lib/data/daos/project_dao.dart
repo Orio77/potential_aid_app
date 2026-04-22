@@ -11,32 +11,37 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
   ProjectDao(super.attachedDatabase);
 
   // Sync helper methods
-  ProjectCompanion _withSyncFieldsP(ProjectCompanion companion) {
+  //
+  // [currentVersion] is the row's version in the DB right now (or 0 for a
+  // brand-new insert so the helper writes version=1). Callers must not rely
+  // on [companion.version]; it was the source of the "every row is version 2"
+  // legacy bug.
+  ProjectCompanion _withSyncFieldsP(
+    ProjectCompanion companion,
+    int currentVersion,
+  ) {
     return companion.copyWith(
       lastModified: Value(DateTime.now()),
-      needsSync: Value(true),
-      version: Value(
-        (companion.version.present ? companion.version.value : 1) + 1,
-      ),
+      needsSync: const Value(true),
+      version: Value(currentVersion + 1),
     );
   }
 
   ProjectCategoryCompanion _withSyncFieldsPC(
     ProjectCategoryCompanion companion,
+    int currentVersion,
   ) {
     return companion.copyWith(
       lastModified: Value(DateTime.now()),
-      needsSync: Value(true),
-      version: Value(
-        (companion.version.present ? companion.version.value : 1) + 1,
-      ),
+      needsSync: const Value(true),
+      version: Value(currentVersion + 1),
     );
   }
 
   ProjectCompanion _markProjectForDeletion(int version) {
     return ProjectCompanion(
-      isDeleted: Value(true),
-      needsSync: Value(true),
+      isDeleted: const Value(true),
+      needsSync: const Value(true),
       lastModified: Value(DateTime.now()),
       version: Value(version + 1),
     );
@@ -44,8 +49,8 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
 
   ProjectCategoryCompanion _markCategoryForDeletion(int version) {
     return ProjectCategoryCompanion(
-      isDeleted: Value(true),
-      needsSync: Value(true),
+      isDeleted: const Value(true),
+      needsSync: const Value(true),
       lastModified: Value(DateTime.now()),
       version: Value(version + 1),
     );
@@ -73,7 +78,8 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
       lastModified: Value(DateTime.now()),
     );
 
-    final syncedProjectComp = _withSyncFieldsP(projectComp);
+    // Brand-new row: baseline 0 so helper writes version=1.
+    final syncedProjectComp = _withSyncFieldsP(projectComp, 0);
 
     return await into(project).insert(syncedProjectComp);
   }
@@ -171,19 +177,37 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
   }
 
   Future<void> deleteProject(int projectId) async {
-    final currentProject = await getProjectById(projectId);
-    if (currentProject == null) return;
+    await transaction(() async {
+      final currentProject = await getProjectById(projectId);
+      if (currentProject == null) return;
 
-    await attachedDatabase.taskDao.softDeleteTasksByProject(projectId);
+      // Soft-delete descendant projects first so their own deletion cascades
+      // (tasks + blocks + links) happen under a soft-delete flow rather than
+      // via the local FK hard-cascade, which would skip the Supabase push.
+      final descendants = await getAllDescendants(projectId);
+      for (final child in descendants) {
+        if (child.isDeleted) continue;
+        await attachedDatabase.taskDao.softDeleteTasksByProject(child.id);
+        await attachedDatabase.blockDao.softDeleteBlocksByProject(child.id);
+        await (update(project)..where((p) => p.id.equals(child.id))).write(
+          _markProjectForDeletion(child.version),
+        );
+      }
 
-    final deleteCompanion = _markProjectForDeletion(currentProject.version);
-    await (update(
-      project,
-    )..where((p) => p.id.equals(projectId))).write(deleteCompanion);
+      await attachedDatabase.taskDao.softDeleteTasksByProject(projectId);
+      await attachedDatabase.blockDao.softDeleteBlocksByProject(projectId);
+
+      final deleteCompanion = _markProjectForDeletion(currentProject.version);
+      await (update(
+        project,
+      )..where((p) => p.id.equals(projectId))).write(deleteCompanion);
+    });
   }
 
   Future<int> updateProject(int projectId, ProjectCompanion updates) async {
-    final syncAwareUpdates = _withSyncFieldsP(updates);
+    final existing = await getProjectById(projectId);
+    if (existing == null) return 0;
+    final syncAwareUpdates = _withSyncFieldsP(updates, existing.version);
     return await (update(
       project,
     )..where((p) => p.id.equals(projectId))).write(syncAwareUpdates);
@@ -215,6 +239,7 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
 
     final projectCompanion = _withSyncFieldsP(
       ProjectCompanion(current: Value(projectData.current + completionCount)),
+      projectData.version,
     );
 
     final res = await (update(
@@ -268,6 +293,7 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
     int? iconCode,
     int? orderIndex,
   }) async {
+    // Brand-new row: baseline 0 so helper writes version=1.
     var companion = _withSyncFieldsPC(
       ProjectCategoryCompanion.insert(
         title: Value(title),
@@ -275,6 +301,7 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
         orderIndex: Value(orderIndex),
         lastModified: DateTime.now(),
       ),
+      0,
     );
     return await into(projectCategory).insert(companion);
   }
@@ -320,7 +347,9 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
     int categoryId,
     ProjectCategoryCompanion updates,
   ) async {
-    final syncAwareUpdates = _withSyncFieldsPC(updates);
+    final existing = await getProjectCategoryByIdOrNull(categoryId);
+    if (existing == null) return 0;
+    final syncAwareUpdates = _withSyncFieldsPC(updates, existing.version);
     return await (update(
       projectCategory,
     )..where((pc) => pc.id.equals(categoryId))).write(syncAwareUpdates);

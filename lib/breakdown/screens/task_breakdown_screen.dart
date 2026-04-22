@@ -29,6 +29,7 @@ class TaskBreakdownScreen extends ConsumerStatefulWidget {
 class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
   late final SubtaskStateManager _stateManager;
   late bool showCompleted;
+  late TaskData _task;
   final GlobalKey mainTaskKey = GlobalKey();
   bool isLoading = true;
   bool _reparentMode = false;
@@ -43,6 +44,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
   void initState() {
     super.initState();
     showCompleted = false;
+    _task = widget.task;
     _stateManager = SubtaskStateManager();
     _initializeSubtasks();
     HardwareKeyboard.instance.addHandler(_handleKeyEvent);
@@ -79,12 +81,21 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
   // ── Initialization ──────────────────────────────────────────────────────────
 
   void _initializeSubtasks() async {
+    final notifier = ref.read(
+      projectTasksNotifier(widget.task.projectId).notifier,
+    );
+
+    // Refetch the parent task so the main card reflects the latest DB state
+    // (e.g. progress rolled up from completed subtasks).
+    final refreshedTask = await notifier.getTask(widget.task.id);
+
     final notCompletedFilter = <Expression<bool> Function($TaskTable)>[
       (table) => table.isCompleted.equals(false),
     ];
-    final subtasksData = await ref
-        .read(projectTasksNotifier(widget.task.projectId).notifier)
-        .getSubtasks(widget.task.id, showCompleted ? [] : notCompletedFilter);
+    final subtasksData = await notifier.getSubtasks(
+      widget.task.id,
+      showCompleted ? [] : notCompletedFilter,
+    );
 
     if (subtasksData.isEmpty) {
       _stateManager.initializeEmpty();
@@ -104,10 +115,10 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
       _stateManager.initializeFromData(subtasksWithCounts);
     }
 
+    if (!mounted) return;
     setState(() {
-      _dynamicTotalWidth = _stateManager.calculateDynamicWidth(
-        widget.task.name,
-      );
+      _task = refreshedTask;
+      _dynamicTotalWidth = _stateManager.calculateDynamicWidth(_task.name);
       _dynamicSubtasksWidth = _stateManager.calculateDynamicSubtasksWidth();
       isLoading = false;
     });
@@ -119,7 +130,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     final newSubtask = _stateManager.addSubtask();
     setState(() {
       _dynamicTotalWidth = _stateManager.calculateDynamicWidth(
-        widget.task.name,
+        _task.name,
       );
       _dynamicSubtasksWidth = _stateManager.calculateDynamicSubtasksWidth();
     });
@@ -168,7 +179,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
 
       _updateSubtaskCount(index, selectedTask.id);
       _dynamicTotalWidth = _stateManager.calculateDynamicWidth(
-        widget.task.name,
+        _task.name,
       );
       _dynamicSubtasksWidth = _stateManager.calculateDynamicSubtasksWidth();
     });
@@ -184,7 +195,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     _stateManager.removeSubtask(index);
     setState(() {
       _dynamicTotalWidth = _stateManager.calculateDynamicWidth(
-        widget.task.name,
+        _task.name,
       );
       _dynamicSubtasksWidth = _stateManager.calculateDynamicSubtasksWidth();
     });
@@ -261,7 +272,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
   void _handleTextChanged(String value) {
     setState(() {
       _dynamicTotalWidth = _stateManager.calculateDynamicWidth(
-        widget.task.name,
+        _task.name,
       );
       _dynamicSubtasksWidth = _stateManager.calculateDynamicSubtasksWidth();
     });
@@ -359,6 +370,48 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
     });
   }
 
+  Future<void> _deleteParentTask() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete task'),
+        content: Text(
+          'Are you sure you want to delete "${_task.name}"? '
+          'This will also delete all of its subtasks. '
+          'This action cannot be undone.',
+        ),
+        actions: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final navigator = Navigator.of(context);
+    await ref
+        .read(projectTasksNotifier(widget.task.projectId).notifier)
+        .deleteTask(widget.task.id);
+
+    ref.invalidate(taskCardsNotifierProvider(widget.task.depth));
+    ref.invalidate(taskCardsNotifierProvider(widget.task.depth + 1));
+
+    navigator.pop();
+  }
+
   // ── Build methods ───────────────────────────────────────────────────────────
 
   Widget _buildArrows() {
@@ -386,7 +439,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
             MainTaskCard(
               task: task,
               cardKey: mainTaskKey,
-              onEdit: () => _editTask(widget.task),
+              onEdit: () => _editTask(_task),
               onNavigateToProject: _navigateToProject,
               onDrop: _reparentMode ? _reparentOntoMainTask : null,
               onWillAcceptDrop: _reparentMode ? _canDropSubtaskOnMain : null,
@@ -577,6 +630,13 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
               onPressed: () => setState(() => _reparentMode = !_reparentMode),
             ),
           ),
+          Tooltip(
+            message: 'Delete task and all subtasks',
+            child: IconButton(
+              icon: const Icon(Icons.delete_outline),
+              onPressed: _deleteParentTask,
+            ),
+          ),
           _buildShowCompletedSwitch(),
         ],
       ),
@@ -603,7 +663,7 @@ class _TaskBreakdownScreenState extends ConsumerState<TaskBreakdownScreen> {
                                 child: Stack(
                                   clipBehavior: Clip.none,
                                   children: [
-                                    _buildTaskBreakdownScreen(widget.task),
+                                    _buildTaskBreakdownScreen(_task),
                                     _buildArrows(),
                                   ],
                                 ),

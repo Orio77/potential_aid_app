@@ -55,7 +55,8 @@ class ProjectsNotifier extends StateNotifier<List<ProjectData>> {
   }
 
   Future<void> deleteProject(int projectId) async {
-    await (_database.projectDao.deleteProject(projectId));
+    await _database.projectDao.deleteProject(projectId);
+    await _loadProjects();
   }
 
   Future<int> updateProject(int projectId, ProjectCompanion updates) async {

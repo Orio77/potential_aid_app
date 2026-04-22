@@ -11,33 +11,33 @@ part 'block_dao.g.dart';
 class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
   BlockDao(super.attachedDatabase);
 
-  BlockCompanion _withSyncFieldsB(BlockCompanion companion) {
+  // Sync helper methods
+  //
+  // [currentVersion] is the row's version in the DB right now (or 0 for a
+  // brand-new insert so the helper writes version=1).
+  BlockCompanion _withSyncFieldsB(BlockCompanion companion, int currentVersion) {
     return companion.copyWith(
       lastModified: Value(DateTime.now()),
-      needsSync: Value(true),
-      version: Value(
-        (companion.version.present ? companion.version.value : 1) + 1,
-      ),
+      needsSync: const Value(true),
+      version: Value(currentVersion + 1),
     );
   }
 
-  // Sync helper methods
   BlockCompletionCompanion _withSyncFieldsBC(
     BlockCompletionCompanion companion,
+    int currentVersion,
   ) {
     return companion.copyWith(
       lastModified: Value(DateTime.now()),
-      needsSync: Value(true),
-      version: Value(
-        (companion.version.present ? companion.version.value : 1) + 1,
-      ),
+      needsSync: const Value(true),
+      version: Value(currentVersion + 1),
     );
   }
 
   BlockCompanion _markBlockForDeletion(int version) {
     return BlockCompanion(
-      isDeleted: Value(true),
-      needsSync: Value(true),
+      isDeleted: const Value(true),
+      needsSync: const Value(true),
       lastModified: Value(DateTime.now()),
       version: Value(version + 1),
     );
@@ -45,8 +45,8 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
 
   BlockTaskCompanion _markBlockTaskForDeletion(int version) {
     return BlockTaskCompanion(
-      isDeleted: Value(true),
-      needsSync: Value(true),
+      isDeleted: const Value(true),
+      needsSync: const Value(true),
       lastModified: Value(DateTime.now()),
       version: Value(version + 1),
     );
@@ -153,13 +153,98 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
   }
 
   Future<void> deleteBlock(int blockId) async {
-    final currentBlock = await getBlockById(blockId);
-    if (currentBlock != null) {
+    await transaction(() async {
+      final currentBlock = await getBlockById(blockId);
+      if (currentBlock == null) return;
+
+      // Soft-delete associated block_task rows too, otherwise they'd be
+      // orphaned in Supabase (the local cascade fires only on hard delete,
+      // and we never push those deletes to the server).
+      await deleteBlockTaskByBlockId(blockId);
+      await _softDeleteBlockCompletions([blockId]);
+
       final deleteCompanion = _markBlockForDeletion(currentBlock.version);
       await (update(
         block,
       )..where((b) => b.id.equals(blockId))).write(deleteCompanion);
-    }
+    });
+  }
+
+  /// Soft-deletes every still-live block for [projectId] along with its
+  /// block_task links and block_completion rows. Called as part of project
+  /// deletion to prevent orphaned rows in Supabase.
+  Future<void> softDeleteBlocksByProject(int projectId) async {
+    final blocks =
+        await (select(block)..where(
+              (b) => b.projectId.equals(projectId) & b.isDeleted.equals(false),
+            ))
+            .get();
+    if (blocks.isEmpty) return;
+
+    final ids = blocks.map((b) => b.id).toList();
+    await _softDeleteBlockTaskLinksForBlocks(ids);
+    await _softDeleteBlockCompletions(ids);
+
+    await batch((batch) {
+      for (final b in blocks) {
+        batch.update(
+          block,
+          _markBlockForDeletion(b.version),
+          where: (row) => row.id.equals(b.id),
+        );
+      }
+    });
+  }
+
+  Future<void> _softDeleteBlockTaskLinksForBlocks(List<int> blockIds) async {
+    if (blockIds.isEmpty) return;
+    final links =
+        await (select(blockTask)..where(
+              (bt) => bt.blockId.isIn(blockIds) & bt.isDeleted.equals(false),
+            ))
+            .get();
+    if (links.isEmpty) return;
+    final now = DateTime.now();
+    await batch((b) {
+      for (final link in links) {
+        b.update(
+          blockTask,
+          BlockTaskCompanion(
+            isDeleted: const Value(true),
+            needsSync: const Value(true),
+            lastModified: Value(now),
+            version: Value(link.version + 1),
+          ),
+          where: (bt) =>
+              bt.blockId.equals(link.blockId) & bt.taskId.equals(link.taskId),
+        );
+      }
+    });
+  }
+
+  Future<void> _softDeleteBlockCompletions(List<int> blockIds) async {
+    if (blockIds.isEmpty) return;
+    final completions =
+        await (select(blockCompletion)..where(
+              (bc) => bc.blockId.isIn(blockIds) & bc.isDeleted.equals(false),
+            ))
+            .get();
+    if (completions.isEmpty) return;
+    final now = DateTime.now();
+    await batch((batch) {
+      for (final c in completions) {
+        batch.update(
+          blockCompletion,
+          BlockCompletionCompanion(
+            isDeleted: const Value(true),
+            needsSync: const Value(true),
+            lastModified: Value(now),
+            version: Value(c.version + 1),
+          ),
+          where: (bc) => bc.id.equals(c.id),
+        );
+      }
+    });
   }
 
   Future<void> deleteBlockTask(int blockId, int taskId) async {
@@ -191,7 +276,9 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
   }
 
   Future<int> updateBlock(int blockId, BlockCompanion updates) async {
-    final syncAwareUpdates = _withSyncFieldsB(updates);
+    final existing = await getBlockById(blockId);
+    if (existing == null) return 0;
+    final syncAwareUpdates = _withSyncFieldsB(updates, existing.version);
     return await (update(
       block,
     )..where((b) => b.id.equals(blockId))).write(syncAwareUpdates);
@@ -317,6 +404,7 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
   ) async {
     if (minutes < 0) throw ArgumentError('Count must not be negative');
 
+    // Brand-new completion row: baseline 0 so helper writes version=1.
     final completionId = await into(db.blockCompletion).insert(
       _withSyncFieldsBC(
         BlockCompletionCompanion.insert(
@@ -325,6 +413,7 @@ class BlockDao extends DatabaseAccessor<AppDatabase> with _$BlockDaoMixin {
           completedAt: completedAt,
           lastModified: DateTime.now(),
         ),
+        0,
       ),
     );
 

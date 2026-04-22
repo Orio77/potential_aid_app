@@ -164,6 +164,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
               defaultTimelineProjectId: Value(pid),
               defaultTimelineCategoryId: Value(cid),
               lastModified: Value(DateTime.now()),
+              needsSync: const Value(true),
             ),
           );
       if (mounted) {
@@ -246,6 +247,7 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
               ..limit(1))
             .getSingleOrNull();
 
+    final nextVersion = (existing?.version ?? 0) + 1;
     final settings = SettingsCompanion.insert(
       id: const Value(1),
       defaultStartTime: state.defaultStartTime,
@@ -256,7 +258,10 @@ class SettingsNotifier extends StateNotifier<AppSettings> {
       defaultTimelineShowProjects: Value(state.defaultTimelineShowProjects),
       defaultTimelineUncompletedOnly: Value(state.defaultTimelineUncompletedOnly),
       pursuitStateJson: Value(existing?.pursuitStateJson),
+      supabaseId: Value(existing?.supabaseId),
       lastModified: DateTime.now(),
+      needsSync: const Value(true),
+      version: Value(nextVersion),
     );
 
     if (existing != null) {
