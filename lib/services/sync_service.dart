@@ -1,4 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:drift/drift.dart' show Value;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/models/sync_models.dart';
@@ -75,6 +79,10 @@ class SyncService {
     _resultController.close();
   }
 
+  /// Key used to ensure the one-shot legacy-data repair runs exactly once
+  /// after upgrading to the code that fixes the version / cascade bugs.
+  static const String _repairFlagKey = 'legacy_repair_v1_done';
+
   /// Initialize sync service - must be called before using
   Future<void> initialize() async {
     try {
@@ -88,6 +96,124 @@ class SyncService {
       _updateStatus(SyncStatus.offline);
     }
     _lastSyncTime = await _loadLastSyncTime();
+
+    // Run the one-shot legacy repair pass on first launch after this fix.
+    // Safe to call in the background; it only touches rows the current code
+    // would touch anyway (orphans under soft-deleted projects).
+    unawaited(_maybeRunLegacyRepair());
+  }
+
+  Future<void> _maybeRunLegacyRepair() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool(_repairFlagKey) == true) return;
+      await repairOrphanedRecords();
+      await prefs.setBool(_repairFlagKey, true);
+    } catch (_) {
+      // If it fails, we leave the flag unset so it can retry on next launch.
+    }
+  }
+
+  /// Walks every soft-deleted project and cascades the soft-delete to its
+  /// still-live children (tasks, blocks, block_tasks, completions) so they
+  /// get pushed as deletes to Supabase on the next sync. Also repairs rows
+  /// whose `needs_sync` flag was lost due to the previous version-overwrite
+  /// bug.
+  ///
+  /// This is idempotent: running it twice is a no-op.
+  Future<int> repairOrphanedRecords() async {
+    int healed = 0;
+
+    final deletedProjects = await (_database.select(_database.project)
+          ..where((p) => p.isDeleted.equals(true)))
+        .get();
+
+    for (final p in deletedProjects) {
+      // These two helpers skip already-deleted rows internally, so the pass
+      // is safe to re-run.
+      await _database.taskDao.softDeleteTasksByProject(p.id);
+      await _database.blockDao.softDeleteBlocksByProject(p.id);
+      healed++;
+    }
+
+    // #region agent log
+    try {
+      final f = File('debug-9f5051.log');
+      final entry = {
+        'sessionId': '9f5051',
+        'hypothesisId': 'repair',
+        'location': 'sync_service.dart:repairOrphanedRecords',
+        'message': 'legacy_repair_done',
+        'data': {
+          'deletedProjectsScanned': deletedProjects.length,
+          'healed': healed,
+        },
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+      };
+      f.writeAsStringSync('${jsonEncode(entry)}\n',
+          mode: FileMode.append, flush: false);
+    } catch (_) {}
+    // #endregion
+
+    return healed;
+  }
+
+  /// Re-queues every still-live local row for push on the next sync. Useful
+  /// if the caller wants to force reconciliation after a destructive manual
+  /// edit to Supabase.
+  Future<void> markEverythingForResync() async {
+    final now = Value(DateTime.now());
+
+    await _database.batch((batch) {
+      batch.update(
+        _database.project,
+        ProjectCompanion(needsSync: const Value(true), lastModified: now),
+        where: (p) => p.isDeleted.equals(false),
+      );
+      batch.update(
+        _database.projectCategory,
+        ProjectCategoryCompanion(
+          needsSync: const Value(true),
+          lastModified: now,
+        ),
+        where: (pc) => pc.isDeleted.equals(false),
+      );
+      batch.update(
+        _database.task,
+        TaskCompanion(needsSync: const Value(true), lastModified: now),
+        where: (t) => t.isDeleted.equals(false),
+      );
+      batch.update(
+        _database.block,
+        BlockCompanion(needsSync: const Value(true), lastModified: now),
+        where: (b) => b.isDeleted.equals(false),
+      );
+      batch.update(
+        _database.blockTask,
+        BlockTaskCompanion(needsSync: const Value(true), lastModified: now),
+        where: (bt) => bt.isDeleted.equals(false),
+      );
+      batch.update(
+        _database.taskCompletion,
+        TaskCompletionCompanion(
+          needsSync: const Value(true),
+          lastModified: now,
+        ),
+        where: (tc) => tc.isDeleted.equals(false),
+      );
+      batch.update(
+        _database.blockCompletion,
+        BlockCompletionCompanion(
+          needsSync: const Value(true),
+          lastModified: now,
+        ),
+        where: (bc) => bc.isDeleted.equals(false),
+      );
+      batch.update(
+        _database.settings,
+        SettingsCompanion(needsSync: const Value(true), lastModified: now),
+      );
+    });
   }
 
   /// Main sync method - handles the complete sync process

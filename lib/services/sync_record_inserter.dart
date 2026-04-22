@@ -196,7 +196,12 @@ class SyncRecordInserter {
         break;
 
       case 'settings':
-        await db.into(db.settings).insert(
+        // Settings is a single-row table locally (PK fixed to id=1). A fresh
+        // local install / first-launch row may already exist with id=1 but
+        // without a supabase_id, so use `insertOnConflictUpdate` to adopt the
+        // remote row's fields (including supabase_id) instead of failing with
+        // a local PK conflict.
+        await db.into(db.settings).insertOnConflictUpdate(
           SettingsCompanion(
             id: const Value(1),
             defaultStartTime: Value(remoteRecord['default_start_time'] as int),

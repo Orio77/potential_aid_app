@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:potential_aid_app/services/supabase_service.dart';
 import 'package:potential_aid_app/services/sync_record_inserter.dart';
 import 'package:potential_aid_app/services/sync_record_updater.dart';
@@ -186,11 +189,44 @@ class SyncRecordMapper {
         return;
       }
 
-      final localModified = existingLocal['last_modified'] as DateTime?;
-      final localVersion = existingLocal['version'] as int? ?? 1;
-      final localNeedsSync = existingLocal['needs_sync'] as bool? ?? false;
+      // Drift's toJson() emits camelCase keys; use the helper so we tolerate
+      // both camelCase and snake_case (legacy callers) defensively.
+      final localModified = SyncConverter.parseDateTime(
+        SyncConverter.getField<dynamic>(existingLocal, 'lastModified'),
+      );
+      final localVersion =
+          SyncConverter.getField<int>(existingLocal, 'version') ?? 1;
+      final localNeedsSync =
+          SyncConverter.getField<bool>(existingLocal, 'needsSync') ?? false;
       final requiresLocalId = tableName != 'block_task';
-      final int? localId = requiresLocalId ? existingLocal['id'] as int? : null;
+      final int? localId = requiresLocalId
+          ? SyncConverter.getField<int>(existingLocal, 'id')
+          : null;
+
+      // #region agent log
+      try {
+        final f = File('debug-9f5051.log');
+        final entry = {
+          'sessionId': '9f5051',
+          'hypothesisId': 'H1',
+          'location': 'sync_record_mapper.dart:applyRemoteChangeToLocal',
+          'message': 'conflict_resolve',
+          'data': {
+            'table': tableName,
+            'supabaseId': supabaseId,
+            'localVersion': localVersion,
+            'remoteVersion': remoteVersion,
+            'localNeedsSync': localNeedsSync,
+            'localModified': localModified?.toIso8601String(),
+            'remoteModified': remoteModified?.toIso8601String(),
+            'isRemoteDeleted': isRemoteDeleted,
+          },
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        };
+        f.writeAsStringSync('${jsonEncode(entry)}\n',
+            mode: FileMode.append, flush: false);
+      } catch (_) {}
+      // #endregion
 
       if (requiresLocalId && localId == null) return;
 

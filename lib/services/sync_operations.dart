@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:drift/drift.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/models/sync_models.dart';
@@ -36,6 +39,12 @@ class SyncOperations {
     Map<String, int> tableStats = {};
 
     try {
+      // The server enforces one settings row per user (`settings_one_row_per_user`).
+      // Adopt any existing remote row's supabase_id onto the local row before
+      // pushing, otherwise the upsert would attempt a second insert for the
+      // same user and fail with error 23505.
+      await _reconcileSettingsWithRemote();
+
       for (final entry in tableMapping.entries) {
         final localTable = entry.key;
         final remoteTable = entry.value;
@@ -81,89 +90,137 @@ class SyncOperations {
     }
   }
 
-  /// Push local changes to remote
+  /// Push local changes to remote.
+  ///
+  /// Order matters:
+  /// 1. Upserts are processed parents-first (so FKs like project_supabase_id
+  ///    resolve on the server).
+  /// 2. Deletes are processed children-first so we push each child's
+  ///    `is_deleted=true` to Supabase *and* hard-delete it locally before the
+  ///    parent row is deleted. Otherwise SQLite's ON DELETE CASCADE would
+  ///    wipe the children locally before we got a chance to push them and
+  ///    they'd stay as orphans on Supabase.
   Future<SyncResult> pushLocalChanges() async {
     int totalRecords = 0;
     Map<String, int> tableStats = {};
 
     try {
-      for (final entry in tableMapping.entries) {
-        final localTable = entry.key;
-        final remoteTable = entry.value;
+      // See [performInitialMigration] for rationale.
+      await _reconcileSettingsWithRemote();
 
+      final upsertOrder = tableMapping.keys.toList();
+      final deleteOrder = upsertOrder.reversed.toList();
+
+      // Phase 1: upserts (parents first so foreign keys resolve server-side)
+      for (final localTable in upsertOrder) {
+        final remoteTable = tableMapping[localTable]!;
         final recordsToSync = await _repository.getRecordsNeedingSync(
           localTable,
         );
+        if (recordsToSync.isEmpty) continue;
 
-        if (recordsToSync.isNotEmpty) {
-          final (creates, updates, deletes) = _categorizeRecords(recordsToSync);
+        final (creates, updates, _) = _categorizeRecords(recordsToSync);
+        if (creates.isEmpty && updates.isEmpty) continue;
 
-          // Handle creates and updates
-          if (creates.isNotEmpty || updates.isNotEmpty) {
-            final upsertRecords = <Map<String, dynamic>>[];
-            for (final record in [...creates, ...updates]) {
-              final supabaseId = await _ensureSupabaseIdValue(
-                localTable,
-                record,
-              );
-              final remoteRecord = await _recordMapper.convertLocalToRemote(
-                localTable,
-                record,
-                supabaseId,
-              );
-              upsertRecords.add(remoteRecord);
-            }
-
-            final uploadedRecords = await _supabaseService.upsertRecords(
-              remoteTable,
-              upsertRecords,
-            );
-
-            await _markRecordsAsSynced(localTable, [
-              ...creates,
-              ...updates,
-            ], uploadedRecords);
-          }
-
-          // Handle deletes
-          if (deletes.isNotEmpty) {
-            final supabaseIds = deletes
-                .map((r) => SyncConverter.getField<String>(r, 'supabaseId'))
-                .whereType<String>()
-                .toList();
-
-            if (supabaseIds.isNotEmpty) {
-              await _supabaseService.deleteRecords(remoteTable, supabaseIds);
-            }
-
-            await _markRecordsAsSynced(localTable, deletes, []);
-
-            if (localTable == 'block_task') {
-              // block_task has no integer id — delete by supabaseId or composite key
-              for (final record in deletes) {
-                final sid = SyncConverter.getField<String>(record, 'supabaseId');
-                if (sid != null) {
-                  await _repository.deleteBlockTaskBySupabaseId(sid);
-                } else {
-                  final blockId = SyncConverter.getField<int>(record, 'blockId');
-                  final taskId = SyncConverter.getField<int>(record, 'taskId');
-                  if (blockId != null && taskId != null) {
-                    await _repository.deleteBlockTaskByCompositeKey(blockId, taskId);
-                  }
-                }
-              }
-            } else {
-              final ids = deletes
-                  .map((r) => SyncConverter.getField<int>(r, 'id'))
-                  .whereType<int>()
-                  .toList();
-              await _repository.deleteLocalRecordsByIds(localTable, ids);
-            }
-          }
-
-          tableStats[localTable] = recordsToSync.length;
-          totalRecords += recordsToSync.length;
+        final upsertRecords = <Map<String, dynamic>>[];
+        for (final record in [...creates, ...updates]) {
+          final supabaseId = await _ensureSupabaseIdValue(localTable, record);
+          final remoteRecord = await _recordMapper.convertLocalToRemote(
+            localTable,
+            record,
+            supabaseId,
+          );
+          upsertRecords.add(remoteRecord);
         }
+
+        final uploadedRecords = await _supabaseService.upsertRecords(
+          remoteTable,
+          upsertRecords,
+        );
+
+        await _markRecordsAsSynced(
+          localTable,
+          [...creates, ...updates],
+          uploadedRecords,
+        );
+
+        final count = creates.length + updates.length;
+        tableStats[localTable] = (tableStats[localTable] ?? 0) + count;
+        totalRecords += count;
+      }
+
+      // Phase 2: deletes (children first so we don't cascade-wipe them before
+      // they're pushed).
+      for (final localTable in deleteOrder) {
+        final remoteTable = tableMapping[localTable]!;
+        final recordsToSync = await _repository.getRecordsNeedingSync(
+          localTable,
+        );
+        if (recordsToSync.isEmpty) continue;
+
+        final (_, _, deletes) = _categorizeRecords(recordsToSync);
+        if (deletes.isEmpty) continue;
+
+        final supabaseIds = deletes
+            .map((r) => SyncConverter.getField<String>(r, 'supabaseId'))
+            .whereType<String>()
+            .toList();
+        if (supabaseIds.isNotEmpty) {
+          await _supabaseService.deleteRecords(remoteTable, supabaseIds);
+        }
+
+        await _markRecordsAsSynced(localTable, deletes, const []);
+
+        if (localTable == 'block_task') {
+          for (final record in deletes) {
+            final sid =
+                SyncConverter.getField<String>(record, 'supabaseId');
+            if (sid != null) {
+              await _repository.deleteBlockTaskBySupabaseId(sid);
+            } else {
+              final blockId =
+                  SyncConverter.getField<int>(record, 'blockId');
+              final taskId =
+                  SyncConverter.getField<int>(record, 'taskId');
+              if (blockId != null && taskId != null) {
+                await _repository.deleteBlockTaskByCompositeKey(
+                  blockId,
+                  taskId,
+                );
+              }
+            }
+          }
+        } else {
+          final ids = deletes
+              .map((r) => SyncConverter.getField<int>(r, 'id'))
+              .whereType<int>()
+              .toList();
+          await _repository.deleteLocalRecordsByIds(localTable, ids);
+        }
+
+        // #region agent log
+        try {
+          final f = File('debug-9f5051.log');
+          final entry = {
+            'sessionId': '9f5051',
+            'hypothesisId': 'H3',
+            'location': 'sync_operations.dart:pushLocalChanges/deletes',
+            'message': 'pushed_deletes',
+            'data': {
+              'table': localTable,
+              'count': deletes.length,
+              'supabaseIds': supabaseIds.length,
+            },
+            'timestamp': DateTime.now().millisecondsSinceEpoch,
+          };
+          f.writeAsStringSync('${jsonEncode(entry)}\n',
+              mode: FileMode.append, flush: false);
+        } catch (_) {}
+        // #endregion
+
+        tableStats[localTable] =
+            (tableStats[localTable] ?? 0) + deletes.length;
+        totalRecords += deletes.length;
       }
 
       return SyncResult(
@@ -227,6 +284,51 @@ class SyncOperations {
   }
 
   // Helper methods
+
+  /// Ensure the local settings row uses the same `supabase_id` as any
+  /// existing remote settings row for the current user. The server's
+  /// `settings_one_row_per_user` constraint means a mismatched id would
+  /// cause the upsert to attempt a duplicate insert (Postgres error 23505).
+  Future<void> _reconcileSettingsWithRemote() async {
+    final userId = _supabaseService.currentUserId;
+    if (userId == null) return;
+
+    List<Map<String, dynamic>> remoteRows;
+    try {
+      remoteRows = await _supabaseService.fetchRecords(
+        'settings',
+        userId: userId,
+      );
+    } catch (_) {
+      // If fetch fails we fall back to the original push behaviour; it will
+      // either succeed (no remote row yet) or surface the original error.
+      return;
+    }
+
+    if (remoteRows.isEmpty) return;
+
+    final remoteSupabaseId = remoteRows.first['supabase_id'] as String?;
+    if (remoteSupabaseId == null || remoteSupabaseId.isEmpty) return;
+
+    final localRows = await _repository.getAllRecords('settings');
+    if (localRows.isEmpty) return;
+
+    final localRow = localRows.first;
+    final localId = SyncConverter.getField<int>(localRow, 'id');
+    if (localId == null) return;
+
+    final localSupabaseId = SyncConverter.getField<String>(
+      localRow,
+      'supabaseId',
+    );
+    if (localSupabaseId == remoteSupabaseId) return;
+
+    await _repository.setRecordSupabaseId(
+      'settings',
+      localId,
+      remoteSupabaseId,
+    );
+  }
 
   /// Ensure a record has a Supabase ID
   Future<String> _ensureSupabaseIdValue(
