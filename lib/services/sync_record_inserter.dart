@@ -196,37 +196,40 @@ class SyncRecordInserter {
         break;
 
       case 'settings':
-        // Settings is a single-row table locally (PK fixed to id=1). A fresh
-        // local install / first-launch row may already exist with id=1 but
-        // without a supabase_id, so use `insertOnConflictUpdate` to adopt the
-        // remote row's fields (including supabase_id) instead of failing with
-        // a local PK conflict.
-        await db.into(db.settings).insertOnConflictUpdate(
-          SettingsCompanion(
-            id: const Value(1),
-            defaultStartTime: Value(remoteRecord['default_start_time'] as int),
-            defaultTaskLength: Value(remoteRecord['default_task_length'] as int),
-            defaultBreakTime: Value(remoteRecord['default_break_time'] as int),
-            defaultTimelineProjectId: Value(
-              remoteRecord['default_timeline_project_id'] as int?,
-            ),
-            defaultTimelineCategoryId: Value(
-              remoteRecord['default_timeline_category_id'] as int?,
-            ),
-            defaultTimelineShowProjects: Value(
-              remoteRecord['default_timeline_show_projects'] as bool? ?? true,
-            ),
-            defaultTimelineUncompletedOnly: Value(
-              remoteRecord['default_timeline_uncompleted_only'] as bool? ?? true,
-            ),
-            pursuitStateJson: Value(remoteRecord['pursuit_state_json'] as String?),
-            supabaseId: Value(remoteRecord['supabase_id'] as String),
-            lastModified: Value(SyncConverter.parseDateTime(remoteRecord['last_modified']) ?? now),
-            needsSync: const Value(false),
-            isDeleted: Value(remoteRecord['is_deleted'] as bool? ?? false),
-            version: Value(remoteRecord['version'] as int? ?? 1),
+        // Single logical row (id = 1). Some legacy DBs never got a PRIMARY KEY
+        // on `id`, so Drift's `insertOnConflictUpdate` emits `ON CONFLICT("id")`
+        // and SQLite rejects it. Insert if missing, else update row 1.
+        final settingsRow = SettingsCompanion(
+          id: const Value(1),
+          defaultStartTime: Value(remoteRecord['default_start_time'] as int),
+          defaultTaskLength: Value(remoteRecord['default_task_length'] as int),
+          defaultBreakTime: Value(remoteRecord['default_break_time'] as int),
+          defaultTimelineProjectId: Value(
+            remoteRecord['default_timeline_project_id'] as int?,
           ),
+          defaultTimelineCategoryId: Value(
+            remoteRecord['default_timeline_category_id'] as int?,
+          ),
+          defaultTimelineShowProjects: Value(
+            remoteRecord['default_timeline_show_projects'] as bool? ?? true,
+          ),
+          defaultTimelineUncompletedOnly: Value(
+            remoteRecord['default_timeline_uncompleted_only'] as bool? ?? true,
+          ),
+          pursuitStateJson: Value(remoteRecord['pursuit_state_json'] as String?),
+          supabaseId: Value(remoteRecord['supabase_id'] as String),
+          lastModified: Value(SyncConverter.parseDateTime(remoteRecord['last_modified']) ?? now),
+          needsSync: const Value(false),
+          isDeleted: Value(remoteRecord['is_deleted'] as bool? ?? false),
+          version: Value(remoteRecord['version'] as int? ?? 1),
         );
+        final existingSettings = await db.select(db.settings).get();
+        if (existingSettings.isEmpty) {
+          await db.into(db.settings).insert(settingsRow);
+        } else {
+          await (db.update(db.settings)..where((s) => s.id.equals(1)))
+              .write(settingsRow);
+        }
         break;
 
       default:
