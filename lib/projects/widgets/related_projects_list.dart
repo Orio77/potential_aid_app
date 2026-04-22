@@ -112,7 +112,7 @@ class _RelatedProjectsListState extends ConsumerState<RelatedProjectsList> {
                             elevation: 2,
                             child: Padding(
                               padding: const EdgeInsets.all(6.0),
-                              child: ProjectProgressInfo(
+                              child: ProjectTaskAwareProgressInfo(
                                 project: filtered[index],
                               ),
                             ),

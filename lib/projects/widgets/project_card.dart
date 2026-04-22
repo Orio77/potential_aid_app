@@ -41,7 +41,7 @@ class ProjectCard extends ConsumerWidget {
               children: [
                 ProjectTitle(title: project.name),
                 const SizedBox(height: 8.0),
-                ProjectProgressInfo(project: project),
+                ProjectTaskAwareProgressInfo(project: project),
               ],
             ),
           ),

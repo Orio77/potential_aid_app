@@ -19,6 +19,20 @@ List<TaskData> firstDepthTasksFromProjectTasks(List<TaskData> tasks) {
   return roots;
 }
 
+/// 0–1 completion for a task, matching the project screen "Overall" bar logic.
+double taskProgressFraction(TaskData t) {
+  if (t.isCompleted) return 1.0;
+  if (t.endGoal <= 0) return 0.0;
+  return (t.current / t.endGoal).clamp(0.0, 1.0);
+}
+
+/// Unweighted mean of [taskProgressFraction] over [tasks] (same as project header).
+double aggregateRootTaskProgress(Iterable<TaskData> tasks) {
+  final list = tasks.toList();
+  if (list.isEmpty) return 0.0;
+  return list.fold(0.0, (s, t) => s + taskProgressFraction(t)) / list.length;
+}
+
 final firstDepthTasksProvider =
     Provider.autoDispose.family<AsyncValue<List<TaskData>>, int>((ref, projectId) {
   return ref.watch(projectTasksNotifier(projectId)).when(

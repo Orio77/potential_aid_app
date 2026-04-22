@@ -61,12 +61,7 @@ class _MultiBarProgressState extends State<_MultiBarProgress> {
     // Global average includes ALL tasks (completed count toward 100%).
     // Treat isCompleted tasks as fully done even if `current` wasn't synced to
     // `endGoal` by whichever path marked them complete.
-    final avgCompletion =
-        tasks.fold(
-          0.0,
-          (sum, t) => sum + _taskProgressFraction(t),
-        ) /
-        tasks.length;
+    final avgCompletion = aggregateRootTaskProgress(tasks);
     final globalPct = avgCompletion * 100;
     final globalColor = CompletionUtils.getCompletionColorM3(
       globalPct,
@@ -152,12 +147,6 @@ class _MultiBarProgressState extends State<_MultiBarProgress> {
   }
 }
 
-double _taskProgressFraction(TaskData t) {
-  if (t.isCompleted) return 1.0;
-  if (t.endGoal <= 0) return 0.0;
-  return (t.current / t.endGoal).clamp(0.0, 1.0);
-}
-
 class _TaskProgressRow extends StatelessWidget {
   final TaskData task;
 
@@ -166,7 +155,7 @@ class _TaskProgressRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final progress = _taskProgressFraction(task);
+    final progress = taskProgressFraction(task);
     final pct = progress * 100;
     final color = CompletionUtils.getCompletionColorM3(pct, theme.colorScheme);
     final unit = task.unit ?? '';

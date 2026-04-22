@@ -1,11 +1,51 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
+import 'package:potential_aid_app/projects/providers/task_progress_providers.dart';
 import 'package:potential_aid_app/utils/completion_utils.dart';
 import 'package:potential_aid_app/stats/widgets/progress_bar.dart';
 
+/// [ProjectProgressInfo] with the same first-depth task aggregate as the
+/// project screen, so list/grid cards are not stuck at 0% when only tasks
+/// store progress.
+class ProjectTaskAwareProgressInfo extends ConsumerWidget {
+  final ProjectData project;
+
+  const ProjectTaskAwareProgressInfo({super.key, required this.project});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(
+      firstDepthTasksWithCompletedProvider(project.id),
+    );
+    return async.when(
+      data: (tasks) {
+        if (tasks.isEmpty) {
+          return ProjectProgressInfo(project: project);
+        }
+        return ProjectProgressInfo(
+          project: project,
+          taskProgressFraction: aggregateRootTaskProgress(tasks),
+        );
+      },
+      loading: () => ProjectProgressInfo(project: project),
+      error: (e, s) => ProjectProgressInfo(project: project),
+    );
+  }
+}
+
 class ProjectProgressInfo extends StatelessWidget {
   final ProjectData project;
-  const ProjectProgressInfo({super.key, required this.project});
+
+  /// When set, bar and % follow task aggregate (same as project screen with tasks).
+  /// [project.current] is often 0 in that case.
+  final double? taskProgressFraction;
+
+  const ProjectProgressInfo({
+    super.key,
+    required this.project,
+    this.taskProgressFraction,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +53,11 @@ class ProjectProgressInfo extends StatelessWidget {
     final current = project.current;
     final goal = project.goal;
     final unit = project.unit;
-    final completionPercentage = (current / goal) * 100;
+    final fromTasks = taskProgressFraction != null;
+    final safeFraction = fromTasks
+        ? taskProgressFraction!.clamp(0.0, 1.0)
+        : (goal > 0 ? current / goal : 0.0);
+    final completionPercentage = safeFraction * 100;
 
     return _buildProgressSection(
       context,
@@ -22,6 +66,7 @@ class ProjectProgressInfo extends StatelessWidget {
       goal,
       unit,
       completionPercentage,
+      fromTasks: fromTasks,
     );
   }
 }
@@ -32,8 +77,9 @@ Widget _buildProgressSection(
   int current,
   int goal,
   String unit,
-  double completionPercentage,
-) {
+  double completionPercentage, {
+  bool fromTasks = false,
+}) {
   final theme = Theme.of(context);
   final progressColor = CompletionUtils.getCompletionColorM3(
     completionPercentage,
@@ -110,42 +156,55 @@ Widget _buildProgressSection(
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Text(
-                    '$current',
-                    style: theme.textTheme.headlineLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: progressColor,
-                      fontSize: hasVeryTightHeight
-                          ? 14
-                          : (isVeryCompact ? 18 : (isCompact ? 22 : null)),
+              child: fromTasks
+                  ? Text(
+                      '${completionPercentage.round()}%',
+                      style: theme.textTheme.headlineLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: progressColor,
+                        fontSize: hasVeryTightHeight
+                            ? 12
+                            : (isVeryCompact ? 16 : (isCompact ? 20 : null)),
+                      ),
+                    )
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          '$current',
+                          style: theme.textTheme.headlineLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: progressColor,
+                            fontSize: hasVeryTightHeight
+                                ? 14
+                                : (isVeryCompact
+                                    ? 18
+                                    : (isCompact ? 22 : null)),
+                          ),
+                        ),
+                        Text(
+                          ' / $goal',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontSize: hasVeryTightHeight
+                                ? 10
+                                : (isVeryCompact ? 12 : (isCompact ? 14 : null)),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          unit,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w500,
+                            fontSize: hasVeryTightHeight
+                                ? 8
+                                : (isVeryCompact ? 10 : (isCompact ? 12 : null)),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  Text(
-                    ' / $goal',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontSize: hasVeryTightHeight
-                          ? 10
-                          : (isVeryCompact ? 12 : (isCompact ? 14 : null)),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    unit,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w500,
-                      fontSize: hasVeryTightHeight
-                          ? 8
-                          : (isVeryCompact ? 10 : (isCompact ? 12 : null)),
-                    ),
-                  ),
-                ],
-              ),
             ),
 
             SizedBox(
@@ -154,7 +213,11 @@ Widget _buildProgressSection(
                   : (isVeryCompact ? 2 : (isCompact ? 4 : 8)),
             ),
 
-            ProgressBar(completionValue: current / goal),
+            ProgressBar(
+              completionValue: fromTasks
+                  ? (completionPercentage / 100.0).clamp(0.0, 1.0)
+                  : (goal > 0 ? current / goal : 0.0),
+            ),
           ],
         );
 
