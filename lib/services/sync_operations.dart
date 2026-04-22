@@ -63,9 +63,10 @@ class SyncOperations {
             remoteRecords.add(remoteRecord);
           }
 
+          final dedupedRemote = _dedupeRemoteRecordsBySupabaseId(remoteRecords);
           final uploadedRecords = await _supabaseService.upsertRecords(
             remoteTable,
-            remoteRecords,
+            dedupedRemote,
           );
 
           await _updateLocalWithRemoteIds(
@@ -133,9 +134,10 @@ class SyncOperations {
           upsertRecords.add(remoteRecord);
         }
 
+        final dedupedUpsert = _dedupeRemoteRecordsBySupabaseId(upsertRecords);
         final uploadedRecords = await _supabaseService.upsertRecords(
           remoteTable,
-          upsertRecords,
+          dedupedUpsert,
         );
 
         await _markRecordsAsSynced(
@@ -372,13 +374,19 @@ class SyncOperations {
     List<Map<String, dynamic>> localRecords,
     List<Map<String, dynamic>> uploadedRecords,
   ) async {
-    for (
-      int i = 0;
-      i < localRecords.length && i < uploadedRecords.length;
-      i++
-    ) {
-      final localRecord = localRecords[i];
-      final uploadedRecord = uploadedRecords[i];
+    final uploadedBySid = <String, Map<String, dynamic>>{};
+    for (final u in uploadedRecords) {
+      final sid = u['supabase_id'] as String?;
+      if (sid == null || sid.isEmpty) continue;
+      uploadedBySid[sid] = u;
+    }
+
+    for (final localRecord in localRecords) {
+      final sid = SyncConverter.getField<String>(localRecord, 'supabaseId');
+      if (sid == null || sid.isEmpty) continue;
+      final uploadedRecord = uploadedBySid[sid];
+      if (uploadedRecord == null) continue;
+
       final supabaseId = uploadedRecord['supabase_id'] as String;
 
       if (tableName == 'block_task') {
@@ -502,6 +510,62 @@ class SyncOperations {
             lastModified: Value(now),
           ),
         );
+  }
+
+  /// Postgres error `21000` when one upsert batch contains the same
+  /// `supabase_id` twice. Local SQLite does not enforce unique `supabase_id`,
+  /// so keep a single payload per id (newest `last_modified`, then `version`).
+  List<Map<String, dynamic>> _dedupeRemoteRecordsBySupabaseId(
+    List<Map<String, dynamic>> records,
+  ) {
+    if (records.length < 2) return records;
+
+    final best = <String, Map<String, dynamic>>{};
+    for (final r in records) {
+      final raw = r['supabase_id'];
+      if (raw is! String || raw.isEmpty) {
+        return records;
+      }
+      final current = best[raw];
+      if (current == null || _compareRemoteRowPriority(r, current) > 0) {
+        best[raw] = r;
+      }
+    }
+    return best.values.toList();
+  }
+
+  /// Returns > 0 if [a] should win over [b].
+  int _compareRemoteRowPriority(
+    Map<String, dynamic> a,
+    Map<String, dynamic> b,
+  ) {
+    final ta = _parseRemoteLastModified(a['last_modified']);
+    final tb = _parseRemoteLastModified(b['last_modified']);
+    final byTime = ta.compareTo(tb);
+    if (byTime != 0) return byTime;
+    final va = (a['version'] as num?)?.toInt() ?? 0;
+    final vb = (b['version'] as num?)?.toInt() ?? 0;
+    return va.compareTo(vb);
+  }
+
+  DateTime _parseRemoteLastModified(dynamic v) {
+    if (v == null) {
+      return DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+    }
+    if (v is DateTime) {
+      return v.toUtc();
+    }
+    if (v is int) {
+      final ms = v.abs() < 20000000000 ? v * 1000 : v;
+      return DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true);
+    }
+    if (v is String) {
+      final parsed = DateTime.tryParse(v);
+      if (parsed != null) {
+        return parsed.toUtc();
+      }
+    }
+    return DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
   }
 
   /// Categorize records into creates, updates, and deletes
