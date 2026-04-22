@@ -21,7 +21,11 @@ class ProjectTaskProgress extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tasksAsync = ref.watch(firstDepthTasksProvider(project.id));
+    // Use the "with completed" variant so the overall bar reflects finished
+    // root tasks — otherwise they're filtered out by the SQL query behind
+    // projectTasksNotifier and the average reads 0% for fully-done projects.
+    final tasksAsync =
+        ref.watch(firstDepthTasksWithCompletedProvider(project.id));
 
     return tasksAsync.when(
       // While loading, show the existing simple bar so there's no flash
@@ -54,13 +58,13 @@ class _MultiBarProgressState extends State<_MultiBarProgress> {
     final theme = Theme.of(context);
     final tasks = widget.tasks;
 
-    // Global average includes ALL tasks (completed count toward 100%)
+    // Global average includes ALL tasks (completed count toward 100%).
+    // Treat isCompleted tasks as fully done even if `current` wasn't synced to
+    // `endGoal` by whichever path marked them complete.
     final avgCompletion =
         tasks.fold(
           0.0,
-          (sum, t) =>
-              sum +
-              (t.endGoal > 0 ? (t.current / t.endGoal).clamp(0.0, 1.0) : 0.0),
+          (sum, t) => sum + _taskProgressFraction(t),
         ) /
         tasks.length;
     final globalPct = avgCompletion * 100;
@@ -70,10 +74,9 @@ class _MultiBarProgressState extends State<_MultiBarProgress> {
     );
 
     // Only show uncompleted tasks in the header rows — completed ones are
-    // visible via the task list's "Show completed" toggle below.
-    final uncompleted = tasks
-        .where((t) => !t.isCompleted && t.depth == 0)
-        .toList();
+    // visible via the task list's "Show completed" toggle below. The list
+    // is already root-only (depth == 0) from the provider.
+    final uncompleted = tasks.where((t) => !t.isCompleted).toList();
     final hasMore = uncompleted.length > _initialCount;
     final visible = _showAll
         ? uncompleted
@@ -149,6 +152,12 @@ class _MultiBarProgressState extends State<_MultiBarProgress> {
   }
 }
 
+double _taskProgressFraction(TaskData t) {
+  if (t.isCompleted) return 1.0;
+  if (t.endGoal <= 0) return 0.0;
+  return (t.current / t.endGoal).clamp(0.0, 1.0);
+}
+
 class _TaskProgressRow extends StatelessWidget {
   final TaskData task;
 
@@ -157,9 +166,7 @@ class _TaskProgressRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final progress = task.endGoal > 0
-        ? (task.current / task.endGoal).clamp(0.0, 1.0)
-        : 0.0;
+    final progress = _taskProgressFraction(task);
     final pct = progress * 100;
     final color = CompletionUtils.getCompletionColorM3(pct, theme.colorScheme);
     final unit = task.unit ?? '';
