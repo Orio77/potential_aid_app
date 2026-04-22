@@ -71,6 +71,11 @@ class _SearchTextFieldState<T, N extends StateNotifier<List<T>>>
   late TextEditingController _controller;
   late FocusNode _focusNode;
   final ScrollController _suggestionsScrollController = ScrollController();
+  final LayerLink _fieldLink = LayerLink();
+  final OverlayPortalController _overlayController = OverlayPortalController();
+  final GlobalKey _fieldKey = GlobalKey();
+  double _fieldWidth = 0;
+
   /// Pointer is over the suggestion panel (or moving to it).
   bool _cursorOverSuggestions = false;
   /// After choosing a row; cleared when the user edits the query.
@@ -102,6 +107,25 @@ class _SearchTextFieldState<T, N extends StateNotifier<List<T>>>
     }
     _suggestionsScrollController.dispose();
     super.dispose();
+  }
+
+  void _syncOverlayVisibility(bool shouldShow) {
+    if (shouldShow && !_overlayController.isShowing) {
+      _overlayController.show();
+    } else if (!shouldShow && _overlayController.isShowing) {
+      _overlayController.hide();
+    }
+  }
+
+  void _updateFieldWidth() {
+    final ctx = _fieldKey.currentContext;
+    if (ctx == null) return;
+    final box = ctx.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+    final width = box.size.width;
+    if (width != _fieldWidth) {
+      _fieldWidth = width;
+    }
   }
 
   void _onFocusChange() {
@@ -242,6 +266,12 @@ class _SearchTextFieldState<T, N extends StateNotifier<List<T>>>
     final cs = theme.colorScheme;
     final suggestionsOpen = _shouldShowSuggestions(limitedResults);
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _updateFieldWidth();
+      _syncOverlayVisibility(suggestionsOpen);
+    });
+
     final Map<ShortcutActivator, Intent> shortcuts = {};
     if (suggestionsOpen) {
       shortcuts[const SingleActivator(LogicalKeyboardKey.arrowDown)] =
@@ -293,119 +323,154 @@ class _SearchTextFieldState<T, N extends StateNotifier<List<T>>>
           ),
         },
         child: TapRegion(
+          groupId: _fieldLink,
           onTapOutside: (_) {
             setState(() {
               _dismissedByOutside = true;
               _cursorOverSuggestions = false;
             });
           },
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextFormField(
-                controller: _controller,
-                focusNode: _focusNode,
-                decoration: (widget.textFieldDecoration ?? const InputDecoration())
-                    .copyWith(
-                  labelText: widget.labelText,
-                  border: widget.textFieldDecoration?.border ??
-                      const OutlineInputBorder(),
-                  suffixIcon: _controller.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: widget.enabled
-                              ? () {
-                                  setState(() {
-                                    _suppressAfterPick = false;
-                                    _dismissedByOutside = false;
-                                    _cursorOverSuggestions = false;
-                                  });
-                                  _controller.clear();
-                                  _onTextChanged('');
-                                }
-                              : null,
-                        )
-                      : widget.textFieldDecoration?.suffixIcon,
-                ),
-                validator: widget.validator,
-                enabled: widget.enabled,
-                maxLines: 1,
-                textInputAction: TextInputAction.search,
-                onChanged: _onTextChanged,
-                onFieldSubmitted: _onFieldSubmitted,
-              ),
-
-              if (suggestionsOpen) ...[
-                const SizedBox(height: 4),
-                MouseRegion(
-                  onEnter: (_) {
-                    _clearCursorExitTimer?.cancel();
-                    setState(() => _cursorOverSuggestions = true);
-                  },
-                  onExit: (_) {
-                    _scheduleCursorLeavePanel();
-                  },
-                  child: Listener(
-                    behavior: HitTestBehavior.translucent,
-                    onPointerDown: (_) {
-                      _clearCursorExitTimer?.cancel();
-                      setState(() => _cursorOverSuggestions = true);
-                      if (widget.enabled && _focusNode.canRequestFocus) {
-                        _focusNode.requestFocus();
-                      }
-                    },
-                    child: Material(
-                      elevation: 2,
-                      borderRadius: BorderRadius.circular(4),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(4),
-                          color: theme.cardColor,
-                        ),
-                        child: Focus(
-                          canRequestFocus: false,
-                          skipTraversal: true,
-                          descendantsAreFocusable: false,
-                          child: SizedBox(
-                            height: 120,
-                            child: ListView.separated(
-                              controller: _suggestionsScrollController,
-                              padding: EdgeInsets.zero,
-                              itemBuilder: (context, index) {
-                                final item = limitedResults[index];
-                                final selected = index == _highlightedIndex;
-                                return ListTile(
-                                  dense: true,
-                                  selected: selected,
-                                  selectedTileColor: cs.primaryContainer
-                                      .withValues(alpha: 0.45),
-                                  title: Text(
-                                    widget.getDisplayText(item),
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: selected
-                                          ? FontWeight.w600
-                                          : FontWeight.w400,
-                                    ),
-                                  ),
-                                  leading: widget.leadingIcon?.call(item),
-                                  trailing: widget.trailingIcon,
-                                  onTap: () => _onItemSelected(item),
-                                );
-                              },
-                              separatorBuilder: (context, index) =>
-                                  Divider(height: 1, color: cs.outlineVariant),
-                              itemCount: limitedResults.length,
-                            ),
-                          ),
-                        ),
-                      ),
+          child: CompositedTransformTarget(
+            link: _fieldLink,
+            child: OverlayPortal(
+              controller: _overlayController,
+              overlayChildBuilder: (overlayContext) {
+                return Positioned(
+                  width: _fieldWidth > 0 ? _fieldWidth : null,
+                  child: CompositedTransformFollower(
+                    link: _fieldLink,
+                    showWhenUnlinked: false,
+                    targetAnchor: Alignment.bottomLeft,
+                    followerAnchor: Alignment.topLeft,
+                    offset: const Offset(0, 4),
+                    child: _buildSuggestionsPanel(
+                      theme,
+                      cs,
+                      limitedResults,
                     ),
                   ),
+                );
+              },
+              child: Container(
+                key: _fieldKey,
+                child: TextFormField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  decoration:
+                      (widget.textFieldDecoration ?? const InputDecoration())
+                          .copyWith(
+                    labelText: widget.labelText,
+                    border: widget.textFieldDecoration?.border ??
+                        const OutlineInputBorder(),
+                    suffixIcon: _controller.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: widget.enabled
+                                ? () {
+                                    setState(() {
+                                      _suppressAfterPick = false;
+                                      _dismissedByOutside = false;
+                                      _cursorOverSuggestions = false;
+                                    });
+                                    _controller.clear();
+                                    _onTextChanged('');
+                                  }
+                                : null,
+                          )
+                        : widget.textFieldDecoration?.suffixIcon,
+                  ),
+                  validator: widget.validator,
+                  enabled: widget.enabled,
+                  maxLines: 1,
+                  textInputAction: TextInputAction.search,
+                  onChanged: _onTextChanged,
+                  onFieldSubmitted: _onFieldSubmitted,
                 ),
-              ],
-            ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSuggestionsPanel(
+    ThemeData theme,
+    ColorScheme cs,
+    List<T> limitedResults,
+  ) {
+    return TapRegion(
+      groupId: _fieldLink,
+      onTapOutside: (_) {
+        setState(() {
+          _dismissedByOutside = true;
+          _cursorOverSuggestions = false;
+        });
+      },
+      child: MouseRegion(
+        onEnter: (_) {
+          _clearCursorExitTimer?.cancel();
+          setState(() => _cursorOverSuggestions = true);
+        },
+        onExit: (_) {
+          _scheduleCursorLeavePanel();
+        },
+        child: Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (_) {
+            _clearCursorExitTimer?.cancel();
+            setState(() => _cursorOverSuggestions = true);
+            if (widget.enabled && _focusNode.canRequestFocus) {
+              _focusNode.requestFocus();
+            }
+          },
+          child: Material(
+            elevation: 2,
+            borderRadius: BorderRadius.circular(4),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(4),
+                color: theme.cardColor,
+              ),
+              child: Focus(
+                canRequestFocus: false,
+                skipTraversal: true,
+                descendantsAreFocusable: false,
+                child: SizedBox(
+                  height: 120,
+                  child: ListView.separated(
+                    controller: _suggestionsScrollController,
+                    padding: EdgeInsets.zero,
+                    itemBuilder: (context, index) {
+                      final item = limitedResults[index];
+                      final selected = index == _highlightedIndex;
+                      return ListTile(
+                        dense: true,
+                        selected: selected,
+                        selectedTileColor:
+                            cs.primaryContainer.withValues(alpha: 0.45),
+                        title: Text(
+                          widget.getDisplayText(item),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: selected
+                                ? FontWeight.w600
+                                : FontWeight.w400,
+                          ),
+                        ),
+                        leading: widget.leadingIcon?.call(item),
+                        trailing: widget.trailingIcon,
+                        onTap: () => _onItemSelected(item),
+                      );
+                    },
+                    separatorBuilder: (context, index) =>
+                        Divider(height: 1, color: cs.outlineVariant),
+                    itemCount: limitedResults.length,
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),

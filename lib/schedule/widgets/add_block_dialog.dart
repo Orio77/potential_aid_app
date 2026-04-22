@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/date_notifier.dart';
@@ -9,7 +10,6 @@ import 'package:potential_aid_app/providers/settings_notifier.dart';
 import 'package:potential_aid_app/schedule/services/add_block_service.dart';
 import 'package:potential_aid_app/projects/screens/project_screen.dart';
 import 'package:potential_aid_app/utils/time_utils.dart';
-import 'package:potential_aid_app/widgets/common/duration_picker_dialog.dart';
 import 'package:potential_aid_app/schedule/widgets/block_add_task_list.dart';
 import 'package:potential_aid_app/schedule/widgets/tasks_for_deadline_dialog.dart';
 import 'package:potential_aid_app/widgets/util/search_text_field.dart';
@@ -25,10 +25,13 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
   final _formKey = GlobalKey<FormState>();
   final _projectNameController = TextEditingController();
   final _focusNode = FocusNode();
+  final _startTimeController = TextEditingController();
+  final _endTimeController = TextEditingController();
   bool _hasRequestedInitialFocus = false;
   bool _hasInitializedStartTime = false;
   late TimeOfDay _startTime;
-  int _durationMinutes = 60;
+  late TimeOfDay _endTime;
+  int _defaultDurationMinutes = 60;
   String? _errorMessage;
   ProjectData? _selectedProject;
   List<TaskData> _selectedTasks = [];
@@ -54,11 +57,14 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
     });
 
     final defaultStartTime = settings.defaultStartTime;
-    _durationMinutes = settings.defaultTaskLength;
+    _defaultDurationMinutes = settings.defaultTaskLength;
     _startTime = TimeOfDay(
       hour: defaultStartTime ~/ 60,
       minute: defaultStartTime % 60,
     );
+    _endTime = _addMinutes(_startTime, _defaultDurationMinutes);
+    _startTimeController.text = _formatTime(_startTime);
+    _endTimeController.text = _formatTime(_endTime);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_hasRequestedInitialFocus) {
@@ -79,6 +85,9 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
     if (mounted) {
       setState(() {
         _startTime = calculatedTime;
+        _endTime = _addMinutes(_startTime, _defaultDurationMinutes);
+        _startTimeController.text = _formatTime(_startTime);
+        _endTimeController.text = _formatTime(_endTime);
       });
     }
   }
@@ -87,8 +96,34 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
   void dispose() {
     _projectNameController.dispose();
     _focusNode.dispose();
+    _startTimeController.dispose();
+    _endTimeController.dispose();
 
     super.dispose();
+  }
+
+  static String _formatTime(TimeOfDay t) =>
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+  static TimeOfDay? _parseTime(String text) {
+    final match = RegExp(r'^\s*(\d{1,2}):(\d{2})\s*$').firstMatch(text);
+    if (match == null) return null;
+    final h = int.parse(match.group(1)!);
+    final m = int.parse(match.group(2)!);
+    if (h < 0 || h > 23 || m < 0 || m > 59) return null;
+    return TimeOfDay(hour: h, minute: m);
+  }
+
+  static TimeOfDay _addMinutes(TimeOfDay t, int minutes) {
+    final total = (t.hour * 60 + t.minute + minutes) % (24 * 60);
+    final wrapped = total < 0 ? total + 24 * 60 : total;
+    return TimeOfDay(hour: wrapped ~/ 60, minute: wrapped % 60);
+  }
+
+  int get _durationMinutes {
+    final start = TimeUtils.datetimeToMinutes(_startTime);
+    final end = TimeUtils.datetimeToMinutes(_endTime);
+    return end - start;
   }
 
   void _onTasksChanged(List<TaskData> tasks) {
@@ -126,11 +161,12 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
     });
 
     try {
+      final duration = _durationMinutes;
       final blockId = await ref
           .read(scheduleNotifierProvider.notifier)
           .addBlock(
             TimeUtils.datetimeToMinutes(_startTime),
-            _durationMinutes,
+            duration,
             _selectedProject!.id,
           );
       if (_selectedTasks.isNotEmpty) {
@@ -239,18 +275,39 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
 
               const SizedBox(height: 16),
 
-              ListTile(
-                leading: const Icon(Icons.access_time),
-                title: const Text('Start Time'),
-                subtitle: Text(_startTime.format(context)),
-                onTap: pickStartTime,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _TimeField(
+                      label: 'Start',
+                      controller: _startTimeController,
+                      onParsed: _onStartParsed,
+                      onPickClock: pickStartTime,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _TimeField(
+                      label: 'End',
+                      controller: _endTimeController,
+                      onParsed: _onEndParsed,
+                      onPickClock: pickEndTime,
+                      validator: (_) => _durationMinutes <= 0
+                          ? 'End must be after start'
+                          : null,
+                    ),
+                  ),
+                ],
               ),
 
-              ListTile(
-                leading: const Icon(Icons.timer),
-                title: const Text('Duration'),
-                subtitle: Text('$_durationMinutes minutes'),
-                onTap: pickDuration,
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Duration: ${_durationMinutes <= 0 ? '--' : _durationMinutes} minutes',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ),
 
               if (_errorMessage != null) ...[
@@ -307,6 +364,27 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
     );
   }
 
+  void _onStartParsed(TimeOfDay t) {
+    setState(() {
+      final previousDuration = _durationMinutes;
+      _startTime = t;
+      if (previousDuration <= 0) {
+        _endTime = _addMinutes(_startTime, _defaultDurationMinutes);
+        _endTimeController.text = _formatTime(_endTime);
+      } else if (TimeUtils.datetimeToMinutes(_endTime) <=
+          TimeUtils.datetimeToMinutes(_startTime)) {
+        _endTime = _addMinutes(_startTime, previousDuration);
+        _endTimeController.text = _formatTime(_endTime);
+      }
+    });
+  }
+
+  void _onEndParsed(TimeOfDay t) {
+    setState(() {
+      _endTime = t;
+    });
+  }
+
   Future<void> pickStartTime() async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
@@ -316,22 +394,80 @@ class _AddBlockDialogState extends ConsumerState<AddBlockDialog> {
     if (picked != null) {
       setState(() {
         _startTime = picked;
+        _startTimeController.text = _formatTime(picked);
+        if (TimeUtils.datetimeToMinutes(_endTime) <=
+            TimeUtils.datetimeToMinutes(_startTime)) {
+          _endTime = _addMinutes(_startTime, _defaultDurationMinutes);
+          _endTimeController.text = _formatTime(_endTime);
+        }
       });
     }
   }
 
-  Future<void> pickDuration() async {
-    final int? picked = await showDialog(
+  Future<void> pickEndTime() async {
+    final TimeOfDay? picked = await showTimePicker(
       context: context,
-      builder: (context) =>
-          DurationPickerDialog(initialDuration: _durationMinutes),
+      initialTime: _endTime,
     );
 
     if (picked != null) {
       setState(() {
-        _durationMinutes = picked;
+        _endTime = picked;
+        _endTimeController.text = _formatTime(picked);
       });
     }
+  }
+}
+
+class _TimeField extends StatelessWidget {
+  final String label;
+  final TextEditingController controller;
+  final void Function(TimeOfDay) onParsed;
+  final VoidCallback onPickClock;
+  final String? Function(String?)? validator;
+
+  const _TimeField({
+    required this.label,
+    required this.controller,
+    required this.onParsed,
+    required this.onPickClock,
+    this.validator,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: TextInputType.datetime,
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'[0-9:]')),
+        LengthLimitingTextInputFormatter(5),
+      ],
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+        hintText: 'HH:MM',
+        suffixIcon: IconButton(
+          icon: const Icon(Icons.access_time),
+          tooltip: 'Pick with clock',
+          onPressed: onPickClock,
+        ),
+      ),
+      validator: (value) {
+        if (value == null || value.trim().isEmpty) {
+          return 'Required';
+        }
+        if (_AddBlockDialogState._parseTime(value) == null) {
+          return 'Invalid time';
+        }
+        if (validator != null) return validator!(value);
+        return null;
+      },
+      onChanged: (value) {
+        final parsed = _AddBlockDialogState._parseTime(value);
+        if (parsed != null) onParsed(parsed);
+      },
+    );
   }
 }
 
