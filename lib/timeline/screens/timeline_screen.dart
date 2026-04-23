@@ -465,7 +465,12 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                 if (constraints.maxWidth < 600) {
                   return showProjects
                       ? MobileProjectList(projects: filteredProjects)
-                      : MobileTaskAgenda(depth: depth);
+                      : MobileTaskAgenda(
+                          depth: depth,
+                          categoryId: selectedCategory?.id,
+                          projectId: selectedProject?.id,
+                          showOnlyUncompleted: _showOnlyUncompleted,
+                        );
                 }
                 return _buildDesktopTimeline(
                   context,

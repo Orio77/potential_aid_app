@@ -76,7 +76,7 @@ class _CompleteTaskDialogState extends ConsumerState<CompleteTaskDialog> {
 
   TextButton _cancelButton(BuildContext context) {
     return TextButton(
-      onPressed: () => Navigator.of(context).pop(),
+      onPressed: () => Navigator.of(context).pop(false),
       child: Text("cancel"),
     );
   }
@@ -89,7 +89,7 @@ class _CompleteTaskDialogState extends ConsumerState<CompleteTaskDialog> {
           ? null
           : () async {
               await _completeTask(widget.task, int.tryParse(_controller.text)!);
-              navigator.pop();
+              navigator.pop(true);
             },
       child: Text("save"),
     );
@@ -131,9 +131,10 @@ class _NumericalRangeFormatter extends TextInputFormatter {
   }
 }
 
-Future<void> showCompleteTaskDialog(BuildContext context, TaskData task) async {
-  await showDialog(
+Future<bool> showCompleteTaskDialog(BuildContext context, TaskData task) async {
+  return (await showDialog<bool>(
     context: context,
     builder: (context) => CompleteTaskDialog(task: task),
-  );
+  )) ??
+      false;
 }

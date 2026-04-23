@@ -45,6 +45,8 @@ class DeadlineService {
   }) async {
     final notifier = ref.read(projectTasksNotifier(task.projectId).notifier);
 
+    final oldDeadline = task.deadline;
+
     // Update the main task
     await notifier.updateTask(
       task.id,
@@ -57,12 +59,22 @@ class DeadlineService {
         (table) => table.isCompleted.equals(false),
       ];
 
+      final dayShift = oldDeadline == null
+          ? 0
+          : DateUtils.dateOnly(
+              newDeadline,
+            ).difference(DateUtils.dateOnly(oldDeadline)).inDays;
+
       await _updateAllNestedSubtasksDeadline(
         ref: ref,
+        projectId: task.projectId,
         parentTaskId: task.id,
-        deadline: newDeadline,
+        dayShift: dayShift,
+        fallbackDeadline: newDeadline,
         filters: notCompletedFilter,
       );
+
+      await notifier.refresh();
     }
 
     // Show confirmation message
@@ -73,23 +85,31 @@ class DeadlineService {
 
   static Future<void> _updateAllNestedSubtasksDeadline({
     required WidgetRef ref,
+    required int projectId,
     required int parentTaskId,
-    required DateTime deadline,
+    required int dayShift,
+    required DateTime fallbackDeadline,
     required List<Expression<bool> Function($TaskTable)> filters,
   }) async {
-    final notifier = ref.read(projectTasksNotifier(parentTaskId).notifier);
+    final notifier = ref.read(projectTasksNotifier(projectId).notifier);
     final subtasks = await notifier.getSubtasks(parentTaskId, filters);
 
     for (final subtask in subtasks) {
-      await notifier.updateTask(
+      final shiftedDeadline = subtask.deadline == null
+          ? fallbackDeadline
+          : subtask.deadline!.add(Duration(days: dayShift));
+
+      await notifier.updateTaskSilent(
         subtask.id,
-        TaskCompanion(deadline: Value(deadline)),
+        TaskCompanion(deadline: Value(shiftedDeadline)),
       );
 
       await _updateAllNestedSubtasksDeadline(
         ref: ref,
+        projectId: projectId,
         parentTaskId: subtask.id,
-        deadline: deadline,
+        dayShift: dayShift,
+        fallbackDeadline: fallbackDeadline,
         filters: filters,
       );
     }

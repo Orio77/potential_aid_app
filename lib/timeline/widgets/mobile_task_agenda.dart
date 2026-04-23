@@ -4,18 +4,63 @@ import 'package:potential_aid_app/breakdown/screens/task_breakdown_screen.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/providers/projects_notifier.dart';
 import 'package:potential_aid_app/timeline/providers/task_cards_notifier.dart';
+import 'package:potential_aid_app/timeline/providers/timeline_date_notifier.dart';
 import 'package:time_machine/time_machine.dart';
 
 /// Mobile-friendly agenda list of tasks grouped by deadline date.
 /// Replaces the horizontal task grid on narrow screens (< 600 px).
-class MobileTaskAgenda extends ConsumerWidget {
+class MobileTaskAgenda extends ConsumerStatefulWidget {
   final int depth;
+  final int? categoryId;
+  final int? projectId;
+  final bool showOnlyUncompleted;
 
-  const MobileTaskAgenda({super.key, required this.depth});
+  const MobileTaskAgenda({
+    super.key,
+    required this.depth,
+    this.categoryId,
+    this.projectId,
+    this.showOnlyUncompleted = true,
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final tasksByDate = ref.watch(taskCardsNotifierProvider(depth));
+  ConsumerState<MobileTaskAgenda> createState() => _MobileTaskAgendaState();
+}
+
+class _MobileTaskAgendaState extends ConsumerState<MobileTaskAgenda> {
+  Future<void> _reloadTasks() {
+    final currentMonth = ref.read(timelineDateNotifierProvider);
+    return ref.read(taskCardsNotifierProvider(widget.depth).notifier).loadTasksForMonth(
+          monthDate: currentMonth,
+          depth: widget.depth,
+          categoryId: widget.categoryId,
+          projectId: widget.projectId,
+          showOnlyUncompleted: widget.showOnlyUncompleted,
+        );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentMonth = ref.watch(timelineDateNotifierProvider);
+    final tasksByDate = ref.watch(taskCardsNotifierProvider(widget.depth));
+
+    ref.listen(timelineDateNotifierProvider, (previous, next) {
+      if (previous != next) {
+        _reloadTasks();
+      }
+    });
+
+    if (tasksByDate.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(taskCardsNotifierProvider(widget.depth).notifier).loadTasksForMonth(
+              monthDate: currentMonth,
+              depth: widget.depth,
+              categoryId: widget.categoryId,
+              projectId: widget.projectId,
+              showOnlyUncompleted: widget.showOnlyUncompleted,
+            );
+      });
+    }
 
     if (tasksByDate.isEmpty) {
       return const Center(child: Text('No tasks with deadlines this month'));
@@ -31,7 +76,11 @@ class MobileTaskAgenda extends ConsumerWidget {
       itemBuilder: (context, index) {
         final date = sortedDates[index];
         final tasks = tasksByDate[date]!;
-        return _DateSection(date: date, tasks: tasks);
+        return _DateSection(
+          date: date,
+          tasks: tasks,
+          onTaskOpened: _reloadTasks,
+        );
       },
     );
   }
@@ -42,8 +91,13 @@ class MobileTaskAgenda extends ConsumerWidget {
 class _DateSection extends StatelessWidget {
   final LocalDate date;
   final List<TaskData> tasks;
+  final Future<void> Function() onTaskOpened;
 
-  const _DateSection({required this.date, required this.tasks});
+  const _DateSection({
+    required this.date,
+    required this.tasks,
+    required this.onTaskOpened,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -87,7 +141,7 @@ class _DateSection extends StatelessWidget {
             ),
           ),
           // Task rows
-          ...tasks.map((task) => _TaskRow(task: task)),
+          ...tasks.map((task) => _TaskRow(task: task, onTaskOpened: onTaskOpened)),
         ],
       ),
     );
@@ -109,8 +163,9 @@ class _DateSection extends StatelessWidget {
 
 class _TaskRow extends ConsumerWidget {
   final TaskData task;
+  final Future<void> Function() onTaskOpened;
 
-  const _TaskRow({required this.task});
+  const _TaskRow({required this.task, required this.onTaskOpened});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -120,12 +175,13 @@ class _TaskRow extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 6),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          Navigator.of(context).push(
+        onTap: () async {
+          await Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => TaskBreakdownScreen(task: task),
             ),
           );
+          await onTaskOpened();
         },
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

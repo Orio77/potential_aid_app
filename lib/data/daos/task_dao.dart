@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:drift/drift.dart';
 import 'package:potential_aid_app/data/database.dart';
 import 'package:potential_aid_app/data/tables/task.dart';
@@ -109,7 +111,9 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
       0,
     );
 
-    return await into(task).insert(taskData);
+    final taskId = await into(task).insert(taskData);
+    await _syncProjectCurrentFromRootTasks(projectId);
+    return taskId;
   }
 
   Future<int> updateTask(int taskId, TaskCompanion updates) async {
@@ -162,15 +166,18 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
       );
 
       final syncAwareUpdates = _withSyncFields(merged, existing.version);
-      return await (update(
+      final res = await (update(
         task,
       )..where((t) => t.id.equals(taskId))).write(syncAwareUpdates);
+      await _syncProjectCurrentFromRootTasks(existing.projectId);
+      return res;
     });
   }
 
   Future<void> deleteTask(int taskId) async {
     await transaction(() async {
       final currentTask = await getTaskById(taskId);
+      final projectId = currentTask.projectId;
 
       // Cascade soft-delete all descendants first
       final descendants = await getAllDescendantsRecursive(taskId);
@@ -195,6 +202,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
       // Soft-delete dependent rows so they're pushed to Supabase as deletes
       // before the local FK cascade has a chance to hard-delete them.
       await _softDeleteDependentsForTasks(allIds);
+      await _syncProjectCurrentFromRootTasks(projectId);
     });
   }
 
@@ -351,6 +359,7 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
         );
       }
 
+      await _syncProjectCurrentFromRootTasks(taskData.projectId);
       return completionId;
     });
   }
@@ -366,8 +375,14 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
     final parent = await getTaskById(parentId);
     if (parent.isCompleted) return;
 
-    final newCurrent = parent.current + 1;
-    final willComplete = newCurrent >= parent.endGoal;
+    final directChildren = await getSubtasks(parentId, null);
+    // If a task has direct subtasks, rollup completion must require completing
+    // all those children (unless user explicitly set a higher goal).
+    final effectiveEndGoal = directChildren.isNotEmpty
+        ? math.max(parent.endGoal, directChildren.length)
+        : parent.endGoal;
+    final newCurrent = math.min(parent.current + 1, effectiveEndGoal);
+    final willComplete = newCurrent >= effectiveEndGoal;
 
     if (willComplete) {
       await _completeAllSubtasks(parentId, completedAt);
@@ -388,7 +403,8 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
       _withSyncFields(
         TaskCompanion(
           isCompleted: Value(willComplete),
-          current: Value(willComplete ? parent.endGoal : newCurrent),
+          current: Value(willComplete ? effectiveEndGoal : newCurrent),
+          endGoal: Value(effectiveEndGoal),
           completedAt: Value(willComplete ? completedAt : null),
         ),
         parent.version,
@@ -571,7 +587,51 @@ class TaskDao extends DatabaseAccessor<AppDatabase> with _$TaskDaoMixin {
           taskData.version,
         ),
       );
+      await _syncProjectCurrentFromRootTasks(taskData.projectId);
     });
+  }
+
+  /// Keeps project.current synchronized with root task progress.
+  ///
+  /// This is intentionally bidirectional:
+  /// - all root tasks complete -> project.current == project.goal
+  /// - any root task incomplete (including newly added one) -> project.current < goal
+  ///
+  /// We only apply this when there is at least one root task.
+  Future<void> _syncProjectCurrentFromRootTasks(int projectId) async {
+    final rootTasks = await getFirstDepthTasksForProject(projectId);
+    if (rootTasks.isEmpty) {
+      return;
+    }
+
+    final projectData = await db.projectDao.getProjectById(projectId);
+    if (projectData == null || projectData.goal <= 0) {
+      return;
+    }
+
+    final sum = rootTasks.fold<double>(0.0, (acc, t) {
+      if (t.isCompleted) return acc + 1.0;
+      if (t.endGoal <= 0) return acc;
+      return acc + (t.current / t.endGoal).clamp(0.0, 1.0);
+    });
+    final fraction = (sum / rootTasks.length).clamp(0.0, 1.0);
+    final allCompleted = fraction >= 1.0;
+
+    // Keep incomplete task sets from appearing as "project completed".
+    int targetCurrent = (projectData.goal * fraction).floor();
+    if (allCompleted) {
+      targetCurrent = projectData.goal;
+    } else if (targetCurrent >= projectData.goal) {
+      targetCurrent = projectData.goal - 1;
+    }
+    if (targetCurrent < 0) targetCurrent = 0;
+
+    if (projectData.current != targetCurrent) {
+      await db.projectDao.updateProject(
+        projectId,
+        ProjectCompanion(current: Value(targetCurrent)),
+      );
+    }
   }
 
   // Recursive retrieval of all descendant tasks

@@ -35,8 +35,10 @@ class CompleteTaskButton extends ConsumerWidget {
             .read(projectTasksNotifier(parentTask.projectId).notifier)
             .getTask(subtask.savedId);
         if (context.mounted) {
-          await showCompleteTaskDialog(context, task);
-          onComplete();
+          final didComplete = await showCompleteTaskDialog(context, task);
+          if (didComplete) {
+            onComplete();
+          }
         }
       },
       icon: const Icon(Icons.task_alt_sharp),
